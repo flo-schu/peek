@@ -132,10 +132,21 @@ high peak concentrations
     after larger perturbations occurred
     -
 
-(2) Environmental stress affects the stability of the attractors
-
-(3) Refuges and renewal of population would generally stabilize the communities
+(3) Environmental stress affects the stability of the attractors
     -
+(4) contamination patterns have an influence on the effect size
+
+(5) knowledge of contamination history is relevant for predicting the response
+    to the next stressor. If this is true: Is all of the contamination history
+    relevant or is there a certain number of fixed points, which are the true
+    initial conditions for a dynamical system?
+    - Such a question coul be answered by exposing the surviving nanocosms at to a
+      small set of treatments at the end of the experiments (e.g. 2xT * 2xP and
+      observe the response - perhaps only one event is sufficient. This would not change
+      the results of the initial questions (1-4) but would add a significant
+      gain on question five)
+
+(6) can the effect be a function of size? (Julie Verheyens Paper)
 
 ## Method
 
@@ -156,10 +167,7 @@ Populate Nanocosms from offspring of one individual?!
 it is preferable to increase the effect size than to increase the sample size because
 standard error scales faster with effect size than with sample size
 
-In the shelves, 40 nanocosms can be placed, if arranged in single rows.
-Double rows it could be 80 but this would be a large increase in workload
-and inconvenience in handling during the experiment duration.
-start with 100 to allow for losses
+Treatments are arranged in one shelfs on two levels
 
 minimum n for treatments (5-10)
 
@@ -218,6 +226,11 @@ Two environmental settings (green shelf + normal shelf)
 #### Image Detection
 
 + Take photographs from white chair on top of table, or use ladder
++ camera obscura has a length of 62.7 cm until the top
+  touches the glas. The glasses have a height of 22cm.
+  The distance of where the camera is mounted to the
+  central point in the glas front is approximately
+  62.5 + 10 cm to the center of the glas.
 
 #### Routine
 
