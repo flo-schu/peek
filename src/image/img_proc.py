@@ -12,6 +12,7 @@ import cv2
 from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
+import imutils
 
 class Image:
     def __init__(self, path):
@@ -21,10 +22,18 @@ class Image:
         self.raw = None
         self.meta = None
         self.edited = None
-        self.diff = None
         self.id = 0
 
+
     def read_raw(self, **params):
+        """
+        reads raw file using rawpy module. 
+        A future version could use pillow (PIL), because of the possibility to
+        read metadata better. However, RW2 files are currently not supported. 
+        It is possible though to write a custom image plugin which recognizes the
+        raw file.
+        https://pillow.readthedocs.io/en/stable/handbook/writing-your-own-file-decoder.html
+        """
         with rawpy.imread(self.path) as raw:
              self.raw = raw.postprocess(**params)
 
@@ -71,7 +80,7 @@ class Image:
             code = pyzbar.decode(thresh)[0]
             message = code.data.decode("utf-8")
             parts = message.split(sep="_")
-            self.id = parts[1]
+            self.id = int(parts[1])
         except IndexError:        
             self.id = 999
         
@@ -80,11 +89,13 @@ class Series(Image):
         self.dirpath = directory
         self.image_list = image_list
         self.images = []
-        self.diffs = None
+
 
     def read_images(self, **params):
         if len(self.image_list) == 0:
             files = os.listdir(self.dirpath)
+            files = [i  for i in files if i.split(".")[1] == "RW2"]
+            print(files)
         else:
             files = self.image_list
 
@@ -99,22 +110,89 @@ class Series(Image):
 
         self.images = images
 
-    def difference(self):
+    def difference(self, lag, smooth):
         """
         calculates the RGB differences between every two consecutive images.
         The last difference is the diff between last and first image
         """
         # changing the dtype from uint to int is very important, because
         # uint does not allow values smaller 0
-        ims = np.array([i.img for i in self.images], dtype=int)
-        diffs = np.diff(np.concatenate((ims,ims[0:,:,:,:]), axis=0), axis=0)
-        
-        for i, d in zip(self.images, np.arange(len(self.images))):
-            i.diff = diffs[d]
+        imlist = self.images.copy()
+        # imlist.append(self.images[0])
+        kernel = np.ones((smooth,smooth),np.float32)/smooth**2
+        ims = np.array([cv2.filter2D(i.img,-1,kernel) for i in imlist], dtype=int)
+        # ims = np.array([i.img for i in imlist], dtype=int)
+        diff = np.diff(ims, n=lag, axis=0)
+        diffs = np.where(diff >= 0, diff, 0)
+
+        return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
 
     def save(self, what):
         for i in self.images:
             i.save(what)
+
+    def save_list(self, imlist, name='image', file_ext='tiff'):
+        for i in range(len(imlist)):
+            imageio.imwrite(self.dirpath+name+"_"+str(i)+"."+file_ext, imlist[i])
+
+
+    def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
+        """
+        motion analysis algorithm. First computes the difference between images.
+        
+        lag:            is the step between images which are differenced. Default is 1.
+                        the higher the step the more pronounced the images should be. 
+                        but consequently fewer images are available
+        thresh_binary:  threshold to create a binary image from a gray image
+        thresh_size:    after tag boxes have been drawn, choose select boxes
+                        with maximum extension (x or y) of 'thresh_size'
+        """
+        diffs = self.difference(lag, smooth)
+        contours = []
+        tagged_ims = []
+
+        for i in range(len(diffs)):
+            orig = self.images[ lag + i ].img
+
+            gray = cv2.cvtColor(diffs[i], cv2.COLOR_BGR2GRAY)
+
+            #threshold the gray image to binarise it. Anything pixel that has
+            #value more than 3 we are converting to white
+            #(remember 0 is black and 255 is absolute white)
+            #the image is called binarised as any value less than 3 will be 0 and
+            # all values equal to and more than 3 will be 255
+            (T, thresh) = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
+
+            cnts = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = imutils.grab_contours(cnts)
+
+            cnts_select = []
+            for c in cnts:
+                # fit a bounding box to the contour
+                if max(c.shape) > thresh_size:            
+                    cnts_select.append(c)
+               
+            imtag = self.tag_image(orig, cnts_select, mar)
+
+            contours.append(cnts_select)
+            tagged_ims.append(imtag)
+
+
+        return diffs, contours, tagged_ims
+
+    @staticmethod
+    def tag_image(image, contours, mar=0):
+        """
+        mar:            margin to be drawn around the tag boxes
+        """ 
+        img = image.copy()
+        for c in contours:
+            # fit a bounding box to the contour
+            (x, y, w, h) = cv2.boundingRect(c)
+            cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
+            
+        return img
+
 
 
 # a = Image(path = "../../data/pics/20201112/Serienbilder013/P1000086.RW2")
