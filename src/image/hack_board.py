@@ -240,3 +240,27 @@ maxdif2 = diff2.max(axis=2)
 
 plt.plot(maxdif[:,:,0].transpose())
 plt.plot(maxdif2[:,:,0].transpose())
+
+
+from img_proc import Series, Image, Session
+from rawpy import rawpy
+from matplotlib import pyplot as plt
+import imageio
+import numpy as np
+import cv2
+import os
+import hashlib
+import pickle
+path = "../../data/pics/20201217/"
+
+
+# i=Image(path+"PNAN2022.RW2")
+
+s = Session(path)
+s.read_images(stop_after=10)
+
+with open(path+"/999/series.pkl","rb") as f:
+    s1 = pickle.load(f)
+
+s.map
+s1.map

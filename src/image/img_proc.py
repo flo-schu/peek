@@ -13,16 +13,18 @@ from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
 import imutils
+import pickle
+import hashlib
 
 class Image:
     def __init__(self, path):
         assert os.path.exists(path), print("path does not exist, working directory:", os.getcwd())
         self.path = path
         self.img = None
-        self.raw = None
         self.meta = None
         self.edited = None
         self.id = 0
+        self.hash = 0
 
 
     def read_raw(self, **params):
@@ -34,20 +36,21 @@ class Image:
         raw file.
         https://pillow.readthedocs.io/en/stable/handbook/writing-your-own-file-decoder.html
         """
-        with rawpy.imread(self.path) as raw:
-             self.raw = raw.postprocess(**params)
+        with rawpy.imread(self.path) as f:
+             raw = f.postprocess(**params)
 
-        self.img = self.raw
+        self.img = raw
+        self.hash = raw.sum()
 
     def save(self, what, file_ext="tiff", delete_old=False):
         what = getattr(self, what)
         imageio.imwrite(os.path.splitext(self.path)[0]+"."+file_ext, what)
         
-    def remove_original(self):
-        os.remove(self.path)
+    # def remove_original(self):
+    #     os.remove(self.path)
 
-    def restore_original(self):
-        self.img = self.raw
+    # def restore_original(self):
+    #     self.img = self.raw
 
     def crop_tb(self, reduce_top, reduce_bottom):
         self.img = self.img[reduce_top:reduce_bottom, :,:]
@@ -83,32 +86,29 @@ class Image:
             self.id = int(parts[1])
         except IndexError:        
             self.id = 999
-        
+
+
+
 class Series(Image):
     def __init__(self, directory="", image_list=[]):
         self.dirpath = directory
-        self.image_list = image_list
-        self.images = []
+        self.images = image_list
+        self.sub_series = []
+        self.map = {
+            "filename":[],
+            "qr":[],
+            "hash":[],
+        }
 
 
-    def read_images(self, **params):
-        if len(self.image_list) == 0:
-            files = os.listdir(self.dirpath)
-            files = [i  for i in files if i.split(".")[1] == "RW2"]
-            print(files)
-        else:
-            files = self.image_list
+    def update_images(self, new_ims):
+        changed = False
+        for im in new_ims:
+            if im.hash not in self.map['hash']:
+                self.images.append(im)
+                changed = True
 
-        images = []
-        for f in files:
-            i = Image(path=os.path.join(self.dirpath,f))
-            i.read_raw(**params)
-            print("processed file: {}".format(f))
-            i.read_qr_code()
-            print("read QR code: {}".format(i.id))
-            images.append(i)
-
-        self.images = images
+        return changed
 
     def difference(self, lag, smooth):
         """
@@ -126,6 +126,25 @@ class Series(Image):
         diffs = np.where(diff >= 0, diff, 0)
 
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
+
+    def read_images(self, **params):
+        if len(self.images) == 0:
+            files = os.listdir(self.dirpath)
+            files = [i  for i in files if i.split(".")[1] == "RW2"]
+            print(files)
+        else:
+            files = self.images
+
+        images = []
+        for f in files:
+            i = Image(path=os.path.join(self.dirpath,f))
+            i.read_raw(**params)
+            print("processed file: {}".format(f))
+            i.read_qr_code()
+            print("read QR code: {}".format(i.id))
+            images.append(i)
+
+        self.images = images 
 
     def save(self, what):
         for i in self.images:
@@ -193,16 +212,67 @@ class Series(Image):
             
         return img
 
+class Session:
+    def __init__(self, directory):
+        self.dirpath = directory
+        self.map = dict()
 
+    def read_images(self, stop_after=None, **params):
+        # remove subdirectories
+        files = [f.name for f in os.scandir(self.dirpath) if f.is_file()]
+        # remove files that are not "RW2"
+        files = [i  for i in files if i.split(".")[1] == "RW2"]            
+        print(files)
 
-# a = Image(path = "../../data/pics/20201112/Serienbilder013/P1000086.RW2")
-# a.read_raw()
-# a.save()
-# a.crop_tb(1000,4000)
-# a.crop_black_lr()
-# a.save('img')
+        if stop_after is None:
+            stop_after = len(files)
 
-# s = Series("../../data/pics/20201112/Serienbilder013/")
-# s.read_images()
-# s.difference()
-# s.save('diff')
+        print('processing a total of {} files. Stopping after {} files'.format(len(files), stop_after))
+
+        sub_slices = [0]
+        images = []
+
+        for j, f in zip(range(len(files)), files):
+            if j >= stop_after:
+                break
+
+            f_name = os.path.join(self.dirpath,f)
+            i = Image(path=f_name)
+            i.read_raw(**params)
+            i.read_qr_code()
+            
+            images.append(i)
+            self.map['filename'].append(f_name)
+            self.map['qr'].append(i.id)
+            self.map['hash'].append(i.hash)
+            
+            print("processed file: {}".format(f))
+            print("read QR code: {}".format(i.id))
+
+            if self.map['qr'][-1] != self.map['qr'][sub_slices[-1]]:
+                sub_slices.append(j)
+                
+                subids = self.map['qr'][sub_slices[-2]:sub_slices[-1]]
+                subims = images[sub_slices[-2]:sub_slices[-1]]
+                subpath = os.path.join(self.dirpath, '_'.join([str(s) for s in set(subids)]))
+                
+                if not os.path.exists(subpath):
+                    os.mkdir(subpath)
+
+                try:
+                    # open existing series pickle file if exisits                
+                    with open(os.path.join(subpath, "series.pkl"), "rb") as file:
+                        subse = pickle.load(file)
+                except FileNotFoundError:
+                    # otherwise create empty series
+                    subse = Series(subpath)
+
+                # add all images not exisiting in hash dictionary
+                changed = subse.update_images(subims)
+
+                # dump created or edited pickle file
+                if changed:
+                    with open(os.path.join(subpath, "series.pkl"), "wb") as file:
+                        pickle.dump(subse, file)
+
+                print("creating subseries for pictures with id: {} in {}".format(subids, subpath))

@@ -12,6 +12,10 @@ diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=
 # s.save_list([i.img for i in s.images], "ims")
 s.save_list(tagged_ims, "tagged_l2")
 
+
+
+
+
 # improvements for thursday
 # 1. take photos with timer and avoid any movement (light, erschütterungen)
 # 2. longer time between consecutive fotos should allow also for movement of culex
