@@ -15,6 +15,7 @@ import numpy as np
 import imutils
 import pickle
 import hashlib
+import shutil
 
 class Image:
     def __init__(self, path):
@@ -26,6 +27,13 @@ class Image:
         self.id = 0
         self.hash = 0
 
+    def copy(self, destination):
+        shutil.copyfile(self.path, destination)
+        self.path = destination
+
+    def move(self, destination):
+        shutil.move(self.path, destination)
+        self.path = destination
 
     def read_raw(self, **params):
         """
@@ -93,22 +101,19 @@ class Series(Image):
     def __init__(self, directory="", image_list=[]):
         self.dirpath = directory
         self.images = image_list
-        self.sub_series = []
         self.map = {
             "filename":[],
             "qr":[],
             "hash":[],
         }
 
-
-    def update_images(self, new_ims):
-        changed = False
+    def update(self, new_ims):
         for im in new_ims:
             if im.hash not in self.map['hash']:
                 self.images.append(im)
-                changed = True
-
-        return changed
+                self.map["filename"].append(im.path)
+                self.map["qr"].append(im.id)
+                self.map["hash"].append(im.hash)
 
     def difference(self, lag, smooth):
         """
@@ -152,7 +157,7 @@ class Series(Image):
 
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
-            imageio.imwrite(self.dirpath+name+"_"+str(i)+"."+file_ext, imlist[i])
+            imageio.imwrite(os.path.join(self.dirpath,name+"_"+str(i)+"."+file_ext), imlist[i])
 
 
     def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
@@ -222,57 +227,57 @@ class Session:
         files = [f.name for f in os.scandir(self.dirpath) if f.is_file()]
         # remove files that are not "RW2"
         files = [i  for i in files if i.split(".")[1] == "RW2"]            
-        print(files)
 
         if stop_after is None:
             stop_after = len(files)
 
         print('processing a total of {} files. Stopping after {} files'.format(len(files), stop_after))
 
-        sub_slices = [0]
-        images = []
-
+        prev_id = -1
         for j, f in zip(range(len(files)), files):
+            # break after n images
             if j >= stop_after:
                 break
-
+            
+            # read image and qr code
             f_name = os.path.join(self.dirpath,f)
             i = Image(path=f_name)
             i.read_raw(**params)
             i.read_qr_code()
-            
-            images.append(i)
-            self.map['filename'].append(f_name)
-            self.map['qr'].append(i.id)
-            self.map['hash'].append(i.hash)
-            
+
             print("processed file: {}".format(f))
             print("read QR code: {}".format(i.id))
 
-            if self.map['qr'][-1] != self.map['qr'][sub_slices[-1]]:
-                sub_slices.append(j)
-                
-                subids = self.map['qr'][sub_slices[-2]:sub_slices[-1]]
-                subims = images[sub_slices[-2]:sub_slices[-1]]
-                subpath = os.path.join(self.dirpath, '_'.join([str(s) for s in set(subids)]))
-                
-                if not os.path.exists(subpath):
-                    os.mkdir(subpath)
+            # create dictionary for Series and copy files (also updates image path)
+            subpath = os.path.join(self.dirpath, str(i.id))
+            if not os.path.exists(subpath):
+                os.mkdir(subpath)
 
+            i.move(os.path.join(subpath, f))
+
+            # open existing series pickle file if exisits, otherwise create empty series
+            if prev_id != i.id:
+                if prev_id != -1:
+                    del subse
                 try:
-                    # open existing series pickle file if exisits                
                     with open(os.path.join(subpath, "series.pkl"), "rb") as file:
                         subse = pickle.load(file)
                 except FileNotFoundError:
-                    # otherwise create empty series
-                    subse = Series(subpath)
+                    print("creating Series for pictures with id: {} in {}".format(i.id, subpath))
+                    subse = Series(directory=subpath, image_list=[])
 
-                # add all images not exisiting in hash dictionary
-                changed = subse.update_images(subims)
+            # add all images not exisiting in hash dictionary
+            print(subse.images)
 
-                # dump created or edited pickle file
-                if changed:
-                    with open(os.path.join(subpath, "series.pkl"), "wb") as file:
-                        pickle.dump(subse, file)
+            # update map
+            self.map.update({str(i.id):subse.map})
 
-                print("creating subseries for pictures with id: {} in {}".format(subids, subpath))
+            # dump created or edited pickle file
+            with open(os.path.join(subpath, "series.pkl"), "wb") as file:
+                pickle.dump(subse, file)
+
+            prev_id = i.id
+
+        # store session
+        with open(os.path.join(self.dirpath, "session.pkl"), "wb") as file:
+            pickle.dump(self, file)

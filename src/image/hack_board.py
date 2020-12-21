@@ -257,10 +257,10 @@ path = "../../data/pics/20201217/"
 # i=Image(path+"PNAN2022.RW2")
 
 s = Session(path)
-s.read_images(stop_after=10)
+s.read_images()
 
-with open(path+"/999/series.pkl","rb") as f:
+with open(path+"10/series.pkl","rb") as f:
     s1 = pickle.load(f)
 
-s.map
-s1.map
+diffs, contours, tagged_ims = s1.motion_analysis(lag=2, smooth=12, thresh_binary=15, thresh_size=5)
+s1.save_list(tagged_ims, "tagged_l2")
