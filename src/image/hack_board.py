@@ -264,3 +264,88 @@ with open(path+"10/series.pkl","rb") as f:
 
 diffs, contours, tagged_ims = s1.motion_analysis(lag=2, smooth=12, thresh_binary=15, thresh_size=5)
 s1.save_list(tagged_ims, "tagged_l2")
+
+
+
+from img_proc import Series, Image, Session
+import pickle
+import numpy as np
+
+import time
+
+path = "../../data/pics/20201217/"
+with open(path+"42/series.pkl","rb") as f:
+    s1 = pickle.load(f)
+
+diffs, contours, tagged_ims = s1.motion_analysis(lag=1, smooth=5, thresh_binary=15, thresh_size=5)
+
+itags = s1.images[1].tags
+
+with open(path+"42/tags_PNAN2164.pkl","wb") as f:
+    pickle.dump(a.tags, f)
+
+a.image.series_id = 1
+
+a = Annotations(s1, 1)
+
+a.read_tags()
+a.show_tag_number(0)
+
+
+
+a.show_next_tag()
+a.show_previous_tag()
+a.reset_lims()
+a.show_tagged()
+a.show_original()
+a.show_tag(a.image.tags['slice_orig'][60], a.image.tags['slice_comp'][60])
+a.ctag['slice_orig']
+ctag=a.image.tags['contours'][60]
+ctag
+
+a.axes[1].annotate(a.tags.iloc[0]["label"], (0.95,0.95), xycoords="axes fraction",
+bbox={'color':'white','ec':'black', 'lw':'2', 'clip_on':True})
+a.axes[1].cla()
+
+mpl.rcParams
+
+ax.set_xlim(im._extent[0:2])
+ax.set_ylim(im._extent[2:4])
+
+n=90
+x, y = itags["contours"][n][:,0].T
+plt.style.use('default')
+
+plt.imshow(itags["slice_orig"][n])
+plt.plot(x-x.min()+10,y-y.min()+10); plt.axis("equal")
+plt.ylim()
+plt.imshow(itags["slice_comp"][80])
+
+ln, = ax.plot(range(5))
+
+%matplotlib
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def press(event):
+    print('press', event.key)
+    sys.stdout.flush()
+    if event.key == 'x':
+        visible = xl.get_visible()
+        xl.set_visible(not visible)
+        fig.canvas.draw()
+
+# Fixing random state for reproducibility
+np.random.seed(19680801)
+
+
+fig, ax = plt.subplots()
+
+fig.canvas.mpl_connect('key_press_event', press)
+
+ax.plot(np.random.rand(12), np.random.rand(12), 'go')
+xl = ax.set_xlabel('easy come, easy go')
+ax.set_title('Press a key')
+plt.show()

@@ -16,6 +16,10 @@ import imutils
 import pickle
 import hashlib
 import shutil
+import pandas as pd
+import matplotlib as mpl
+from matplotlib.patches import Rectangle
+import sys
 
 class Image:
     def __init__(self, path):
@@ -25,7 +29,9 @@ class Image:
         self.meta = None
         self.edited = None
         self.id = 0
+        self.series_id = 999
         self.hash = 0
+        self.tags = {}
 
     def copy(self, destination):
         shutil.copyfile(self.path, destination)
@@ -53,12 +59,15 @@ class Image:
     def save(self, what, file_ext="tiff", delete_old=False):
         what = getattr(self, what)
         imageio.imwrite(os.path.splitext(self.path)[0]+"."+file_ext, what)
-        
-    # def remove_original(self):
-    #     os.remove(self.path)
-
-    # def restore_original(self):
-    #     self.img = self.raw
+    
+    def save_pkl(self, attr):
+        obj = getattr(self, attr)
+        direc = os.path.dirname(self.path)
+        fname = os.path.basename(self.path).split(".")[0]
+        path = os.path.join(direc, attr + "_" + fname + ".pkl")
+        print(path)
+        with open(path, "wb") as file:
+            pickle.dump(obj, file)
 
     def crop_tb(self, reduce_top, reduce_bottom):
         self.img = self.img[reduce_top:reduce_bottom, :,:]
@@ -95,7 +104,47 @@ class Image:
         except IndexError:        
             self.id = 999
 
+    def read_something_from_file(self, something):
+        direc = os.path.dirname(self.path)
+        fname = os.path.basename(self.path).split(".")[0]
+        path = os.path.join(direc, something + "_" + fname + ".pkl")
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                self.tags = pickle.load(f)
+        else:
+            print("error", path)
 
+
+    def annotate(self):
+        pass
+
+    @staticmethod
+    def cut_slices(image, contours, mar=0):
+        """
+        mar:            margin to be drawn around the tag boxes
+        """
+        img = image.copy()
+        slices = []
+
+        for c in contours:
+            (x, y, w, h) = cv2.boundingRect(c)
+            slc = img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
+            slices.append(slc)
+        
+        return slices
+
+    @staticmethod
+    def tag_image(image, contours, mar=0):
+        """
+        mar:            margin to be drawn around the tag boxes
+        """ 
+        img = image.copy()
+        for c in contours:
+            # fit a bounding box to the contour
+            (x, y, w, h) = cv2.boundingRect(c)
+            cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
+            
+        return img
 
 class Series(Image):
     def __init__(self, directory="", image_list=[]):
@@ -176,7 +225,10 @@ class Series(Image):
         tagged_ims = []
 
         for i in range(len(diffs)):
-            orig = self.images[ lag + i ].img
+
+            orig_obj = self.images[ lag + i ]
+            orig_img = orig_obj.img
+            comp_img = self.images[i].img
 
             gray = cv2.cvtColor(diffs[i], cv2.COLOR_BGR2GRAY)
 
@@ -195,8 +247,18 @@ class Series(Image):
                 # fit a bounding box to the contour
                 if max(c.shape) > thresh_size:            
                     cnts_select.append(c)
-               
-            imtag = self.tag_image(orig, cnts_select, mar)
+            
+            imtag = self.tag_image(orig_img, cnts_select, mar)
+            imslc1 = self.cut_slices(orig_img, cnts_select, mar)
+            imslc2 = self.cut_slices(comp_img, cnts_select, mar)
+
+            tags = {
+                'contours': cnts_select,
+                'slice_orig': imslc1,
+                'slice_comp': imslc2,
+            }
+
+            orig_obj.tags = tags
 
             contours.append(cnts_select)
             tagged_ims.append(imtag)
@@ -204,18 +266,6 @@ class Series(Image):
 
         return diffs, contours, tagged_ims
 
-    @staticmethod
-    def tag_image(image, contours, mar=0):
-        """
-        mar:            margin to be drawn around the tag boxes
-        """ 
-        img = image.copy()
-        for c in contours:
-            # fit a bounding box to the contour
-            (x, y, w, h) = cv2.boundingRect(c)
-            cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
-            
-        return img
 
     def dump_pkl(self, fname="series"):
         # dump created or edited pickle file
@@ -285,3 +335,114 @@ class Session:
         # store session
         with open(os.path.join(self.dirpath, "session.pkl"), "wb") as file:
             pickle.dump(self, file)
+
+
+# interactive figure
+class Annotations(): 
+    def __init__(self, image):
+        self.image = image
+        self.origx = (0, image.img.shape[1])
+        self.origy = (image.img.shape[0],0)
+        self.xlim = (0,0)
+        self.ylim = (0,0)
+        self.ctag = None
+        self.keymap = {
+            'd':"Daphnia Magna",
+            'c':"Culex Pipiens, larva",
+            'p':"Culex Pipiens, pupa",
+            'u':"unidentified",
+        }
+
+        plt.ion()
+
+        # create figure
+        self.gs = plt.GridSpec(nrows=2, ncols=2)
+        self.figure = plt.figure()
+        self.figure.canvas.mpl_connect('key_press_event', self.press) 
+        mpl.rcParams['keymap.back']:['left'] 
+        mpl.rcParams['keymap.pan']:[] 
+        mpl.rcParams['keymap.pan']:[] 
+        self.axes = {}
+
+        self.axes[0] = plt.subplot(self.gs[0:2, 0])
+        self.axes[1] = plt.subplot(self.gs[0, 1])
+        self.axes[2] = plt.subplot(self.gs[1, 1])
+
+        self.show_original()
+
+
+    def press(self, event):
+        print('press', event.key)
+        sys.stdout.flush()
+        if event.key in self.keymap.keys():
+            self.ctag.label = self.keymap[event.key]
+            self.tags.iloc[self.i] = self.ctag
+            self.show_label()
+
+        if event.key == "n":
+            self.reset_lims()
+            self.show_next_tag()
+
+        if event.key == "b":
+            self.reset_lims()
+            self.show_previous_tag()
+
+        self.figure.canvas.draw()
+        self.image.save_pkl('tags')
+
+    def label(self):
+        pass
+
+    def read_tags(self):
+        self.tags = pd.DataFrame(self.image.tags)
+        try:
+            len(self.tags.label)
+        except AttributeError:
+            self.tags['label'] = "?"
+
+    def reset_lims(self):
+        self.axes[0].set_xlim(self.origx)
+        self.axes[0].set_ylim(self.origy)
+
+    def show_original(self):
+        im = self.axes[0].imshow(self.image.img)
+
+    def show_tagged(self):
+        tagged = self.image.tag_image(self.image.img, self.tags['contours'])
+        im = self.axes[0].imshow(tagged)
+
+    def show_label(self):
+        self.axes[1].annotate(self.ctag["label"], (0.05,0.05), xycoords="axes fraction",
+                        bbox={'color':'white','ec':'black', 'lw':2})
+
+    def show_tag(self, tag):
+        self.axes[1].cla()
+        im1 = self.axes[1].imshow(tag["slice_orig"])
+        self.axes[2].cla()
+        im2 = self.axes[2].imshow(tag["slice_comp"])
+        self.show_label()
+
+
+    def draw_tag_box(self):
+        x,y,w,h = cv2.boundingRect(self.ctag['contours'])
+        rect = Rectangle((x,y),w,h, linewidth=5, fill=False, color="red")
+        # [ptch.remove() for ptch in reversed(self.axes[0].patches)]
+        for p in reversed(self.axes[0].patches):
+            p.set_color('green')
+            p.set_linewidth(1)
+        self.axes[0].add_patch(rect)
+
+    def show_tag_number(self, i):
+        self.i = i
+        self.ctag = self.tags.iloc[i]
+        self.draw_tag_box()
+        self.show_tag(self.ctag)
+
+    def show_next_tag(self):
+        self.show_tag_number(self.i + 1)
+
+    def show_previous_tag(self):
+        self.show_tag_number(self.i - 1)
+
+    def save_progress(self):
+        self.image.save_pkl('tags')
