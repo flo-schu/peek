@@ -217,6 +217,12 @@ class Series(Image):
             
         return img
 
+    def dump_pkl(self, fname="series"):
+        # dump created or edited pickle file
+        with open(os.path.join(self.dirpath, fname + ".pkl"), "wb") as file:
+            pickle.dump(self, file)
+
+
 class Session:
     def __init__(self, directory):
         self.dirpath = directory
@@ -267,14 +273,12 @@ class Session:
                     subse = Series(directory=subpath, image_list=[])
 
             # add all images not exisiting in hash dictionary
-            print(subse.images)
-
+            subse.update([i])
             # update map
             self.map.update({str(i.id):subse.map})
 
             # dump created or edited pickle file
-            with open(os.path.join(subpath, "series.pkl"), "wb") as file:
-                pickle.dump(subse, file)
+            subse.dump()
 
             prev_id = i.id
 
