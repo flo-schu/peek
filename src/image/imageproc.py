@@ -237,9 +237,8 @@ class Series(Image):
             #(remember 0 is black and 255 is absolute white)
             #the image is called binarised as any value less than 3 will be 0 and
             # all values equal to and more than 3 will be 255
-            (T, thresh) = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
-
-            cnts = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            thresh = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
+            cnts = cv2.findContours(thresh[1], cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             cnts = imutils.grab_contours(cnts)
 
             cnts_select = []
@@ -405,11 +404,11 @@ class Annotations():
         self.axes[0].set_ylim(self.origy)
 
     def show_original(self):
-        im = self.axes[0].imshow(self.image.img)
+        self.axes[0].imshow(self.image.img)
 
     def show_tagged(self):
         tagged = self.image.tag_image(self.image.img, self.tags['contours'])
-        im = self.axes[0].imshow(tagged)
+        self.axes[0].imshow(tagged)
 
     def show_label(self):
         self.axes[1].annotate(self.ctag["label"], (0.05,0.05), xycoords="axes fraction",
@@ -417,9 +416,9 @@ class Annotations():
 
     def show_tag(self, tag):
         self.axes[1].cla()
-        im1 = self.axes[1].imshow(tag["slice_orig"])
+        self.axes[1].imshow(tag["slice_orig"])
         self.axes[2].cla()
-        im2 = self.axes[2].imshow(tag["slice_comp"])
+        self.axes[2].imshow(tag["slice_comp"])
         self.show_label()
 
 
