@@ -1,6 +1,8 @@
 # script to a QR code which is attached to the nanocosms 
 # so their foto can be automatically matched to an ID 
 
+#TODO: put workhorse inside class in image.prep
+
 import numpy as np
 import qrcode
 import os
@@ -71,3 +73,4 @@ for i in np.arange(nrows):
             doc[ymin:ymax, xmin:xmax, :] = ims[index]
     
 cv2.imwrite(dirname+"/Codes.png",doc)
+

@@ -5,9 +5,9 @@
 from IPython import get_ipython
 from matplotlib import pyplot as plt
 import pickle
-from improc import Annotations
+from image.analysis import Annotations
 
-path = "../../data/pics/20201217/"
+path = "../data/pics/20201217/"
 nano = 42
 
 with open(path+str(nano)+"/series.pkl","rb") as f:

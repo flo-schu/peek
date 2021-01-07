@@ -1,4 +1,4 @@
-from img_proc import Series, Image
+from image.process import Series, Image
 from rawpy import rawpy
 path = "../../data/pics/20201203/Serienbilder043/"
 
@@ -39,7 +39,7 @@ i = s.images[0]
 a = s.images[2]
 
 #edge detector
-from img_proc import Series, Image
+from image.process import Series, Image
 import cv2
 from matplotlib import pyplot as plt
 path = "../../data/pics/20201203/Serienbilder043/"
@@ -59,7 +59,7 @@ cv2.imwrite(path+"1166_edge.tiff", bitwise_or)
 
 
 # motion
-from img_proc import Series, Image
+from image.process import Series, Image
 import cv2
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
@@ -133,7 +133,7 @@ s.difference()
 
 # QR code
 
-from img_proc import Series, Image
+from image.process import Series, Image
 import imageio
 import cv2
 from pyzbar import pyzbar
@@ -201,7 +201,7 @@ cv2.QRCodeDetector()
 
 # evaluate accuracy, smooth
 
-from img_proc import Series, Image
+from image.process import Series, Image
 from rawpy import rawpy
 from matplotlib import pyplot as plt
 import imageio
@@ -242,7 +242,7 @@ plt.plot(maxdif[:,:,0].transpose())
 plt.plot(maxdif2[:,:,0].transpose())
 
 
-from img_proc import Series, Image, Session
+from image.process import Series, Image, Session
 from rawpy import rawpy
 from matplotlib import pyplot as plt
 import imageio
@@ -267,7 +267,7 @@ s1.save_list(tagged_ims, "tagged_l2")
 
 
 
-from img_proc import Series, Image, Session
+from image.process import Series, Image, Session
 import pickle
 import numpy as np
 
