@@ -3,7 +3,7 @@
 
 # ======= read images and qr code and store in subfolders =====================
 # takes long time
-from imageproc import Series, Image, Session, Annotations
+from imrpoc import Series, Image, Session, Annotations
 import pickle
 path = "../../data/pics/20201217/"
 

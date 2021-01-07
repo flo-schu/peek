@@ -5,7 +5,7 @@
 from IPython import get_ipython
 from matplotlib import pyplot as plt
 import pickle
-from imageproc import Annotations
+from improc import Annotations
 
 path = "../../data/pics/20201217/"
 nano = 42
