@@ -13,20 +13,18 @@ from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
 import imutils
-import pickle
+import json
 import shutil
 
 class Image:
-    def __init__(self, path):
-        assert os.path.exists(path), print("path does not exist, working directory:", os.getcwd())
+    def __init__(self, path=""):
         self.path = path
         self.img = None
-        self.meta = None
-        self.edited = None
+        self.time = 0
         self.id = 0
-        self.series_id = 999
-        self.hash = 0
+        self.hash = str(0)
         self.tags = {}
+
 
     def copy(self, destination):
         shutil.copyfile(self.path, destination)
@@ -35,6 +33,12 @@ class Image:
     def move(self, destination):
         shutil.move(self.path, destination)
         self.path = destination
+
+    def change_path(self, destination):
+        self.path = destination
+
+    def delete(self):
+        os.remove(self.path)
 
     def read_raw(self, **params):
         """
@@ -48,21 +52,38 @@ class Image:
         with rawpy.imread(self.path) as f:
              raw = f.postprocess(**params)
 
+        self.time = os.stat(self.path).st_mtime
         self.img = raw
-        self.hash = raw.sum()
+        self.hash = str(raw.sum())
 
-    def save(self, what, file_ext="tiff", delete_old=False):
-        what = getattr(self, what)
-        imageio.imwrite(os.path.splitext(self.path)[0]+"."+file_ext, what)
+    def change_file_ext(self, new_ext=""):
+        fname, old_ext = os.path.splitext(self.path)
+        if new_ext == "":
+            new_ext = old_ext
+
+        self.path = fname+new_ext
+        return self.path
+
+    def save(self, attr="img", file_ext="", remove_from_instance=False):
+        if remove_from_instance:
+            obj = self.__dict__.pop(attr)
+        else:
+            obj = getattr(self, attr)
+
+        imageio.imwrite(self.change_file_ext(file_ext), obj)
     
-    def save_pkl(self, attr):
-        obj = getattr(self, attr)
-        direc = os.path.dirname(self.path)
-        fname = os.path.basename(self.path).split(".")[0]
-        path = os.path.join(direc, attr + "_" + fname + ".pkl")
-        print(path)
-        with open(path, "wb") as file:
-            pickle.dump(obj, file)
+    def read(self, attr="img", file_ext=""):
+        value = imageio.imread(self.change_file_ext(file_ext))
+        setattr(self, attr, value)
+
+    # def save_pkl(self, attr):
+    #     obj = getattr(self, attr)
+    #     direc = os.path.dirname(self.path)
+    #     fname = os.path.basename(self.path).split(".")[0]
+    #     path = os.path.join(direc, attr + "_" + fname + ".pkl")
+    #     print(path)
+    #     with open(path, "wb") as file:
+    #         pickle.dump(obj, file)
 
     def crop_tb(self, reduce_top, reduce_bottom):
         self.img = self.img[reduce_top:reduce_bottom, :,:]
@@ -99,15 +120,15 @@ class Image:
         except IndexError:        
             self.id = 999
 
-    def read_something_from_file(self, something):
-        direc = os.path.dirname(self.path)
-        fname = os.path.basename(self.path).split(".")[0]
-        path = os.path.join(direc, something + "_" + fname + ".pkl")
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                self.tags = pickle.load(f)
-        else:
-            print("error", path)
+    # def read_something_from_file(self, something):
+    #     direc = os.path.dirname(self.path)
+    #     fname = os.path.basename(self.path).split(".")[0]
+    #     path = os.path.join(direc, something + "_" + fname + ".pkl")
+    #     if os.path.exists(path):
+    #         with open(path, "rb") as f:
+    #             self.tags = pickle.load(f)
+    #     else:
+    #         print("error", path)
 
 
     def annotate(self):
@@ -142,22 +163,43 @@ class Image:
         return img
 
 class Series(Image):
-    def __init__(self, directory="", image_list=[]):
+    def __init__(self, directory="", image_list=[], struct_name="series_struct"):
         self.dirpath = directory
-        self.images = image_list
-        self.map = {
-            "filename":[],
-            "qr":[],
-            "hash":[],
-        }
+        self.struct = self.load_struct(struct_name)
+        self.images = self.load_images(image_list)
 
-    def update(self, new_ims):
-        for im in new_ims:
-            if im.hash not in self.map['hash']:
-                self.images.append(im)
-                self.map["filename"].append(im.path)
-                self.map["qr"].append(im.id)
-                self.map["hash"].append(im.hash)
+    def load_struct(self, struct_name):
+        try:
+            with open(os.path.join(self.dirpath, struct_name+".json"), "r") as file:
+                m = json.load(file)
+        except FileNotFoundError:
+            m = {}
+        
+        return m
+
+    def read_files_from_struct(self):
+        images = []
+        for i, struc in self.struct.items():
+            img = Image()
+            for item in struc.items():
+                setattr(img, item[0], item[1])
+            img.read(attr="img")  
+            images.append(img)
+
+        return images   
+
+    def load_images(self, image_list):
+        # import passed list
+        if len(image_list) > 0:
+            return image_list
+        
+        # import files from struct if exist, otherwise
+        # return empty list
+        if len(self.struct) == 0:
+            return image_list
+        
+        return self.read_files_from_struct()
+
 
     def difference(self, lag, smooth):
         """
@@ -177,6 +219,7 @@ class Series(Image):
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
 
     def read_images(self, **params):
+        # if len()
         if len(self.images) == 0:
             files = os.listdir(self.dirpath)
             files = [i  for i in files if i.split(".")[1] == "RW2"]
@@ -195,9 +238,9 @@ class Series(Image):
 
         self.images = images 
 
-    def save(self, what):
+    def save(self, attr):
         for i in self.images:
-            i.save(what)
+            i.save(attr)
 
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
@@ -261,16 +304,16 @@ class Series(Image):
         return diffs, contours, tagged_ims
 
 
-    def dump_pkl(self, fname="series"):
-        # dump created or edited pickle file
-        with open(os.path.join(self.dirpath, fname + ".pkl"), "wb") as file:
-            pickle.dump(self, file)
+    def dump(self, fname="series"):
+        # dump struct
+        with open(os.path.join(self.dirpath, fname + "_struct" + ".json"), "w+") as file:
+            json.dump(self.struct, file)
 
 
 class Session:
     def __init__(self, directory):
         self.dirpath = directory
-        self.map = dict()
+        self.struct = dict()
 
     def read_images(self, stop_after=None, **params):
         # remove subdirectories
@@ -303,29 +346,31 @@ class Session:
             if not os.path.exists(subpath):
                 os.mkdir(subpath)
 
-            i.move(os.path.join(subpath, f))
+            # DONE: convert to tiff and delete old
+            i.delete() # removing with old path
+            i.change_path(os.path.join(subpath, f)) # change path
+            i.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
 
-            # open existing series pickle file if exisits, otherwise create empty series
+            # create empty series instance
             if prev_id != i.id:
                 if prev_id != -1:
                     del subse
-                try:
-                    with open(os.path.join(subpath, "series.pkl"), "rb") as file:
-                        subse = pickle.load(file)
-                except FileNotFoundError:
                     print("creating Series for pictures with id: {} in {}".format(i.id, subpath))
-                    subse = Series(directory=subpath, image_list=[])
+                
+                # try opening series struct, if it does not exist create empty struct
+                subse = Series(directory=subpath, image_list=[])
 
-            # add all images not exisiting in hash dictionary
-            subse.update([i])
-            # update map
-            self.map.update({str(i.id):subse.map})
 
-            # dump created or edited pickle file
+            # update subseries_struct
+            subse.struct.update({str(len(subse.struct)):i.__dict__})
+            # update struct
+            self.struct.update({str(i.id):subse.struct})
+
+            # dump created struct file
             subse.dump()
 
             prev_id = i.id
 
         # store session
-        with open(os.path.join(self.dirpath, "session.pkl"), "wb") as file:
-            pickle.dump(self, file)
+        with open(os.path.join(self.dirpath, "session.json"), "w+") as file:
+            json.dump(self.struct, file)

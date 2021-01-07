@@ -4,14 +4,15 @@
 # 1. LOAD SERIES OBJECT FROM PICKLE (ONLY after images have been preprocessed)
 from IPython import get_ipython
 from matplotlib import pyplot as plt
-import pickle
+from image.process import Series
 from image.analysis import Annotations
 
 path = "../data/pics/20201217/"
-nano = 42
+nano = 999
 
-with open(path+str(nano)+"/series.pkl","rb") as f:
-    s = pickle.load(f)
+s = Series(path+str(nano))
+s.struct
+s.images[0].__dict__.pop('img')
 
 diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 # s.save_list(tagged_ims, "tagged")

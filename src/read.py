@@ -1,16 +1,13 @@
-# TODO: Split file into scripts which can be executed in any shell
-
-
 # ======= read images and qr code and store in subfolders =====================
 # takes long time
 from image.process import Session
 import pickle
-path = "../../data/pics/20201217/"
+path = "../data/pics/20201217/"
 
-ses = Session(path)
-ses.read_images()
-
+s = Session(path)
+s.read_images(stop_after=15)
 
 # improvements:
 # + TODO: control QR codes
 # + TODO: fix QR codes that could not be read
+
