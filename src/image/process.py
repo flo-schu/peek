@@ -12,9 +12,11 @@ import cv2
 from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import imutils
 import json
 import shutil
+import datetime as dt
 
 class Image:
     def __init__(self, path=""):
@@ -25,6 +27,11 @@ class Image:
         self.hash = str(0)
         self.tags = {}
 
+    def create_dir(self, subdir):
+        path = os.path.join(os.path.dirname(self.path), subdir,"")
+        if not os.path.exists(path):
+            os.mkdir(path)
+        return path
 
     def copy(self, destination):
         shutil.copyfile(self.path, destination)
@@ -52,9 +59,20 @@ class Image:
         with rawpy.imread(self.path) as f:
              raw = f.postprocess(**params)
 
-        self.time = os.stat(self.path).st_mtime
+        ts = dt.datetime.fromtimestamp(os.path.getmtime(self.path))
+        self.date = ts.strftime('%Y%m%d')
+        self.time = ts.strftime('%H%M%S')
         self.img = raw
         self.hash = str(raw.sum())
+
+    def read_processed(self, struct):
+        for item in struct.items():
+            setattr(self, item[0], item[1])
+        self.read(attr="img")  
+
+    def read(self, attr="img", file_ext=""):
+        value = imageio.imread(self.change_file_ext(file_ext))
+        setattr(self, attr, value)
 
     def change_file_ext(self, new_ext=""):
         fname, old_ext = os.path.splitext(self.path)
@@ -72,18 +90,10 @@ class Image:
 
         imageio.imwrite(self.change_file_ext(file_ext), obj)
     
-    def read(self, attr="img", file_ext=""):
-        value = imageio.imread(self.change_file_ext(file_ext))
-        setattr(self, attr, value)
-
-    # def save_pkl(self, attr):
-    #     obj = getattr(self, attr)
-    #     direc = os.path.dirname(self.path)
-    #     fname = os.path.basename(self.path).split(".")[0]
-    #     path = os.path.join(direc, attr + "_" + fname + ".pkl")
-    #     print(path)
-    #     with open(path, "wb") as file:
-    #         pickle.dump(obj, file)
+    def dump_struct(self, fname, struct):
+        # dump struct
+        with open(os.path.join(os.path.dirname(self.path), fname + "_struct" + ".json"), "w+") as file:
+            json.dump(struct, file)
 
     def crop_tb(self, reduce_top, reduce_bottom):
         self.img = self.img[reduce_top:reduce_bottom, :,:]
@@ -120,19 +130,8 @@ class Image:
         except IndexError:        
             self.id = 999
 
-    # def read_something_from_file(self, something):
-    #     direc = os.path.dirname(self.path)
-    #     fname = os.path.basename(self.path).split(".")[0]
-    #     path = os.path.join(direc, something + "_" + fname + ".pkl")
-    #     if os.path.exists(path):
-    #         with open(path, "rb") as f:
-    #             self.tags = pickle.load(f)
-    #     else:
-    #         print("error", path)
-
-
-    def annotate(self):
-        pass
+    def read_tags(self):
+        self.tags = pd.csv
 
     @staticmethod
     def cut_slices(image, contours, mar=0):
@@ -164,34 +163,79 @@ class Image:
 
 class Series(Image):
     def __init__(self, directory="", image_list=[], struct_name="series_struct"):
-        self.dirpath = directory
-        self.struct = self.load_struct(struct_name)
-        self.images = self.load_images(image_list)
+        self.path = directory
+        self.id = os.path.basename(self.path)
+        self.struct = self.browse_subdirs_for_files("tiff")
+        self.images = image_list
 
     def load_struct(self, struct_name):
         try:
-            with open(os.path.join(self.dirpath, struct_name+".json"), "r") as file:
-                m = json.load(file)
+            with open(os.path.join(self.path, struct_name+".json"), "r") as file:
+                struct = json.load(file)
         except FileNotFoundError:
-            m = {}
+            struc = {}
         
-        return m
+        return struct
+
+    def process_image(self, file_name, **params):
+        path = os.path.join(self.path,file_name)
+        i = Image(path=path)
+        i.read_raw(**params)
+        i.read_qr_code()
+        i.delete() # removing with old path
+
+        # create directory for Image and copy files (also updates image path)
+        # delete old, save new and save structure of image
+        series_dir = i.create_dir(str(i.id))
+        image_dir = i.create_dir(os.path.join(str(i.id), i.time))
+        i.change_path(os.path.join(image_dir, file_name)) # change path
+
+        i.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
+        i.dump_struct(file_name.split(".")[0], i.__dict__)
+
+        return i, series_dir, image_dir
+
+    def find_subdirs(self):
+        # remove subdirectories
+        return [f.name for f in os.scandir(self.path) if not f.is_file()]
+
+    def browse_subdirs_for_files(self, file_type):
+        dirs = self.find_subdirs()
+        struct = {}
+        for i, d in enumerate(dirs):
+            f = self.find_files(subdir=d, file_type=file_type)
+            assert len(f) == 1, print(f)
+            path = os.path.join(self.path, d, f[0])
+            struct.update({str(i):path})
+        return struct
+
+        
+
+
+    def find_files(self, subdir="", file_type=""):
+        # remove subdirectories
+        basedir = os.path.join(self.path, subdir)
+        files = [f.name for f in os.scandir(basedir) if f.is_file()]
+        if file_type != "":
+            # remove files that are not of type e.g. "RW2" or "tiff", etc.
+            files = [i  for i in files if i.split(".")[1] == file_type]   
+        
+        return files
 
     def read_files_from_struct(self):
         images = []
-        for i, struc in self.struct.items():
+        for i, struct in self.struct.items():
             img = Image()
-            for item in struc.items():
-                setattr(img, item[0], item[1])
-            img.read(attr="img")  
+            img.read_processed(struct)
             images.append(img)
-
+           
         return images   
 
     def load_images(self, image_list):
         # import passed list
         if len(image_list) > 0:
             return image_list
+        
         
         # import files from struct if exist, otherwise
         # return empty list
@@ -221,7 +265,7 @@ class Series(Image):
     def read_images(self, **params):
         # if len()
         if len(self.images) == 0:
-            files = os.listdir(self.dirpath)
+            files = os.listdir(self.path)
             files = [i  for i in files if i.split(".")[1] == "RW2"]
             print(files)
         else:
@@ -229,7 +273,7 @@ class Series(Image):
 
         images = []
         for f in files:
-            i = Image(path=os.path.join(self.dirpath,f))
+            i = Image(path=os.path.join(self.path,f))
             i.read_raw(**params)
             print("processed file: {}".format(f))
             i.read_qr_code()
@@ -244,7 +288,7 @@ class Series(Image):
 
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
-            imageio.imwrite(os.path.join(self.dirpath,name+"_"+str(i)+"."+file_ext), imlist[i])
+            imageio.imwrite(os.path.join(self.path,name+"_"+str(i)+"."+file_ext), imlist[i])
 
 
     def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
@@ -304,22 +348,13 @@ class Series(Image):
         return diffs, contours, tagged_ims
 
 
-    def dump(self, fname="series"):
-        # dump struct
-        with open(os.path.join(self.dirpath, fname + "_struct" + ".json"), "w+") as file:
-            json.dump(self.struct, file)
-
-
-class Session:
+class Session(Series):
     def __init__(self, directory):
-        self.dirpath = directory
-        self.struct = dict()
+        self.path = directory
 
     def read_images(self, stop_after=None, **params):
-        # remove subdirectories
-        files = [f.name for f in os.scandir(self.dirpath) if f.is_file()]
-        # remove files that are not "RW2"
-        files = [i  for i in files if i.split(".")[1] == "RW2"]            
+        
+        files = self.find_files(file_type="RW2")
 
         if stop_after is None:
             stop_after = len(files)
@@ -327,50 +362,31 @@ class Session:
         print('processing a total of {} files. Stopping after {} files'.format(len(files), stop_after))
 
         prev_id = -1
-        for j, f in zip(range(len(files)), files):
+        for j, f in enumerate(files):
             # break after n images
             if j >= stop_after:
                 break
             
             # read image and qr code
-            f_name = os.path.join(self.dirpath,f)
-            i = Image(path=f_name)
-            i.read_raw(**params)
-            i.read_qr_code()
+            image, series_dir, image_dir = self.process_image(f, **params)
 
+            # # create empty series instance
+            # if prev_id != image.id:
+            #     if prev_id != -1:
+            #         del subse
+            #         # print("creating Series for pictures with id: {} in {}".format(i.id, subpath))
+            #     subse = Series(directory=series_dir)
+
+            # # update subseries structure
+            # subse.struct.update({len(subse.struct):image.path})
+            # subse.dump_struct("series", subse.struct)
+
+            # # update session structure
+            # self.struct.update({len(self.struct):subse.id})
+            # self.dump_struct("session", self.struct)
+
+            # repaort
             print("processed file: {}".format(f))
-            print("read QR code: {}".format(i.id))
-
-            # create dictionary for Series and copy files (also updates image path)
-            subpath = os.path.join(self.dirpath, str(i.id))
-            if not os.path.exists(subpath):
-                os.mkdir(subpath)
-
-            # DONE: convert to tiff and delete old
-            i.delete() # removing with old path
-            i.change_path(os.path.join(subpath, f)) # change path
-            i.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
-
-            # create empty series instance
-            if prev_id != i.id:
-                if prev_id != -1:
-                    del subse
-                    print("creating Series for pictures with id: {} in {}".format(i.id, subpath))
-                
-                # try opening series struct, if it does not exist create empty struct
-                subse = Series(directory=subpath, image_list=[])
-
-
-            # update subseries_struct
-            subse.struct.update({str(len(subse.struct)):i.__dict__})
-            # update struct
-            self.struct.update({str(i.id):subse.struct})
-
-            # dump created struct file
-            subse.dump()
-
-            prev_id = i.id
-
-        # store session
-        with open(os.path.join(self.dirpath, "session.json"), "w+") as file:
-            json.dump(self.struct, file)
+            print("read QR code: {}".format(image.id))
+            
+            prev_id = image.id

@@ -1,7 +1,7 @@
 import pandas as pd
 import cv2
 import matplotlib as mpl
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 import sys
 

@@ -5,7 +5,7 @@ import pickle
 path = "../data/pics/20201217/"
 
 s = Session(path)
-s.read_images(stop_after=15)
+s.read_images(stop_after=3)
 
 # improvements:
 # + TODO: control QR codes

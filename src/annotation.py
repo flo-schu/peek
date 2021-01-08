@@ -3,16 +3,19 @@
 
 # 1. LOAD SERIES OBJECT FROM PICKLE (ONLY after images have been preprocessed)
 from IPython import get_ipython
-from matplotlib import pyplot as plt
 from image.process import Series
 from image.analysis import Annotations
+from matplotlib import pyplot as plt
 
 path = "../data/pics/20201217/"
-nano = 999
+nano = 20
 
 s = Series(path+str(nano))
-s.struct
-s.images[0].__dict__.pop('img')
+
+d1 = s.browse_subdirs_for_files("tiff")
+d2 = s.struct
+
+
 
 diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 # s.save_list(tagged_ims, "tagged")
@@ -21,7 +24,8 @@ diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=
 # saving is done automatically
 
 # magic IPython line command
-get_ipython().run_line_magic('matplotlib', 'TkAgg')
+# %matplotlib
+get_ipython().run_line_magic('matplotlib', 'inline')
 
 i = s.images[2]
 a = Annotations(i)
@@ -45,3 +49,33 @@ a.show_tag_number(0)
 # 2. classification to differentiate between D/C/N
 
 
+# 1. 
+
+cont=i.tags['contours']
+
+dict(enumerate(cont))
+cont[0][0]
+
+def store_contours(self, contours):
+    conts = {}
+    for i, obj in enumerate(cont):
+        conts.update({i:{}})
+        for j, coordinate in enumerate(obj):
+            conts[i].update({j:{}})
+            for ax, val in zip(("x","y"),coordinate[0]):
+                conts[i][j].update({ax:val})
+    
+    # for better human readability
+    pd.DataFrame(conts).to_csv('contours.csv', index=False)
+    # better machine readability
+    json.dumps()
+
+import pandas as pd
+import json
+
+
+cs.iloc[0,0]
+
+test=pd.read_csv('test.csv')
+test.iloc[0,0]
+dict(test.iloc[0,1])
