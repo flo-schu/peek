@@ -27,6 +27,10 @@ class Image:
         self.hash = str(0)
         self.tags = {}
 
+    def append_to_filename(self, path, app):
+        return os.path.join(os.path.dirname(path),os.path.basename(path).split(".")[0]+app)
+
+
     def create_dir(self, subdir):
         path = os.path.join(os.path.dirname(self.path), subdir,"")
         if not os.path.exists(path):
@@ -166,16 +170,7 @@ class Series(Image):
         self.path = directory
         self.id = os.path.basename(self.path)
         self.struct = self.browse_subdirs_for_files("tiff")
-        self.images = image_list
-
-    def load_struct(self, struct_name):
-        try:
-            with open(os.path.join(self.path, struct_name+".json"), "r") as file:
-                struct = json.load(file)
-        except FileNotFoundError:
-            struc = {}
-        
-        return struct
+        self.images = self.read_files_from_struct()
 
     def process_image(self, file_name, **params):
         path = os.path.join(self.path,file_name)
@@ -222,10 +217,14 @@ class Series(Image):
         
         return files
 
+
     def read_files_from_struct(self):
         images = []
-        for i, struct in self.struct.items():
-            img = Image()
+        for i, path in self.struct.items():
+            img = Image(path)
+            sname = self.append_to_filename(path, "_struct.json")
+            with open(sname, "r") as f:
+                struct = json.load(f)
             img.read_processed(struct)
             images.append(img)
            
@@ -235,7 +234,6 @@ class Series(Image):
         # import passed list
         if len(image_list) > 0:
             return image_list
-        
         
         # import files from struct if exist, otherwise
         # return empty list
@@ -361,7 +359,6 @@ class Session(Series):
 
         print('processing a total of {} files. Stopping after {} files'.format(len(files), stop_after))
 
-        prev_id = -1
         for j, f in enumerate(files):
             # break after n images
             if j >= stop_after:
@@ -370,23 +367,6 @@ class Session(Series):
             # read image and qr code
             image, series_dir, image_dir = self.process_image(f, **params)
 
-            # # create empty series instance
-            # if prev_id != image.id:
-            #     if prev_id != -1:
-            #         del subse
-            #         # print("creating Series for pictures with id: {} in {}".format(i.id, subpath))
-            #     subse = Series(directory=series_dir)
-
-            # # update subseries structure
-            # subse.struct.update({len(subse.struct):image.path})
-            # subse.dump_struct("series", subse.struct)
-
-            # # update session structure
-            # self.struct.update({len(self.struct):subse.id})
-            # self.dump_struct("session", self.struct)
-
-            # repaort
+            # report
             print("processed file: {}".format(f))
             print("read QR code: {}".format(image.id))
-            
-            prev_id = image.id

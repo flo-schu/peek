@@ -8,14 +8,9 @@ from image.analysis import Annotations
 from matplotlib import pyplot as plt
 
 path = "../data/pics/20201217/"
-nano = 20
+nano = 24
 
 s = Series(path+str(nano))
-
-d1 = s.browse_subdirs_for_files("tiff")
-d2 = s.struct
-
-
 
 diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 # s.save_list(tagged_ims, "tagged")
