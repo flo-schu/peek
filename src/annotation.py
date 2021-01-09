@@ -8,7 +8,7 @@ from image.analysis import Annotations
 from matplotlib import pyplot as plt
 
 path = "../data/pics/20201217/"
-nano = 24
+nano = 21
 
 s = Series(path+str(nano))
 
@@ -19,7 +19,7 @@ diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=
 # saving is done automatically
 
 # magic IPython line command
-# %matplotlib
+%matplotlib
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 i = s.images[2]
@@ -32,6 +32,7 @@ a.keymap
 
 i.read_something_from_file('tags')
 a.read_tags()
+a.tags
 a.show_tag_number(0)
 
 # improvements:

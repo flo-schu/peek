@@ -30,7 +30,6 @@ class Image:
     def append_to_filename(self, path, app):
         return os.path.join(os.path.dirname(path),os.path.basename(path).split(".")[0]+app)
 
-
     def create_dir(self, subdir):
         path = os.path.join(os.path.dirname(self.path), subdir,"")
         if not os.path.exists(path):
@@ -68,6 +67,12 @@ class Image:
         self.time = ts.strftime('%H%M%S')
         self.img = raw
         self.hash = str(raw.sum())
+
+    def read_struct(self):
+        sname = self.append_to_filename(self.path, "_struct.json")
+        with open(sname, "r") as f:
+            struct = json.load(f)
+        self.read_processed(struct)
 
     def read_processed(self, struct):
         for item in struct.items():
@@ -222,10 +227,7 @@ class Series(Image):
         images = []
         for i, path in self.struct.items():
             img = Image(path)
-            sname = self.append_to_filename(path, "_struct.json")
-            with open(sname, "r") as f:
-                struct = json.load(f)
-            img.read_processed(struct)
+            img.read_struct()
             images.append(img)
            
         return images   
