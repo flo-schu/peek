@@ -17,8 +17,9 @@ import imutils
 import json
 import shutil
 import datetime as dt
+from utils.manage import Files
 
-class Image:
+class Image(Files):
     def __init__(self, path=""):
         self.path = path
         self.img = None
@@ -26,29 +27,6 @@ class Image:
         self.id = 0
         self.hash = str(0)
         self.tags = {}
-
-    def append_to_filename(self, path, app):
-        return os.path.join(os.path.dirname(path),os.path.basename(path).split(".")[0]+app)
-
-    def create_dir(self, subdir):
-        path = os.path.join(os.path.dirname(self.path), subdir,"")
-        if not os.path.exists(path):
-            os.mkdir(path)
-        return path
-
-    def copy(self, destination):
-        shutil.copyfile(self.path, destination)
-        self.path = destination
-
-    def move(self, destination):
-        shutil.move(self.path, destination)
-        self.path = destination
-
-    def change_path(self, destination):
-        self.path = destination
-
-    def delete(self):
-        os.remove(self.path)
 
     def read_raw(self, **params):
         """
@@ -79,26 +57,6 @@ class Image:
             setattr(self, item[0], item[1])
         self.read(attr="img")  
 
-    def read(self, attr="img", file_ext=""):
-        value = imageio.imread(self.change_file_ext(file_ext))
-        setattr(self, attr, value)
-
-    def change_file_ext(self, new_ext=""):
-        fname, old_ext = os.path.splitext(self.path)
-        if new_ext == "":
-            new_ext = old_ext
-
-        self.path = fname+new_ext
-        return self.path
-
-    def save(self, attr="img", file_ext="", remove_from_instance=False):
-        if remove_from_instance:
-            obj = self.__dict__.pop(attr)
-        else:
-            obj = getattr(self, attr)
-
-        imageio.imwrite(self.change_file_ext(file_ext), obj)
-    
     def dump_struct(self, fname, struct):
         # dump struct
         with open(os.path.join(os.path.dirname(self.path), fname + "_struct" + ".json"), "w+") as file:
@@ -195,32 +153,6 @@ class Series(Image):
 
         return i, series_dir, image_dir
 
-    def find_subdirs(self):
-        # remove subdirectories
-        return [f.name for f in os.scandir(self.path) if not f.is_file()]
-
-    def browse_subdirs_for_files(self, file_type):
-        dirs = self.find_subdirs()
-        struct = {}
-        for i, d in enumerate(dirs):
-            f = self.find_files(subdir=d, file_type=file_type)
-            assert len(f) == 1, print(f)
-            path = os.path.join(self.path, d, f[0])
-            struct.update({str(i):path})
-        return struct
-
-        
-
-
-    def find_files(self, subdir="", file_type=""):
-        # remove subdirectories
-        basedir = os.path.join(self.path, subdir)
-        files = [f.name for f in os.scandir(basedir) if f.is_file()]
-        if file_type != "":
-            # remove files that are not of type e.g. "RW2" or "tiff", etc.
-            files = [i  for i in files if i.split(".")[1] == file_type]   
-        
-        return files
 
 
     def read_files_from_struct(self):
@@ -289,8 +221,7 @@ class Series(Image):
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
             imageio.imwrite(os.path.join(self.path,name+"_"+str(i)+"."+file_ext), imlist[i])
-
-
+            
     def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
         """
         motion analysis algorithm. First computes the difference between images.
@@ -328,18 +259,18 @@ class Series(Image):
                 # fit a bounding box to the contour
                 if max(c.shape) > thresh_size:            
                     cnts_select.append(c)
-            
+
             imtag = self.tag_image(orig_img, cnts_select, mar)
             imslc1 = self.cut_slices(orig_img, cnts_select, mar)
             imslc2 = self.cut_slices(comp_img, cnts_select, mar)
 
             tags = {
-                'contours': cnts_select,
-                'slice_orig': imslc1,
-                'slice_comp': imslc2,
+                'tag_contour': cnts_select,
+                'tag_image_orig': imslc1,
+                'tag_image_diff': imslc2,
             }
 
-            orig_obj.tags = tags
+            orig_obj.new_tags = tags
 
             contours.append(cnts_select)
             tagged_ims.append(imtag)
