@@ -1,18 +1,13 @@
 # ======= read images and qr code and store in subfolders =====================
 # takes long time
 from image.process import Session
-import pickle
-path = "../data/pics/20201217/"
 
+path = "../data/pics/20201229/"
 s = Session(path)
-s.read_images(stop_after=3)
+s.read_images(stop_after=None)
 
 # Next Steps:
-# 1. write code that moves all images out of subfolders (for first sessions) [easy]
-# 2. Control QR codes
-# 3. manually label QR codes which could not be read
+# - [ ] write code that moves all images out of subfolders (for first sessions) [easy]
+# - [ ] Control QR codes
+# - [ ] manually label QR codes which could not be read
 #
-# improvements:
-# + TODO: control QR codes
-# + TODO: fix QR codes that could not be read
-
