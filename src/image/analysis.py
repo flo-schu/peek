@@ -263,9 +263,7 @@ class Data:
         self.path = path
 
     @staticmethod
-    def collect(path, search_keyword, 
-                date="all", sample_id="all", img_num="all", 
-                import_image=False):
+    def collect_paths(path, date="all", sample_id="all", img_num="all"):
         """
         path            should be top-level path where all sessions are stored
         search_keyword  analysis from which tags should be imported
@@ -295,11 +293,13 @@ class Data:
                 id_imgs = id_imgs[int(img_num)-1:int(img_num)]
             image_paths.extend([os.path.join(id_, img) for img in id_imgs])
             
-        print("importing:", image_paths)
+        return image_paths
 
+    @staticmethod
+    def collect_files(paths, search_keyword, import_image=False):
         images = []
-        for ip in image_paths:
-            i = Image(ip)
+        for p in paths:
+            i = Image(p)
             i.read_struct(import_image=import_image)
             i.tags = Annotations(image=i, analysis=search_keyword)
             i.tags.load_processed_tags()

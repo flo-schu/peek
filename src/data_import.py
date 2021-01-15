@@ -1,7 +1,7 @@
 from image.analysis import Data
 
-images = Data.collect("../data/pics/", search_keyword="motion_analysis", 
-                      sample_id='all', date='all', img_num=2, import_image=False)
+paths = Data.collect_paths("../data/pics/test", sample_id='all', date='all', img_num=2)
+images = Data.collect_files(paths, "motion_analysis", import_image=False)
 images[66].__dict__
 
 

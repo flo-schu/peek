@@ -27,6 +27,10 @@ class Files:
             os.mkdir(path)
         return path
 
+    @classmethod
+    def check_if_exist(cls, path, dirlist):
+        return [os.path.exists(os.path.join(path, d)) for d in dirlist]
+
     def copy(self, destination):
         shutil.copyfile(self.path, destination)
         self.path = destination
