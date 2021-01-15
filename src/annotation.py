@@ -34,6 +34,7 @@ a.load_processed_tags()
 a.start()
 a.show_tag_number(62)
 
+# store annotated tags
 Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")
 
 
@@ -51,14 +52,11 @@ Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date
 
 
 # Next Steps
-# 1. collect tags (same objective as in motion_analysis.py)
-#    - this should be run after the labelling in order to 
-#      store labelled images in a secure spot where they
-#      cannot be overwritten.
-# 2. train object detection algorithm for Daphnia/Culex
+# - [x] collect tags (same objective as in motion_analysis.py)
+#       - this should be run after the labelling in order to 
+#         store labelled images in a secure spot where they
+#         cannot be overwritten.
+# - [/] only show not annotated images
+# - [ ] train object detection algorithm for Daphnia/Culex
+# - [ ] option to change the bounding box
 # 
-# improvements:
-# 1. only show not annotated images
-# 2. option to change the bounding box
-#
-#

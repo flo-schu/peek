@@ -344,7 +344,7 @@ class Data:
         for p in paths:
             i = Image(p)
             i.read_struct(import_image=import_images)
-            i.tags = Annotations(image=i, analysis=search_keyword)
+            i.tags = Annotations(image=i, analysis=search_keyword, tag_db_path="")
             i.tags.load_processed_tags()
 
             images.append(i)

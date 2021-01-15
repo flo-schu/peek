@@ -34,14 +34,12 @@ for n in nanos:
     
 # Next Steps:
 # - [x] Loop over all nanocosms and get tags
-# - [ ] at the moment avoid executing motion analysis after tagging, because 
+# - [x] at the moment avoid executing motion analysis after tagging, because 
 #       old tags overwritten!!!
 #       This could be resolved with try load tags before reading and 
 #       retaining those which have been annotated. Unannotated duplicates could then be
-#       discarded
+#       discarded. Was resolved by saving annotated tags to a separate DB
 # - [x] Write functions to collect 
 #       - [x] all tags from one id
 #       - [x] all tags from one session
-# - [ ] write functions to plot the timeseries (Then I have at least the performance of 
-#       Daphnia)
 # - [ ] Important: Write detector for Culex
