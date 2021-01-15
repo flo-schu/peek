@@ -17,7 +17,7 @@ def test_a_motion_analysis():
         diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 
         for i in s.images[1:]:
-            a = Annotations(i, 'motion_analysis')
+            a = Annotations(i, 'motion_analysis', tag_db_path="")
             a.read_new_tags(pd.DataFrame(i.new_tags))
 
         print("tagged nano {} from {}".format(n, len(nanos)))
