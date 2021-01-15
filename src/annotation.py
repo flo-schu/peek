@@ -18,7 +18,13 @@ nano = 23
 s = Series(path+str(nano))
 i = s.images[1]
 
-a = Annotations(i, 'motion_analysis')
+keymap = {
+    'd':"Daphnia Magna",
+    'c':"Culex Pipiens, larva",
+    'p':"Culex Pipiens, pupa",
+    'u':"unidentified",
+}
+a = Annotations(i, 'motion_analysis', keymap)
 a.load_processed_tags()
 
 %matplotlib
@@ -27,13 +33,10 @@ a.show_tag_number(0)
 
 
 # help
-a.keymap
 # annotate image with keys as displayed in keymap by pressing keys
 # n - next image
 # b - previous image
-# d - Daphnia
-# c - culex, larva
-# p - culex, pupa
+# other keys as specified in keymap
 
 
 

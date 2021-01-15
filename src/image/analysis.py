@@ -1,14 +1,16 @@
+import os
+import sys
+import time
+import cv2
+import imageio
 import pandas as pd
 import numpy as np
-import cv2
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
-import sys
-import os
 from utils.manage import Files
-import imageio
-import time
+from image.process import Image
+from icecream import ic
 
 class Tag(Files):
     def __init__(self):
@@ -85,21 +87,17 @@ class Tag(Files):
 
 # interactive figure
 class Annotations(Tag): 
-    def __init__(self, image, analysis):
+    def __init__(self, image, analysis, keymap={}):
         self.image = image
         self.analysis = analysis
-        self.origx = (0, image.img.shape[1])
-        self.origy = (image.img.shape[0],0)
+        self.origx = (0,0)
+        self.origy = (0,0)
         self.xlim = (0,0)
         self.ylim = (0,0)
         self.tags = pd.DataFrame({'id':[]})
         self.ctag = None
-        self.keymap = {
-            'd':"Daphnia Magna",
-            'c':"Culex Pipiens, larva",
-            'p':"Culex Pipiens, pupa",
-            'u':"unidentified",
-        }
+        self.error = False
+        self.keymap = keymap
         
         fname = '_'+analysis+'_tags.csv'
         self.path = self.image.append_to_filename(self.image.path, fname)
@@ -109,6 +107,8 @@ class Annotations(Tag):
 
     def start(self):
         # create figure
+        self.origx = (0, self.image.img.shape[1])
+        self.origy = (self.image.img.shape[0],0)
         self.gs = plt.GridSpec(nrows=2, ncols=2)
         self.figure = plt.figure()
         self.figure.canvas.mpl_connect('key_press_event', self.press) 
@@ -126,7 +126,10 @@ class Annotations(Tag):
 
 
     def load_processed_tags(self):
-        self.tags = pd.read_csv(self.path)
+        try:
+            self.tags = pd.read_csv(self.path)
+        except FileNotFoundError:
+            self.error = True
 
 
 
@@ -260,34 +263,47 @@ class Data:
         self.path = path
 
     @staticmethod
-    def collect_annotations(path, search_keyword):
-        files = Files.search_files(path, search_keyword)
-        df = DataFrame()
+    def collect(path, search_keyword, 
+                date="all", sample_id="all", img_num="all", 
+                import_image=False):
+        """
+        path            should be top-level path where all sessions are stored
+        search_keyword  analysis from which tags should be imported
+        date            date from which ids should be collected (YYYYMMDD) or "all"
+                        if all dates from one id should be gathered    
+        id              look for sepcific id in sessions or "all" (start with 1 for 1st image) 
+        """
+        sessions = [d for d in Files.find_subdirs(path) if Files.is_date(d)]
+        if date != "all":
+            sessions = [d for d in sessions if d == date]
 
-        for f in files:
-            d = Files.read(f)
-            df.append(f, inplace=True)
-        return df
+        sessions = [os.path.join(path, d) for d in sessions]
 
-    def collect_id(self, path, search_keyword):
-        s = Series(path, import_image=False)
+        ids = []
+        for s in sessions:
+            s_ids = Files.find_subdirs(s)
+            if sample_id != "all":
+                s_ids = [id_ for id_ in s_ids if id_ == str(sample_id)]
 
-        for p in pics:
-            d = self.collect_annotations(path, search_keyword)
+            ids.extend([os.path.join(s, id_) for id_ in s_ids])
+
+        image_paths = []
+
+        for id_ in ids:
+            id_imgs = Files.find_subdirs(id_)
+            if img_num != "all":
+                id_imgs = id_imgs[int(img_num)-1:int(img_num)]
+            image_paths.extend([os.path.join(id_, img) for img in id_imgs])
             
-            if add_id_col:
-                d['nano_id'] = p
-            
-            df.append(d)
+        print("importing:", image_paths)
 
-        return df
+        images = []
+        for ip in image_paths:
+            i = Image(ip)
+            i.read_struct(import_image=import_image)
+            i.tags = Annotations(image=i, analysis=search_keyword)
+            i.tags.load_processed_tags()
 
-    def collect_session(self):
-        pass
+            images.append(i)
 
-    def collect_all(self):
-        pass
-
-
-
-
+        return images
