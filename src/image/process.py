@@ -27,6 +27,7 @@ class Image(Files):
         self.id = 0
         self.hash = str(0)
         self.tags = {}
+        self.analyses = {}
 
     def read_raw(self, **params):
         """
@@ -66,9 +67,14 @@ class Image(Files):
         if import_image:
             self.read_image(attr="img")  
 
-    def dump_struct(self, fname, struct):
+    def dump_struct(self, struct):
         # dump struct
-        with open(os.path.join(os.path.dirname(self.path), fname + "_struct" + ".json"), "w+") as file:
+        dirname = os.path.dirname(self.path)
+        filename = os.path.basename(self.path).split(".")[0] + "_struct"
+        extname = ".json"
+
+        print(dirname, filename, filename+extname)
+        with open(os.path.join(dirname, filename + extname), "w+") as file:
             json.dump(struct, file)
 
     def crop_tb(self, reduce_top, reduce_bottom):
@@ -164,7 +170,7 @@ class Series(Image):
         i.change_path(os.path.join(image_dir, file_name)) # change path
 
         i.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
-        i.dump_struct(file_name.split(".")[0], i.__dict__)
+        i.dump_struct(i.__dict__)
 
         return i, series_dir, image_dir
 

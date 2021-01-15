@@ -7,11 +7,16 @@ from image.analysis import Annotations
 from utils.manage import Files
 import os
 
-path = "../data/pics/20201229/"
-nanos = [f for f in Files.find_subdirs(path) if f != "999"]
+path = "../data/pics/"
+date = "20201229"
+copy_to = "../data/annotations/"
+stop_after=100
 
+nanos = [f for f in Files.find_subdirs(os.path.join(path, date)) if f != "999"]
+
+z = 0
 for n in nanos:
-    s = Series(os.path.join(path,n))
+    s = Series(os.path.join(path, date, n))
 
     diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 
@@ -20,7 +25,13 @@ for n in nanos:
         a.read_new_tags(pd.DataFrame(i.new_tags))
 
     print("tagged nano {} from {}".format(n, len(nanos)))
-
+    z += 1
+    
+    Files.copy_files(os.path.join(path, date, n), os.path.join(copy_to, date, n), ex1='.tiff', ex2="PNAN")
+    
+    if z == stop_after:
+        break
+    
 # Next Steps:
 # - [x] Loop over all nanocosms and get tags
 # - [ ] at the moment avoid executing motion analysis after tagging, because 
@@ -28,9 +39,9 @@ for n in nanos:
 #       This could be resolved with try load tags before reading and 
 #       retaining those which have been annotated. Unannotated duplicates could then be
 #       discarded
-# - [ ] Write functions to collect 
-#       - [ ] all tags from one id
-#       - [ ] all tags from one session
+# - [x] Write functions to collect 
+#       - [x] all tags from one id
+#       - [x] all tags from one session
 # - [ ] write functions to plot the timeseries (Then I have at least the performance of 
 #       Daphnia)
 # - [ ] Important: Write detector for Culex

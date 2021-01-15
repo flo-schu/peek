@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import cv2
+import shutil
 import imageio
 import pandas as pd
 import numpy as np
@@ -87,8 +88,9 @@ class Tag(Files):
 
 # interactive figure
 class Annotations(Tag): 
-    def __init__(self, image, analysis, keymap={}):
+    def __init__(self, image, analysis, tag_db_path, keymap={}):
         self.image = image
+        self.tag_db_path = tag_db_path
         self.analysis = analysis
         self.origx = (0,0)
         self.origy = (0,0)
@@ -142,6 +144,7 @@ class Annotations(Tag):
             t, p = self.ctag.save()
             self.drop_duplicates()
             self.tags = self.tags.append(t, ignore_index=True)
+            self.save_tag_to_database(t, add_attrs=['id','date','time'])
             self.show_label()
 
         if event.key == "n":
@@ -155,6 +158,14 @@ class Annotations(Tag):
         self.figure.canvas.draw()
         self.tags = self.tags.sort_values(by='id')
         self.save_progress()
+
+    def save_tag_to_database(self, tag, add_attrs=[]):
+        db = pd.read_csv(self.tag_db_path)
+        for a in add_attrs:
+            tag['img_'+a] = getattr(self.image, a)
+        db = db.append(tag, ignore_index=True)
+        db.to_csv(self.tag_db_path, index=False)
+        
 
     @staticmethod
     def get_id(tags, tag_id):
@@ -259,8 +270,40 @@ class Data:
     if a data instance is initiated, it opens a file where search results are appended
     to.
     """
-    def __init__(self, path):
+    def __init__(
+        self, path, search_keyword, import_images=False,
+        date="all", sample_id="all", img_num="all",
+        ):
         self.path = path
+        self.keyword = search_keyword
+        self.import_images = import_images
+        self.attrs=['id', 'date', 'time']
+
+        self.date = date
+        self.id = sample_id
+        self.img_num = img_num
+        self.images = []
+
+    def collect(self):
+        paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
+        self.images = self.collect_files(paths, self.keyword, self.import_images)
+        self.data = self.extract_data(self.images, self.attrs)
+
+    @classmethod
+    def extract_data(cls, images, attrs=['id', 'date', 'time']):
+        df = pd.DataFrame()
+        for i in images:
+            idata = cls.label_data(i, attrs)
+            df = df.append(idata)
+        
+        return df
+
+    @staticmethod
+    def label_data(image, attrs=[]):
+        idata = image.tags.tags
+        for a in attrs:
+            idata['img_'+a] = getattr(image, a)
+        return idata
 
     @staticmethod
     def collect_paths(path, date="all", sample_id="all", img_num="all"):
@@ -296,14 +339,15 @@ class Data:
         return image_paths
 
     @staticmethod
-    def collect_files(paths, search_keyword, import_image=False):
+    def collect_files(paths, search_keyword, import_images=False):
         images = []
         for p in paths:
             i = Image(p)
-            i.read_struct(import_image=import_image)
+            i.read_struct(import_image=import_images)
             i.tags = Annotations(image=i, analysis=search_keyword)
             i.tags.load_processed_tags()
 
             images.append(i)
 
         return images
+

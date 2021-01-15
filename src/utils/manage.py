@@ -128,3 +128,23 @@ class Files:
 
         except ValueError:
             return False
+
+    @staticmethod
+    def filter_files(path, ex1, ex2):
+        """
+        much better filter function. Two conditions
+        """
+        flist = []
+        for p, dirs, fls in os.walk(path):
+            fls[:] = [f for f in fls if not (ex1 in f and ex2 in f)]   
+            flist.extend([os.path.join(p, f) for f in fls])
+        return flist
+
+    @classmethod    
+    def copy_files(cls, path, new_path, ex1='.tiff', ex2="PNAN"):
+        old_files = cls.filter_files(path, ex1, ex2)
+        new_files = [f.replace(path, new_path) for f in old_files]
+
+        for of, nf in zip(old_files, new_files):
+            os.makedirs(os.path.dirname(nf), exist_ok=True)
+            shutil.copyfile(of, nf)

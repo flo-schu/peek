@@ -24,7 +24,7 @@ def test_a_motion_analysis():
 
 def test_b_data_import():
     paths = Data.collect_paths("data/pics/test/", sample_id='all', date='all', img_num='all')
-    images = Data.collect_files(paths, "motion_analysis", import_image=False)
+    images = Data.collect_files(paths, "motion_analysis", import_images=False)
 
     assert len(paths) == 3, paths
     assert len(images) == 3, images
