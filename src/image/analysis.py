@@ -37,25 +37,8 @@ class Tag(Files):
 
         for attr in specials:
             ext = os.listdir(os.path.join(path, attr))[0].split('.')[1]
-            value = self.read(os.path.join(path, attr, str(int(self.id))+'.'+ext))
+            value = Files.read(os.path.join(path, attr, str(int(self.id))+'.'+ext))
             setattr(self, attr, value)
-
-
-    @staticmethod
-    def read(path):
-        dirname = os.path.dirname(path)
-        basename = os.path.basename(path)
-        f_name = basename.split(".")[0]
-        f_ext = basename.split(".")[1]
-        if f_ext == "npy":
-            return np.load(path)
-
-        if f_ext == "tiff":
-            return imageio.imread(path)
-
-        else:
-            print("error")
-
 
     def save(self):
         """
@@ -265,3 +248,46 @@ class Annotations(Tag):
 
     def save_progress(self):
         self.tags.to_csv(self.path, index=False)
+
+
+class Data:
+    """
+    Data contains methods for reading files and storing them in specific locations
+    if a data instance is initiated, it opens a file where search results are appended
+    to.
+    """
+    def __init__(self, path):
+        self.path = path
+
+    @staticmethod
+    def collect_annotations(path, search_keyword):
+        files = Files.search_files(path, search_keyword)
+        df = DataFrame()
+
+        for f in files:
+            d = Files.read(f)
+            df.append(f, inplace=True)
+        return df
+
+    def collect_id(self, path, search_keyword):
+        s = Series(path, import_image=False)
+
+        for p in pics:
+            d = self.collect_annotations(path, search_keyword)
+            
+            if add_id_col:
+                d['nano_id'] = p
+            
+            df.append(d)
+
+        return df
+
+    def collect_session(self):
+        pass
+
+    def collect_all(self):
+        pass
+
+
+
+

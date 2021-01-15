@@ -1,6 +1,8 @@
 import os
 import shutil
 import imageio
+import pandas as pd
+import numpy as np
 
 class Files:
     @staticmethod
@@ -43,6 +45,15 @@ class Files:
         # remove subdirectories
         return [f.name for f in os.scandir(path) if not f.is_file()]
 
+    @staticmethod
+    def search_files(path, search_string=None):
+        files = [f.name for f in os.scandir(path) if f.is_file()]
+
+        if search_string is None:
+            return files
+        else:
+            return [f for f in files if search_string in f]
+
     def browse_subdirs_for_files(self, file_type):
         dirs = self.find_subdirs(self.path)
         struct = {}
@@ -56,16 +67,34 @@ class Files:
     def find_files(self, subdir="", file_type=""):
         # remove subdirectories
         basedir = os.path.join(self.path, subdir)
-        files = [f.name for f in os.scandir(basedir) if f.is_file()]
+        files = self.search_files(basedir)
         if file_type != "":
             # remove files that are not of type e.g. "RW2" or "tiff", etc.
             files = [i  for i in files if i.split(".")[1] == file_type]   
         
         return files
 
-    def read(self, attr="img", file_ext=""):
+    def read_image(self, attr="img", file_ext=""):
         value = imageio.imread(self.change_file_ext(file_ext))
         setattr(self, attr, value)
+
+    @staticmethod
+    def read(path):
+        dirname = os.path.dirname(path)
+        basename = os.path.basename(path)
+        f_name = basename.split(".")[0]
+        f_ext = basename.split(".")[1]
+        if f_ext == "npy":
+            return np.load(path)
+
+        if f_ext == "tiff":
+            return imageio.imread(path)
+
+        if f_ext == "csv":
+            return pd.read_csv(path)
+
+        else:
+            print("error. Most likely unknown filetype for read function")
 
     def save(self, attr="img", file_ext="", remove_from_instance=False):
         if remove_from_instance:
@@ -74,3 +103,4 @@ class Files:
             obj = getattr(self, attr)
 
         imageio.imwrite(self.change_file_ext(file_ext), obj)
+

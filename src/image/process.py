@@ -46,16 +46,18 @@ class Image(Files):
         self.img = raw
         self.hash = str(raw.sum())
 
-    def read_struct(self):
+    def read_struct(self, import_image):
         sname = self.append_to_filename(self.path, "_struct.json")
         with open(sname, "r") as f:
             struct = json.load(f)
-        self.read_processed(struct)
+        self.read_processed(struct, import_image)
 
-    def read_processed(self, struct):
+    def read_processed(self, struct, import_image):
         for item in struct.items():
             setattr(self, item[0], item[1])
-        self.read(attr="img")  
+
+        if import_image:
+            self.read_image(attr="img")  
 
     def dump_struct(self, fname, struct):
         # dump struct
@@ -129,11 +131,17 @@ class Image(Files):
         return img
 
 class Series(Image):
-    def __init__(self, directory="", image_list=[], struct_name="series_struct"):
+    def __init__(
+        self, 
+        directory="", 
+        image_list=[], 
+        struct_name="series_struct",
+        import_image=True
+        ):
         self.path = directory
         self.id = os.path.basename(self.path)
         self.struct = self.browse_subdirs_for_files("tiff")
-        self.images = self.read_files_from_struct()
+        self.images = self.read_files_from_struct(import_image)
 
     def process_image(self, file_name, **params):
         path = os.path.join(self.path,file_name)
@@ -155,26 +163,26 @@ class Series(Image):
 
 
 
-    def read_files_from_struct(self):
+    def read_files_from_struct(self, import_image):
         images = []
         for i, path in self.struct.items():
             img = Image(path)
-            img.read_struct()
+            img.read_struct(import_image)
             images.append(img)
            
         return images   
 
-    def load_images(self, image_list):
-        # import passed list
-        if len(image_list) > 0:
-            return image_list
+    # def load_images(self, image_list):
+    #     # import passed list
+    #     if len(image_list) > 0:
+    #         return image_list
         
-        # import files from struct if exist, otherwise
-        # return empty list
-        if len(self.struct) == 0:
-            return image_list
+    #     # import files from struct if exist, otherwise
+    #     # return empty list
+    #     if len(self.struct) == 0:
+    #         return image_list
         
-        return self.read_files_from_struct()
+    #     return self.read_files_from_struct()
 
 
     def difference(self, lag, smooth):

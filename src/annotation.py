@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import os
 
 path = "../data/pics/20201217/"
-nano = 20
+nano = 23
 
 # open image and attributes
 # i = Image(path+"21/184248/PNAN2092.tiff")
