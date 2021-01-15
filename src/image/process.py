@@ -47,7 +47,14 @@ class Image(Files):
         self.hash = str(raw.sum())
 
     def read_struct(self, import_image):
-        sname = self.append_to_filename(self.path, "_struct.json")
+        if os.path.isdir(self.path):
+            try:
+               sname = self.find_single_file(directory=self.path, file_type="json")
+            except AssertionError:
+                print("Did not import {} correctly. more than one structure in image folder".format(self.path))
+        else:
+            sname = self.append_to_filename(self.path, "_struct.json")
+
         with open(sname, "r") as f:
             struct = json.load(f)
         self.read_processed(struct, import_image)
@@ -140,7 +147,7 @@ class Series(Image):
         ):
         self.path = directory
         self.id = os.path.basename(self.path)
-        self.struct = self.browse_subdirs_for_files("tiff")
+        self.struct = self.browse_subdirs_for_files(directory, "tiff")
         self.images = self.read_files_from_struct(import_image)
 
     def process_image(self, file_name, **params):
@@ -293,7 +300,7 @@ class Session(Series):
 
     def read_images(self, stop_after=None, **params):
         
-        files = self.find_files(file_type="RW2")
+        files = Files.find_files(self.path, file_type="RW2")
 
         if stop_after is None:
             stop_after = len(files)

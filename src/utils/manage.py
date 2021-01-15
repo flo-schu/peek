@@ -3,6 +3,7 @@ import shutil
 import imageio
 import pandas as pd
 import numpy as np
+from dateutil.parser import parse
 
 class Files:
     @staticmethod
@@ -54,20 +55,26 @@ class Files:
         else:
             return [f for f in files if search_string in f]
 
-    def browse_subdirs_for_files(self, file_type):
-        dirs = self.find_subdirs(self.path)
+    @classmethod
+    def browse_subdirs_for_files(cls, path, file_type):
+        dirs = cls.find_subdirs(path)
         struct = {}
         for i, d in enumerate(dirs):
-            f = self.find_files(subdir=d, file_type=file_type)
-            assert len(f) == 1, print(f)
-            path = os.path.join(self.path, d, f[0])
-            struct.update({str(i):path})
+            p = cls.find_single_file(os.path.join(path, d), file_type)
+            struct.update({str(i):p})
         return struct
 
-    def find_files(self, subdir="", file_type=""):
+    @classmethod
+    def find_single_file(cls, directory, file_type):
+        f = cls.find_files(path=directory, file_type=file_type)
+        assert len(f) == 1, print(f)
+        return os.path.join(directory, f[0])
+
+    @classmethod
+    def find_files(cls, path, file_type=""):
         # remove subdirectories
-        basedir = os.path.join(self.path, subdir)
-        files = self.search_files(basedir)
+        basedir = os.path.join(path, "")
+        files = cls.search_files(basedir)
         if file_type != "":
             # remove files that are not of type e.g. "RW2" or "tiff", etc.
             files = [i  for i in files if i.split(".")[1] == file_type]   
@@ -104,3 +111,16 @@ class Files:
 
         imageio.imwrite(self.change_file_ext(file_ext), obj)
 
+    def is_date(string, fuzzy=False):
+        """
+        Return whether the string can be interpreted as a date.
+
+        :param string: str, string to check for date
+        :param fuzzy: bool, ignore unknown tokens in string if True
+        """
+        try: 
+            parse(string, fuzzy=fuzzy)
+            return True
+
+        except ValueError:
+            return False
