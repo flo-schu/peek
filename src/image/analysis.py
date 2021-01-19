@@ -274,20 +274,38 @@ class Data:
         self, path, search_keyword, import_images=False,
         date="all", sample_id="all", img_num="all",
         ):
+        self.data=None
         self.path = path
         self.keyword = search_keyword
         self.import_images = import_images
         self.attrs=['id', 'date', 'time']
+        self.index_names=['time', 'id', 'object']
 
         self.date = date
         self.id = sample_id
         self.img_num = img_num
         self.images = []
 
+
     def collect(self):
         paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
         self.images = self.collect_files(paths, self.keyword, self.import_images)
         self.data = self.extract_data(self.images, self.attrs)
+        self.data = self.rename_columns(self.data, self.index_names, 'tag')
+
+        self.index()
+        self.order()
+
+    def index(self):
+        tstamp = pd.to_datetime(self.data.img_date+self.data.img_time, format='%Y%m%d%H%M%S').to_numpy()
+        tag_id = self.data.tag_id.to_numpy(dtype=int)
+        img_id = self.data.img_id.to_numpy(dtype=int)
+        idx = pd.MultiIndex.from_arrays([tstamp, img_id, tag_id], names=self.index_names)
+
+        self.data.index = idx
+
+    def order(self):
+        self.data = self.data.sort_values(by = self.index_names)
 
     @classmethod
     def extract_data(cls, images, attrs=['id', 'date', 'time']):
@@ -296,6 +314,13 @@ class Data:
             idata = cls.label_data(i, attrs)
             df = df.append(idata)
         
+        return df
+
+    @staticmethod
+    def rename_columns(df, change_cols, prepend):
+        for col in change_cols:
+            df = df.rename(columns={col:prepend+'_'+col})
+
         return df
 
     @staticmethod

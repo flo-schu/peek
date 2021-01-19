@@ -59,5 +59,5 @@ ammonium = {
 }
 
 
-Timer(40, nitrite, prep_time=10)
+Timer(40, phosphate, prep_time=10)
 
