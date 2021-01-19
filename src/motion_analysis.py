@@ -8,7 +8,7 @@ from utils.manage import Files
 import os
 
 path = "../data/pics/"
-date = "20201229"
+date = "20210102"
 copy_to = "../data/annotations/"
 stop_after=100
 
@@ -21,10 +21,10 @@ for n in nanos:
     diffs, contours, tagged_ims = s.motion_analysis(lag=1, smooth=12, thresh_binary=15, thresh_size=5)
 
     for i in s.images[1:]:
-        a = Annotations(i, 'motion_analysis')
+        a = Annotations(i, 'motion_analysis', tag_db_path="")
         a.read_new_tags(pd.DataFrame(i.new_tags))
 
-    print("tagged nano {} from {}".format(n, len(nanos)))
+    print("tagged nano {} from {}".format(z, len(nanos)))
     z += 1
     
     Files.copy_files(os.path.join(path, date, n), os.path.join(copy_to, date, n), ex1='.tiff', ex2="PNAN")
@@ -43,3 +43,6 @@ for n in nanos:
 #       - [x] all tags from one id
 #       - [x] all tags from one session
 # - [ ] Important: Write detector for Culex
+# - [ ] what about zero sized images?
+# - [ ] Address memory problems when six images were taken from one nanocosm (need 1.2 GB
+        # memory)
