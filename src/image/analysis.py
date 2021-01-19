@@ -98,7 +98,7 @@ class Annotations(Tag):
         self.ylim = (0,0)
         self.tags = pd.DataFrame({'id':[]})
         self.ctag = None
-        self.error = False
+        self.error = (False, "no message")
         self.keymap = keymap
         
         fname = '_'+analysis+'_tags.csv'
@@ -131,7 +131,7 @@ class Annotations(Tag):
         try:
             self.tags = pd.read_csv(self.path)
         except FileNotFoundError:
-            self.error = True
+            self.error = (True, self.path)
 
 
 
@@ -273,6 +273,7 @@ class Data:
     def __init__(
         self, path, search_keyword, import_images=False,
         date="all", sample_id="all", img_num="all",
+        correct_path=(False,0,"")
         ):
         self.data=None
         self.path = path
@@ -280,6 +281,7 @@ class Data:
         self.import_images = import_images
         self.attrs=['id', 'date', 'time']
         self.index_names=['time', 'id', 'object']
+        self.correct_path=correct_path
 
         self.date = date
         self.id = sample_id
@@ -289,8 +291,9 @@ class Data:
 
     def collect(self):
         paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
-        self.images = self.collect_files(paths, self.keyword, self.import_images)
+        self.images = self.collect_files(paths, self.keyword, self.import_images, self.correct_path)
         self.data = self.extract_data(self.images, self.attrs)
+        self.check_for_errors()
         self.data = self.rename_columns(self.data, self.index_names, 'tag')
 
         self.index()
@@ -303,9 +306,16 @@ class Data:
         idx = pd.MultiIndex.from_arrays([tstamp, img_id, tag_id], names=self.index_names)
 
         self.data.index = idx
+        self.data = self.data.drop(columns=['img_date','img_time','tag_id','img_id'])
 
     def order(self):
         self.data = self.data.sort_values(by = self.index_names)
+
+    def check_for_errors(self):
+        errors = [i.tags.error[1] for i in self.images if i.tags.error[0]]
+        if len(errors) > 0:
+            self.errors = errors
+            print("Warning: Errors during file import -> for details see obj.errors")
 
     @classmethod
     def extract_data(cls, images, attrs=['id', 'date', 'time']):
@@ -364,11 +374,15 @@ class Data:
         return image_paths
 
     @staticmethod
-    def collect_files(paths, search_keyword, import_images=False):
+    def collect_files(paths, search_keyword, 
+                      import_images=False, 
+                      correct_path=(False, 0, '')):
         images = []
         for p in paths:
             i = Image(p)
             i.read_struct(import_image=import_images)
+            if correct_path[0]:
+                i.path = Files.change_top_dirs(i.path, strip_levels=correct_path[1], add_path=correct_path[2])
             i.tags = Annotations(image=i, analysis=search_keyword, tag_db_path="")
             i.tags.load_processed_tags()
 

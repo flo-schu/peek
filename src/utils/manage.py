@@ -148,3 +148,9 @@ class Files:
         for of, nf in zip(old_files, new_files):
             os.makedirs(os.path.dirname(nf), exist_ok=True)
             shutil.copyfile(of, nf)
+
+    @staticmethod
+    def change_top_dirs(path, strip_levels=0, add_path=""):
+        path = os.path.normpath(path)
+        pparts = [add_path] + path.split(os.sep)[strip_levels:]
+        return os.path.join(*pparts)
