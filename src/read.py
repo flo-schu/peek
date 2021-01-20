@@ -2,11 +2,7 @@
 # takes long time
 from image.process import Session
 
-path = "../data/pics/20210105/"
-s = Session(path)
-s.read_images(stop_after=None)
-
-path = "../data/pics/20210108/"
+path = "../data/pics/20210114/"
 s = Session(path)
 s.read_images(stop_after=None)
 

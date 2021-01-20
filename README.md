@@ -20,3 +20,5 @@ Nanocosm experiment with Daphnia Magna and Culex Pipiens
 6. [ ] what about zero sized images?
 7. [ ] Address memory problems when six images were taken from one nanocosm (need 1.2 GB memory)
 8. [ ] write cluster script to process images
+9. [ ] change design of struct path --> relative import to base directory. Otherwise its quite shit. should be possible and not too much work. Until then, write helper function
+to strip everything until datefolder and preprend current path.

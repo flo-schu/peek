@@ -9,8 +9,8 @@ import os
 
 path = "../data/pics/"
 copy_to="../data/annotations"
-date = "20201229"
-nano = 41
+date = "20210111"
+nano = 10
 
 # open image and attributes
 # i = Image(path+"21/184248/PNAN2092.tiff")
@@ -29,10 +29,9 @@ keymap = {
 }
 a = Annotations(i, 'motion_analysis', tag_db_path="../data/tag_db.csv", keymap=keymap)
 a.load_processed_tags()
-
 %matplotlib
 a.start()
-a.show_tag_number(62)
+a.show_tag_number(40)
 
 # store annotated tags
 Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")

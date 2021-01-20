@@ -6,7 +6,9 @@ def count_organisms(df):
 
     returns a series object
     """
-    return df.groupby(['time','id']).size()
+    agg_df = df.groupby(['time','id']).size().to_frame()
+    agg_df = agg_df.rename(columns={0:'count'})
+    return agg_df
 
 def id_average(df, freq='D'):
     """

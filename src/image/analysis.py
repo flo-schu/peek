@@ -276,6 +276,7 @@ class Data:
         correct_path=(False,0,"")
         ):
         self.data=None
+        self.dlog=None
         self.path = path
         self.keyword = search_keyword
         self.import_images = import_images
@@ -288,6 +289,19 @@ class Data:
         self.img_num = img_num
         self.images = []
 
+    def import_logging_data(self):
+        """
+        this method needs to be adapted to accomodate other sorts of 
+        logged data.
+        The most important point, is that the frame has a multiindex,
+        consisting of 'time' and 'id'
+        """
+        mntr = pd.read_csv("../data/raw_data.csv" )
+        mntr = mntr.astype({'mntr_date': str, 'ID_nano': int, 'conductivity': float})
+        mntr['mntr_date'] = pd.to_datetime(mntr['mntr_date'])
+        mntr.index = pd.MultiIndex.from_frame(mntr[['mntr_date', 'ID_nano']], names=['time','id'])
+        mntr = mntr.drop(columns=['mntr_date','ID_nano'])
+        self.dlog = mntr
 
     def collect(self):
         paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
@@ -296,10 +310,10 @@ class Data:
         self.check_for_errors()
         self.data = self.rename_columns(self.data, self.index_names, 'tag')
 
-        self.index()
-        self.order()
+        # self.index()
+        # self.order()
 
-    def index(self):
+    def index_images(self):
         tstamp = pd.to_datetime(self.data.img_date+self.data.img_time, format='%Y%m%d%H%M%S').to_numpy()
         tag_id = self.data.tag_id.to_numpy(dtype=int)
         img_id = self.data.img_id.to_numpy(dtype=int)
@@ -307,6 +321,7 @@ class Data:
 
         self.data.index = idx
         self.data = self.data.drop(columns=['img_date','img_time','tag_id','img_id'])
+
 
     def order(self):
         self.data = self.data.sort_values(by = self.index_names)
@@ -317,6 +332,9 @@ class Data:
             self.errors = errors
             print("Warning: Errors during file import -> for details see obj.errors")
 
+    def connect_other_data(self, df):
+        pass
+
     @classmethod
     def extract_data(cls, images, attrs=['id', 'date', 'time']):
         df = pd.DataFrame()
@@ -324,6 +342,19 @@ class Data:
             idata = cls.label_data(i, attrs)
             df = df.append(idata)
         
+        return df
+    
+    @staticmethod
+    def index_df(df, time_col, time_fmt, other_cols, new_index_names, drop=True):
+        tstamp = pd.to_datetime(df[time_col], format=time_fmt).to_numpy()
+        idx_cols = [tstamp]
+        for i in other_cols:
+            idx_cols.append(df[i].to_numpy())
+        idx = pd.MultiIndex.from_arrays(idx_cols, names=new_index_names)
+        df.index = idx
+        if drop:
+            df = df.drop(columns=[time_col]+other_cols)
+
         return df
 
     @staticmethod
@@ -389,4 +420,5 @@ class Data:
             images.append(i)
 
         return images
+
 

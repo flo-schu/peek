@@ -8,11 +8,12 @@ from utils.manage import Files
 import os
 
 path = "../data/pics/"
-date = "20210102"
+date = "20210114"
 copy_to = "../data/annotations/"
 stop_after=100
 
 nanos = [f for f in Files.find_subdirs(os.path.join(path, date)) if f != "999"]
+
 
 z = 0
 for n in nanos:
