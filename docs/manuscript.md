@@ -158,9 +158,67 @@ Populate Nanocosms from offspring of one individual?!
 
 #### Pre-Tests
 
-+ semi-acute tests with individuals with small amounts of sediments.
-  this is helpful, since pesticides will sorb to sediments. Nanocosm test
-  with three containers and three concentrations
+##### identification of pesticide
+
+from the KGM project [@Reference], several priority substances were identified.
+Use of a pyrethroid insecticide dissolved in DMSO resulted in very bad smell
+of the experiment vessels. In order to avoid this and also exclude potential
+effects of DMSO, the ideal choice would be a water soluble pesticide.
+
+Thiacloprid was used in culmination experiment [@Liess.2013] at concentrations
+0, 3.33, 10, 33.3 µg L-1 with Culex and Daphnia. However Thiacloprid was used
+as Calypso formulation. Additionally contamination was only applied as a pulse
+in the planned experiment, organisms would be continuously exposed. According
+to PPDB database excerpt 2012 found in [@Bonmatin.2015], Thiacloprid does not autolyse
+in water.
+
+Based on this experiment, Neonicotinoid pesticides should be possible to use
+directly dissolved in water (solubility 185 mg /L vs. max concentration 0.03 mg/L).
+Fipronil, Chlorantraniliprole and methiocarb are eliminated because of extremely
+low solubility.
+
+Hence candidates are: __neonicotinoids__, best choice would probably be
+__Thiamethoxam or imidiacloprid__.
+
+Table 1: _Table of neonicotinoid insecticides with relevant properties (DT = dissipation time, chiron = Chironomus sp.)._
+
+Substance           | Group          | Solubility H2O mg/L | Aq. photolysis DT50 | H2O->Sediment DT50 | EC50 µg/L  |
+--------------------|----------------|---------------------|---------------------|--------------------|------------|
+clothianidin        | Neonicotinoide |  330                | 0.1 – stable        | 56                 | 29 Chiron. |
+fipronil            | Phenylpyrazole |    3.78             | 0.33                | 68                 | 0.5 Chiron.|
+__imidacloprid__    | Neonicotinoide |  610                | 0.2                 | 129                | 55 Chiron. |
+methiocarb          | Carbamate      |   27                |                     |                    |            |
+thiacloprid         | Neonicotinoide |  185                | stable              | 28                 | 1  Chiron. |
+__thiamethoxam__    | Neonicotinoide | 4100                | 2.7                 | 40                 | 78 Chiron. |
+chlorantraniliprole | Ryanoide       |    0.88             |                     |                    |            |
+
+Thiamethoxam seems like an ideal choice, because it has an acceptable photolysis
+property, not too short not too long. Also H2O to sediment time is acceptable.
+Also due to relatively high water solubility, the distribution in the media will
+be the most homogeneous among the investigated pesticides. In theory this
+should give me a toxic pesticide which distributes well in the nanocosm and
+dissipates in a few days with some migration to the water column
+
+Therefore, a pre experiment with imidiacloprid, thiamethoxam and thiacloprid
+(for comparison) will be conducted.
+
+Tasks:
+
++ [ ] Talk to Albrecht / Alexander to find out about preparation of neonic
+      solutions in water only
++ [ ] Test heating units with temperature logger in empty nanocosm
++ [ ] prepare stock solutions and send to analysis
++ [ ] conduct pre-experiment as lined out in lab book with imidiacloprid,
+      thiacloprid and thiamethoxam (size groups, 5 concentrations)
++ [ ] (opt) study time dynamic in empty sediment tank
++ [ ] test effect of heating units together with pesticide of choice
+      in PERMACOSM!!!
++ [ ] when working candidates have been identified test pesticide in existing
+      tanks (perhaps increase population beforehand?!)
+
+semi-acute tests with individuals with small amounts of sediments.
+this is helpful, since pesticides will sorb to sediments. Nanocosm test
+with three containers and three concentrations
 
 #### Treatments
 
