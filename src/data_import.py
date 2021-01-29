@@ -12,19 +12,18 @@ import itertools
 # then use update to feed data from loggers
 # (opt) then drop NA columns
 
-a = [1]
-b = ["a", "b", "c"]
+dti = pd.date_range("2020-10-23", pd.datetime.today(), freq="D")
+mid = range(1,81)
+index = pd.MultiIndex.from_product([dti, mid], names = ["time", "msr_id"])
 
-index = pd.MultiIndex.from_product([a, b], names = ["a", "b"])
-
-pd.DataFrame(index = index).reset_index()
+m = pd.DataFrame(index = index)
 
 
-# manual measurements --------------------------------------------------
+# manual measurements ----------------------------------------------------------
 path = "../data/raw_measurements/manual_measurements/raw_data.csv"
 manual = Data.import_manual_measurements(path)
 
-# knick ----------------------------------------------------------------
+# knick ------------------------------------------------------------------------
 
 # if tags need to be corrected this should be done in the data files. Why?
 # Because if a 3rd person looks at this no one will understand. Also
@@ -39,12 +38,13 @@ o2 = o2.groupby(grp).nth(1)
 cond = Data.import_knick_logger(path, 'conductivity', "NANO2")
 cond = cond.groupby(grp).last()
 
-msm = manual.update(o2, 'outer'  raise_conflict=True)
-msm =    msm.update(cond, 'outer', left_index=True, right_index=True)
+# merging happens here =) and it works like a charm ----------------------------
+m = m.merge(manual, 'left', left_index=True, right_index=True)
+m.update(o2  , join='left', overwrite=True, errors='raise')
+m.update(cond, join='left', overwrite=True, errors='raise')
+m.to_csv("../data/measurements.csv")
 
-
-msm.to_csv("../data/measurements.csv")
-
+m.index = pd.MultiIndex.from_frame(m[['time', 'ID_nano']])
 
 # TODO: temperature correction for conductivity and oxygen correction for 
 #       measurement time. At the moment, unly the 2nd oxygen value is extracted
