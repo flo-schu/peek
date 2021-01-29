@@ -2,6 +2,54 @@ from image.analysis import Data
 import evaluation.calc as calc
 from matplotlib import pyplot as plt
 import pandas as pd
+import numpy as np
+import itertools
+
+# make empty frame
+# create an empty measurement frame with dates from start ot end of the 
+# experiment and msr_id from 1-80
+# then use merge to add the manual measurements and msr_id <-> nano_id combis
+# then use update to feed data from loggers
+# (opt) then drop NA columns
+
+a = [1]
+b = ["a", "b", "c"]
+
+index = pd.MultiIndex.from_product([a, b], names = ["a", "b"])
+
+pd.DataFrame(index = index).reset_index()
+
+
+# manual measurements --------------------------------------------------
+path = "../data/raw_measurements/manual_measurements/raw_data.csv"
+manual = Data.import_manual_measurements(path)
+
+# knick ----------------------------------------------------------------
+
+# if tags need to be corrected this should be done in the data files. Why?
+# Because if a 3rd person looks at this no one will understand. Also
+# This would be way to tedius to implement here
+
+path = '../data/raw_measurements/physicochemical_knick/'
+grp = [pd.Grouper(freq='D', level='time'),"msr_id"]
+
+o2 = Data.import_knick_logger(path, 'o2', "NANO2")
+o2 = o2.groupby(grp).nth(1)
+
+cond = Data.import_knick_logger(path, 'conductivity', "NANO2")
+cond = cond.groupby(grp).last()
+
+msm = manual.update(o2, 'outer'  raise_conflict=True)
+msm =    msm.update(cond, 'outer', left_index=True, right_index=True)
+
+
+msm.to_csv("../data/measurements.csv")
+
+
+# TODO: temperature correction for conductivity and oxygen correction for 
+#       measurement time. At the moment, unly the 2nd oxygen value is extracted
+
+
 
 d = Data("../data/annotations/", sample_id='all', date='20210105', img_num='all', 
          search_keyword="motion_analysis", import_images=False,
@@ -10,11 +58,14 @@ d = Data("../data/annotations/", sample_id='all', date='20210105', img_num='all'
 d.collect()
 d.index_images()
 d.order()
-d.import_logging_data()
 dat = calc.count_organisms(d.data)
 dat = calc.id_average(dat)
 
-df = dat.merge(d.dlog, 'left', left_index=True, right_index=True)
+manm = Data.import_manual_measurements()
+measurements = manm.merge(df, 'outer', left_index=True, right_index=True)
+measurements.to_csv('../data/test.csv')
+
+df = dat.merge(manm, 'left', left_index=True, right_index=True)
 
 
 plt.plot(df['count'], df['pH'], 'o')

@@ -276,7 +276,6 @@ class Data:
         correct_path=(False,0,"")
         ):
         self.data=None
-        self.dlog=None
         self.path = path
         self.keyword = search_keyword
         self.import_images = import_images
@@ -289,19 +288,71 @@ class Data:
         self.img_num = img_num
         self.images = []
 
-    def import_logging_data(self):
+    @staticmethod
+    def import_manual_measurements(path):
         """
         this method needs to be adapted to accomodate other sorts of 
         logged data.
         The most important point, is that the frame has a multiindex,
         consisting of 'time' and 'id'
         """
-        mntr = pd.read_csv("../data/raw_data.csv" )
-        mntr = mntr.astype({'mntr_date': str, 'ID_nano': int, 'conductivity': float})
-        mntr['mntr_date'] = pd.to_datetime(mntr['mntr_date'])
-        mntr.index = pd.MultiIndex.from_frame(mntr[['mntr_date', 'ID_nano']], names=['time','id'])
-        mntr = mntr.drop(columns=['mntr_date','ID_nano'])
-        self.dlog = mntr
+        df = pd.read_csv(path)
+        df = df.astype({'mntr_date': str, 'ID_nano': int, 
+                        'conductivity': float, 'ID_measure': int})
+        df['mntr_date'] = pd.to_datetime(df['mntr_date'])
+        df.index = pd.MultiIndex.from_frame(df[['mntr_date', 'ID_measure']], names=['time','msr_id'])
+        # mntr.index = pd.MultiIndex.from_frame(mntr[['mntr_date', 'ID_nano']], names=['time','id'])
+        df = df.drop(columns=['mntr_date','ID_measure'])
+        return df
+
+    @staticmethod
+    def import_knick_logger(path, param=None, tag=None):
+        """
+        transferrable method, which returns a dataframe of KNICK MUltioxy 907
+        data. Data must be in CSV format with unicode encoding.
+
+        param   indicates the measured paramter (O2, conductivity, ...)
+                this string must be present in the filenames
+        tag     is the TAG (Messstelle) set in the device
+        """
+        if param is not None:
+            files = Files.search_files(path, param)
+        else:
+            files = Files.find_files(path, 'csv')
+
+        data = []
+        for f in files:
+            data.append(pd.read_table(os.path.join(path,f), sep=","))
+
+        df = pd.concat(data).sort_values('Timestamp')
+        
+        df['AnnotationText'] = df['AnnotationText'].fillna(999)
+        df = df.astype({'AnnotationText': int})
+        
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        df = df.drop(columns=["SensoFace", "SensorOrderCode", "DeviceErrorFlag", 
+                              "SensorSerialCode"])
+
+        # some edits to columns
+        df = df.rename(columns={'OxyConcentration':'oxygen', 
+                                'CondConductance': 'conductivity',
+                                'TemperatureCelsius':'temperature_device',
+                                'OxyPartialPressure': 'partial_pressure'})
+
+        try:
+            df['oxygen'] = df['oxygen'] / 1000 # to mg/L
+        except KeyError:
+            pass
+        # df['oxygen_unit'] = "mg_L"
+
+        if tag is not None:
+            df = df[df['LoggerTagName'] == tag]
+            df = df.drop(columns=['LoggerTagName'])
+
+        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'AnnotationText']], names=['time','msr_id'])
+        df = df.drop(columns=["Timestamp", "AnnotationText"])
+
+        return df
 
     def collect(self):
         paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
