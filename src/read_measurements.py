@@ -1,6 +1,9 @@
 from image.analysis import Data
 import pandas as pd
 
+
+# before importing take steps named in raw_measurements/readme.txt
+
 # create empty data frame with dates and measurement ids -----------------------
 dti = pd.date_range("2020-10-23", pd.datetime.today(), freq="D")
 mid = range(1,81)
@@ -8,6 +11,11 @@ index = pd.MultiIndex.from_product([dti, mid], names = ["time", "msr_id"])
 
 m = pd.DataFrame(index = index)
 
+
+# photometer measurements (nutrients) ------------------------------------------
+path = "../data/raw_measurements/nutrients_photometer_mn/"
+photom = Data.import_photometer(path)
+test = photom.reset_index()
 
 # manual measurements ----------------------------------------------------------
 path = "../data/raw_measurements/manual_measurements/raw_data.csv"
@@ -30,8 +38,10 @@ cond = cond.groupby(grp).last()
 
 # merging happens here =) and it works like a charm ----------------------------
 m = m.merge(manual, 'left', left_index=True, right_index=True)
-m.update(o2  , join='left', overwrite=True, errors='raise')
-m.update(cond, join='left', overwrite=True, errors='raise')
+m.update(o2    , join='left', overwrite=True, errors='raise')
+m.update(cond  , join='left', overwrite=True, errors='raise')
+m.update(photom, join='left', overwrite=True, errors='raise')
+m = m.dropna(how="all")
 m.to_csv("../data/measurements.csv")
 
 

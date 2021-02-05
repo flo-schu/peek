@@ -306,6 +306,52 @@ class Data:
         return df
 
     @staticmethod
+    def import_photometer(path):
+        """
+        in preparation only the first row (column names) of the files need to be 
+        modified: Change Verdünnung to Verduennung. Then no key errors will occurr.
+        """
+        files = Files.search_files(path, 'nutrients')
+        corrections = Files.search_files(path, 'corrections')
+
+        data = []
+        for f in files:
+            data.append(pd.read_csv(os.path.join(path,f), sep=","))
+
+        df = pd.concat(data)
+
+        df['Timestamp'] = pd.to_datetime(df['SampleDate'], format="%d.%m.%Y")
+        df = df.drop(columns=[
+            "EST","Verduennung","STAT","TYPE","Computer", "Anwender",  
+            "send", "Dezimalen", "Bemerkung", "Einheit", "Datum", "Zeit", 
+            "Probenort", "Methodennummer"
+            ])
+
+        df = df.rename(columns={"Timestamp":"time"})
+        df = df.sort_values(["time","Zaehler"])
+        df['msr_id'] = df.groupby(["time","Methodenname"]).cumcount()+1
+
+        df = df.pivot(
+            index=["time","msr_id"], 
+            columns=["Methodenname"], 
+            values=["Messwert","A","NTU"]
+            )
+        
+        # transofrm column multiindex to normal index
+        df.columns = df.columns.to_series().apply('__'.join)
+
+        df = df.rename(columns={
+            "Messwert__AMMONIUM 15":"Ammonium",
+            "Messwert__AMMONIUM 3" :"Ammonium_3",
+            "Messwert__NITRAT" :"Nitrate",
+            "Messwert__NITRIT" :"Nitrite",
+            "Messwert__o-PHOSPHAT" :"Phosphate",
+        })
+
+        return df
+
+
+    @staticmethod
     def import_knick_logger(path, param=None, tag=None):
         """
         transferrable method, which returns a dataframe of KNICK MUltioxy 907
