@@ -3,3 +3,6 @@
 /.vscode/
 *.pyc
 /.pytest_cache/
+*.xlsx
+*.png
+*.jpg

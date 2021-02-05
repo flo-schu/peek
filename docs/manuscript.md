@@ -154,7 +154,18 @@ high peak concentrations
 
 #### Start Population
 
-Populate Nanocosms from offspring of one individual?!
+Populate Nanocosms from offspring of one individual?! This was not done
+
+Nanocosms were populated multiple times, because of difficulties with the
+colonization:
+
+| Date       | Daphnia | Culex        |
+| -----------|---------|--------------|
+| 10.11.2020 | x       | x            |
+| xx.11.2020 | x       | x            |
+| xx.12.2020 | x       | x            |
+| xx.12.2020 | x       | x            |
+| 11.01.2021 |         | x (Eipakete) |
 
 #### Pre-Tests
 
@@ -182,15 +193,16 @@ __Thiamethoxam or imidiacloprid__.
 
 Table 1: _Table of neonicotinoid insecticides with relevant properties (DT = dissipation time, chiron = Chironomus sp.)._
 
-Substance           | Group          | Solubility H2O mg/L | Aq. photolysis DT50 | H2O->Sediment DT50 | EC50 µg/L  |
---------------------|----------------|---------------------|---------------------|--------------------|------------|
-clothianidin        | Neonicotinoide |  330                | 0.1 – stable        | 56                 | 29 Chiron. |
-fipronil            | Phenylpyrazole |    3.78             | 0.33                | 68                 | 0.5 Chiron.|
-__imidacloprid__    | Neonicotinoide |  610                | 0.2                 | 129                | 55 Chiron. |
-methiocarb          | Carbamate      |   27                |                     |                    |            |
-thiacloprid         | Neonicotinoide |  185                | stable              | 28                 | 1  Chiron. |
-__thiamethoxam__    | Neonicotinoide | 4100                | 2.7                 | 40                 | 78 Chiron. |
-chlorantraniliprole | Ryanoide       |    0.88             |                     |                    |            |
+Substance           | Group          | Solubility H2O mg/L | Aq. photolysis DT50 | H2O->Sediment DT50 | EC50 µg/L  | Zulassung |
+--------------------|----------------|---------------------|---------------------|--------------------|------------|-----------|
+clothianidin        | Neonicotinoide |  330                | 0.1 – stable        | 56                 | 29 Chiron. | teils     |
+fipronil            | Phenylpyrazole |    3.78             | 0.33                | 68                 | 0.5 Chiron.| teils     |
+__imidacloprid__    | Neonicotinoide |  610                | 0.2                 | 129                | 55 Chiron. |           |
+__methiocarb__      | Carbamate      |   27                |                     |                    | 8 Daphn.   | nein      |
+thiacloprid         | Neonicotinoide |  185                | stable              | 28                 | 1  Chiron. |           |
+__thiamethoxam__    | Neonicotinoide | 4100                | 2.7                 | 40                 | 78 Chiron. | teils     |
+chlorantraniliprole | Ryanoide       |    0.88             |                     |                    | 12 Daphn   | ja        |
+Esfenvalerate       | Pyrethroids    | insoluble           |                     |                    | .1 D/C     | ja        |
 
 Thiamethoxam seems like an ideal choice, because it has an acceptable photolysis
 property, not too short not too long. Also H2O to sediment time is acceptable.
@@ -200,7 +212,18 @@ should give me a toxic pesticide which distributes well in the nanocosm and
 dissipates in a few days with some migration to the water column
 
 Therefore, a pre experiment with imidiacloprid, thiamethoxam and thiacloprid
-(for comparison) will be conducted.
+(for comparison) will be conducted. After discussion with the group, neonics are
+regarded as unsuitable because of insensitivity of daphnia to the pesticides.
+
+Both Culex [@Reynaldi.2011] and Daphnia are sensitive to Esfenvalerate. 
+
+Daphnia are sensitive to Chlorantraniliprole. What about Culex? 
+
+Fipronil is effective against Culex (1-20 µg/L) [@Stevens.2011] and Daphnia M.
+20-100 µg/L (EPA).
+
+So, I should test: Esfenvalerate, Thiamethoxam, Fipronil and Chlorantra-
+niliprole
 
 Tasks:
 
@@ -208,6 +231,7 @@ Tasks:
       solutions in water only
 + [ ] Test heating units with temperature logger in empty nanocosm
 + [ ] prepare stock solutions and send to analysis
++ [ ] stage 1: Test with neonates (acute 48 hours)
 + [ ] conduct pre-experiment as lined out in lab book with imidiacloprid,
       thiacloprid and thiamethoxam (size groups, 5 concentrations)
 + [ ] (opt) study time dynamic in empty sediment tank
