@@ -2,6 +2,7 @@ from nutrients.speech_timer import Timer
 
 # am Anfang und am Ende können 4 Proben verarbeitet
 # werden sobald das Messen anfängt auf 3 Proben reduzieren
+# 10 min warten
 nitrite = {
     0:   "Start. 4 Tropfen",
     25:  "Schütteln, dann Pulver",
@@ -14,6 +15,7 @@ nitrite = {
 
 # 3 gleichzeitig müsste gehen (über 1 Minute Zeit
 # zum messen)
+# 10 min warten
 phosphate = {
     0:"start",
     15: "schütteln",
@@ -26,6 +28,7 @@ phosphate = {
 }
 
 # 3 gleichzeitig für stressfreies messen
+# nach schütteln 5 minuten warten
 nitrate = {
     0:   "5 Tropfen",
     20:  "schütteln, dann Pulver",
@@ -46,6 +49,7 @@ test = {
 
 # empfehlung 3 gleichzeitig für stressfreies messen
 # 4 geht aber super stressig
+# nach Pulver 5 minuten warten. Nach Lsg. 2, 7 minuten warten
 ammonium = {
     0:   "10 Tropfen Lösung 1",
     30:  "Schütteln, dann Pulver.",
@@ -59,5 +63,5 @@ ammonium = {
 }
 
 
-Timer(100, phosphate, prep_time=10)
+Timer(100, nitrite, prep_time=10)
 

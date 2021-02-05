@@ -1,6 +1,7 @@
 from image.analysis import Data
 import pandas as pd
 
+# create empty data frame with dates and measurement ids -----------------------
 dti = pd.date_range("2020-10-23", pd.datetime.today(), freq="D")
 mid = range(1,81)
 index = pd.MultiIndex.from_product([dti, mid], names = ["time", "msr_id"])
