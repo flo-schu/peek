@@ -20,7 +20,7 @@ import datetime as dt
 from utils.manage import Files
 
 class Image(Files):
-    def __init__(self, path=""):
+    def __init__(self, path="", import_image=True):
         self.path = path
         self.img = None
         self.time = 0
@@ -28,6 +28,8 @@ class Image(Files):
         self.hash = str(0)
         self.tags = {}
         self.analyses = {}
+
+        self.read_struct(import_image)
 
     def read_raw(self, **params):
         """
@@ -47,7 +49,11 @@ class Image(Files):
         self.img = raw
         self.hash = str(raw.sum())
 
-    def read_struct(self, import_image):
+    def read_struct(self, import_image=True):
+        if not os.path.exists(self.path):
+            print("Path does not exist. Check spelling.")
+            return
+
         if os.path.isdir(self.path):
             try:
                sname = self.find_single_file(directory=self.path, file_type="json")
@@ -142,6 +148,11 @@ class Image(Files):
             cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
             
         return img
+
+
+    def show(self):
+        plt.imshow(self.img)
+        plt.axis('off')
 
 class Series(Image):
     def __init__(

@@ -88,7 +88,18 @@ class Tag(Files):
 
 # interactive figure
 class Annotations(Tag): 
-    def __init__(self, image, analysis, tag_db_path, keymap={}):
+    def __init__(
+        self, 
+        image, 
+        analysis, 
+        tag_db_path, 
+        keymap={
+            'd':"Daphnia Magna",
+            'c':"Culex Pipiens, larva",
+            'p':"Culex Pipiens, pupa",
+            'u':"unidentified"
+            }
+        ):
         self.image = image
         self.tag_db_path = tag_db_path
         self.analysis = analysis
