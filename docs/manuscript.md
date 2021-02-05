@@ -70,7 +70,7 @@ and insecticide (lufenuron) and two temperature treatments. Hence, temperature +
 pesticide alone is not really a novel approach, also in nanocosms. The experiment lasted
 for three months. Invasive sampling method was applied.
 
-[@Ashauer.2020] showed that sampling timing of sampling is an important determinant 
+[@Ashauer.2020] showed that sampling timing of sampling is an important determinant
 of risk assessment, since average concentrations do not capture possible effects of
 high peak concentrations
 
@@ -215,9 +215,9 @@ Therefore, a pre experiment with imidiacloprid, thiamethoxam and thiacloprid
 (for comparison) will be conducted. After discussion with the group, neonics are
 regarded as unsuitable because of insensitivity of daphnia to the pesticides.
 
-Both Culex [@Reynaldi.2011] and Daphnia are sensitive to Esfenvalerate. 
+Both Culex [@Reynaldi.2011] and Daphnia are sensitive to Esfenvalerate.
 
-Daphnia are sensitive to Chlorantraniliprole. What about Culex? 
+Daphnia are sensitive to Chlorantraniliprole. What about Culex?
 
 Fipronil is effective against Culex (1-20 µg/L) [@Stevens.2011] and Daphnia M.
 20-100 µg/L (EPA).
