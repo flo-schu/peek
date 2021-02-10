@@ -9,10 +9,13 @@ class Timer:
     """
     small timer. Watch out! The program can't deal with very small time differences
     because then the speech function is too slow.
+
+    sms:    samples per sequence
     """
-    def __init__(self, cycles = np.inf, timings = {}, prep_time = 10):
+    def __init__(self, cycles = np.inf, timings = {}, prep_time = 10, sps = 1):
         self.cycles = cycles
         self.steps_cycle = len(timings)
+        self.sps = sps
         
         self.ask_for_input()
         self.timings = self.prepare_timings(timings) # should be in seconds
@@ -46,7 +49,7 @@ class Timer:
         self.engine = pyttsx3.init()
         start = math.floor(time.time())
         step = self.steps_cycle-1
-        sample = 1
+        sample = self.sps
         while timings != {}:
             elapsed = math.floor(time.time()-start)
             
@@ -54,9 +57,9 @@ class Timer:
                 step += 1
                 if step == self.steps_cycle:
                     print("\n-----------------------------------------------------")
-                    print("working on sample {}. Time elapsed {}\n".format(sample, timedelta(seconds=elapsed)))
+                    print("working on samples {}. Time elapsed {}\n".format(sample, timedelta(seconds=elapsed)))
                     step = 1
-                    sample += 1
+                    sample += self.sps
                 
                 event = timings.pop(elapsed)
                 print("step {}: {}".format(step, event))

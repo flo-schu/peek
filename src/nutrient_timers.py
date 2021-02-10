@@ -17,9 +17,9 @@ nitrite = {
 # zum messen)
 # 10 min warten
 phosphate = {
-    0:"start",
-    15: "schütteln",
-    35: "schütteln",
+    0:"start, 6 Tropfen Lösung 1",
+    15: "schütteln, dann 6 Tropfen Lösung 2",
+    35: "schütteln, dann Warteschlange.",
     45: "messen",
     60: "60",
     90: "30",
@@ -63,5 +63,5 @@ ammonium = {
 }
 
 
-Timer(100, nitrite, prep_time=10)
+Timer(100, phosphate, prep_time=0, sps=3)
 
