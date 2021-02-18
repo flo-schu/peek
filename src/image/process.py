@@ -62,9 +62,13 @@ class Image(Files):
         else:
             sname = self.append_to_filename(self.path, "_struct.json")
 
-        with open(sname, "r") as f:
-            struct = json.load(f)
-        self.read_processed(struct, import_image)
+        try:
+            with open(sname, "r") as f:
+                struct = json.load(f)
+            self.read_processed(struct, import_image)
+
+        except FileNotFoundError:
+            print("no struct json file found. Proceeding without")
 
     def read_processed(self, struct, import_image):
         for item in struct.items():
