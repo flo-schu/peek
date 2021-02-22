@@ -97,12 +97,15 @@ plt.imshow(r)
 # 3. detect change
 # 4. find beginning and then advance by closest location
 
-
-imin = min_filter(30, r)
+gray = cv.cvtColor(r, cv.COLOR_BGR2GRAY)
+imin = min_filter(30, gray)
+# imin = min_filter(30, r)
 plt.imshow(imin)
-
-mask = cv.inRange(imin[:,:,0], 20, 255) # red mask
-mask = max_filter(10, mask)
+plt.plot(imin[:,500])
+# mask = cv.inRange(imin[:,:,0], 20, 255) # red mask
+mask = cv.inRange(imin, 50, 255) # red mask
+mask = max_filter(50, mask)
+plt.imshow(mask)
 
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
