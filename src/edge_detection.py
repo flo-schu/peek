@@ -104,7 +104,7 @@ plt.imshow(imin)
 plt.plot(imin[:,500])
 # mask = cv.inRange(imin[:,:,0], 20, 255) # red mask
 mask = cv.inRange(imin, 50, 255) # red mask
-mask = max_filter(50, mask)
+mask = max_filter(100, mask)
 plt.imshow(mask)
 
 from scipy.ndimage import gaussian_filter1d
@@ -112,12 +112,12 @@ from scipy.signal import argrelextrema, find_peaks
 
 start_sediment = [0]
 # end_sediment = [imin[:,:,0].shape[0]]
-newmask = np.ones(imin[:,:,0].shape)
+newmask = np.ones(imin.shape)
 for i in range(mask.shape[1]):
     y = mask[2000:,i]
-    ys = gaussian_filter1d(y, 10)
-    yg = np.gradient(np.gradient(ys))
-    yex, props = find_peaks(ys, height=150, width=200)
+    # ys = gaussian_filter1d(y, 10)
+    # yg = np.gradient(np.gradient(ys))
+    yex, props = find_peaks(y, height=250, width=200)
     try:
         if len(yex) > 1:
             print(i, "more than one peak")
@@ -127,12 +127,15 @@ for i in range(mask.shape[1]):
         start_sediment.append(start_sediment[i-1])
         # end_sediment.append(end_sediment[i-1]+2000)
 
+# test = gaussian_filter1d(mask[2000:,260],10)
+# find_peaks(test, height=150, width=200)
+
 sss = gaussian_filter1d(start_sediment, 10)
 plt.plot(start_sediment); plt.plot(sss)
 for i in range(len(sss)-1):
     newmask[round(sss[i])+2000:,i] = 0
 
-plt.plot(ys)
+plt.plot()
 plt.plot(start_sediment)
 
 plt.imshow(mask)
