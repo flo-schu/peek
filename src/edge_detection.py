@@ -105,25 +105,39 @@ mask = cv.inRange(imin[:,:,0], 20, 255) # red mask
 mask = max_filter(10, mask)
 
 from scipy.ndimage import gaussian_filter1d
-from scipy.signal import argrelextrema
+from scipy.signal import argrelextrema, find_peaks
 
-start_sediment = []
+start_sediment = [0]
+# end_sediment = [imin[:,:,0].shape[0]]
 newmask = np.ones(imin[:,:,0].shape)
 for i in range(mask.shape[1]):
     y = mask[2000:,i]
     ys = gaussian_filter1d(y, 10)
     yg = np.gradient(np.gradient(ys))
+    yex, props = find_peaks(ys, height=150, width=200)
     try:
-        yex = argrelextrema(yg, np.greater)[0][0]
+        if len(yex) > 1:
+            print(i, "more than one peak")
+        start_sediment.append(props['left_ips'][0])
+        # end_sediment.append(props['right_bases'][0]+2000)
     except IndexError:
-        yex = mask.shape[0]
-    start_sediment.append(yex)
-    newmask[2000+yex:,i] = 0
+        start_sediment.append(start_sediment[i-1])
+        # end_sediment.append(end_sediment[i-1]+2000)
 
+sss = gaussian_filter1d(start_sediment, 10)
+plt.plot(start_sediment); plt.plot(sss)
+for i in range(len(sss)-1):
+    newmask[round(sss[i])+2000:,i] = 0
+
+plt.plot(ys)
+plt.plot(start_sediment)
+
+plt.imshow(mask)
 plt.imshow(newmask)
 
 r2 = cv.bitwise_and(r, r, mask=newmask.astype('uint8'))
 plt.imshow(r2)
+plt.imshow(r)
 
 # also promising:
 i = img.img[1000:4500,:,:]
