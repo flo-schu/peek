@@ -1,17 +1,20 @@
 import os
 import sys
 import time
-import cv2
 import shutil
 import imageio
+import cv2 as cv
 import pandas as pd
 import numpy as np
+from icecream import ic
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import argrelextrema, find_peaks
+
 from utils.manage import Files
 from image.process import Image
-from icecream import ic
 
 class Tag(Files):
     def __init__(self):
@@ -78,7 +81,7 @@ class Tag(Files):
         h = self.height
 
         if x + y + w + h == 0:
-            x, y, w, h = cv2.boundingRect(self.tag_contour)
+            x, y, w, h = cv.boundingRect(self.tag_contour)
             self.x = x
             self.y = y
             self.width = w
@@ -530,3 +533,173 @@ class Data:
         return images
 
 
+class Spectral:
+    @staticmethod
+    def mask_from_top(mask):
+        d = np.flipud(np.flipud(mask).cumsum(axis=0))
+        masktop = np.where(d > 0, 0, 255).astype('uint8')
+
+        return masktop
+
+    @staticmethod
+    def mask_from_bottom(mask):
+        d = np.flipud(np.flipud(mask).cumsum(axis=0))
+        masktop = np.where(d > 0, 0, 255).astype('uint8')
+
+        return masktop
+
+    @staticmethod
+    def min_filter(n, img):
+        size = (n, n)
+        shape = cv.MORPH_RECT
+        kernel = cv.getStructuringElement(shape, size)
+
+        # Applies the minimum filter with kernel NxN
+        return cv.erode(img, kernel)
+
+    @staticmethod
+    def max_filter(n, img):
+        size = (n, n)
+        shape = cv.MORPH_RECT
+        kernel = cv.getStructuringElement(shape, size)
+
+        return cv.dilate(img, kernel)
+
+    @classmethod
+    def mrm(cls, img, min_kernel_n, range_threshold, max_kernel_n):
+        """
+        mrm - minimum filter followed by a range threshold and followed by a 
+        maximum filter. Is a sequence of image processing steps creates a mask.
+        This mask filters a bright and relatively homogeneous feature of an image 
+        which has a strong contrast to the surrounding.
+
+        xxx_kernel_n    stands for the kernel size of the respective minimum or 
+                        maximum functions. The kernel takes the minimum or maximum
+                        respectively for the N x N sized matrix of the kernel
+        
+        range_threshold transforms the continuous image to a mask consisting of 
+                        0 or 255 values. Takes a tuple like object and needs a 
+                        min and max threshold like: (20, 255). See cv.inRange()
+        """
+        img = cls.min_filter(min_kernel_n, img)
+        mask = cv.inRange(img, range_threshold[0], range_threshold[1]) # red mask
+        mask = cls.max_filter(max_kernel_n, mask)
+
+        return mask
+
+    @staticmethod
+    def detect_vertical_peaks(img, return_prop="ips", **peak_args):
+        """
+        Goes through an image by vertical slices and returns the first peak
+        encountered. Peak arguments can pe provided by keywords. Refer to
+        scipy.signal find_peaks method to know what arguments can be used. 
+        Well working are height and width. Particularly the width argument is 
+        important to ensure that only strong enough signals are detected.
+        """
+        y, x = img.shape
+        
+        left = [0]
+        right = [y]
+        
+        for i in range(x):
+            vline = img[:,i]
+            peak_x, props = find_peaks(vline, **peak_args)
+            try:
+                if len(peak_x) > 1:
+                    print(i, "more than one peak")
+                left.append(props['left_'+return_prop][0])
+                right.append(props['right_'+return_prop][0])
+            except IndexError:
+                left.append(left[i-1])
+                right.append(right[i-1])
+
+        return left[1:], right[1:]
+
+    @staticmethod
+    def detect_vertical_extrema(img, smooth_n=10, derivative=1):
+        """
+        finds extrema in spectral vertical lines of an image. At the moment optimized for
+        first derivative. 
+        Basically the function looks for an increase first and takes the beginning of 
+        the increase and then looks for the decrease of a value again.
+        Since the water surface behaves in pretty much this fashion, it works ok
+        Wait for problematic images
+
+        Interpolation could help a lot in these cases.
+        """
+        y, x = img.shape
+        
+        left = [0]
+        right = [y]
+
+        for i in range(x):
+            vline = img[:,i]
+            if smooth_n > 0:
+                vline = gaussian_filter1d(vline, smooth_n)
+            
+            vline = np.gradient(vline, derivative)
+            ex1 = argrelextrema(vline, np.less)[0]
+            ex2 = argrelextrema(vline, np.greater)[0]
+            try:
+                left.append(ex1[0])
+            except IndexError:
+                print("not enough peaks.")
+                left.append(left[i-1])
+
+            try:
+                right.append(ex2[1])
+            except IndexError:
+                print("not enough peaks.")
+                right.append(right[i-1])
+
+
+        return left[1:], right[1:]
+
+    @staticmethod
+    def extend_horiz_border(border, img, towards="bottom", smooth_n=0, 
+                            y_offset=(0,0), fill=0):
+        
+        """
+        The method takes a 1D array or list as an input as well as an image. Both
+        must have the same x dimension (eg. if the border is of len 10, the image 
+        must by Y x 10 as well. It returns an image which is filled from the 
+        border until top or bottom or until a second border). 
+        
+        border      1D array of same x-dimension as img
+        img         2D array
+        smooth_n    if set to value greater 1, the array is smoothed beforehand
+        y_offset    array like of len=2, specifies if the border is offset and the
+                    second interval is offset as well
+        fill        is the number with whihc the array is filled
+        """
+        y, x = img.shape
+        
+        if smooth_n > 0:
+            a = np.round(gaussian_filter1d(border, smooth_n)).astype('int')
+        else:
+            a = np.round(border).astype('int')
+
+        a = a + y_offset[0]
+        
+        assert len(a) == x, "img and border should have the same x dimension"
+        
+        if isinstance(towards, (np.ndarray, list)):
+            if smooth_n > 0:
+                b = np.round(gaussian_filter1d(towards, smooth_n)).astype('int')
+            else:
+                b = np.round(towards).astype('int')
+            
+            b = b + y_offset[1]
+            assert len(a) == len(b)
+        elif towards == "bottom":
+            b = np.repeat(y+y_offset[1], x)
+        elif towards == "top":
+            b = a
+            a = np.repeat(0+y_offset[1], x)
+
+
+        # im sure for this exists a numpy method        
+        for i in range(x):
+            img[a[i]:b[i], i] = fill
+
+        return img
