@@ -93,6 +93,44 @@ def detect_vertical_peaks(img, return_prop="ips", **peak_args):
 
     return left[1:], right[1:]
 
+def detect_vertical_extrema(img, smooth_n=10, derivative=1):
+    """
+    finds extrema in spectral vertical lines of an image. At the moment optimized for
+    first derivative. 
+    Basically the function looks for an increase first and takes the beginning of 
+    the increase and then looks for the decrease of a value again.
+    Since the water surface behaves in pretty much this fashion, it works ok
+    Wait for problematic images
+
+    Interpolation could help a lot in these cases.
+    """
+    y, x = img.shape
+    
+    left = [0]
+    right = [y]
+
+    for i in range(x):
+        vline = img[:,i]
+        if smooth_n > 0:
+            vline = gaussian_filter1d(vline, smooth_n)
+        
+        vline = np.gradient(vline, derivative)
+        ex1 = argrelextrema(vline, np.less)[0]
+        ex2 = argrelextrema(vline, np.greater)[0]
+        try:
+            left.append(ex1[0])
+        except IndexError:
+            print("not enough peaks.")
+            left.append(left[i-1])
+
+        try:
+            right.append(ex2[1])
+        except IndexError:
+            print("not enough peaks.")
+            right.append(right[i-1])
+
+
+    return left[1:], right[1:]
 
 def extend_horiz_border(border, img, towards="bottom", smooth_n=0, 
                         y_offset=(0,0), fill=0):
@@ -138,9 +176,9 @@ def extend_horiz_border(border, img, towards="bottom", smooth_n=0,
 
     # im sure for this exists a numpy method        
     for i in range(x):
-        newmask[a[i]:b[i], i] = fill
+        img[a[i]:b[i], i] = fill
 
-    return newmask
+    return img
 
 path = "../data/pics/"
 date = "20210204"
@@ -154,29 +192,80 @@ img = Image(os.path.join(path, date, "8", "091155"))
 # 1. trim image roughly
 i = img.img[1000:4500,:,:]
 
+# remove from end of blue band to top ------------------------------------------
 # 2. apply mask till blue band is detected
-blue_low = np.array([0,30,70])
-blue_high = np.array([40,80,140])
+blue_low = np.array([0,20,60])
+blue_high = np.array([50,90,150])
 
-mask = cv.inRange(i, blue_low, blue_high)
+# create preliminary mask of blue band
+# mask = cv.inRange(i, blue_low, blue_high)
+mask = mrm(i, 20, (blue_low, blue_high), 50)
+plt.imshow(mask)
+
 masktop = mask_from_top(mask)
 r = cv.bitwise_and(i, i, mask=masktop)
 
 plt.imshow(r)
 
+# remove sediment --------------------------------------------------------------
+# create prelimary mask of sediment 
 gray = cv.cvtColor(r, cv.COLOR_BGR2GRAY)
+y_offset = 2000
+mask = mrm(gray[2000:], 30, (50, 255), 100)
 
-mask = mrm(gray, 30, (50, 255), 100)
-plt.imshow(mask)
+# detect peaks
+left, right = detect_vertical_peaks(mask, height=250, width = 200)
 
-left, right = detect_vertical_peaks(mask[2000:, ], height=250, width = 200)
+# redraw mask based on peak analysis
+# using np.zeros instead of np.ones with fill=1 instead of fill=0 
+# inverts the process
+newmask = extend_horiz_border(
+    left, img=np.ones(gray.shape), towards="bottom", 
+    y_offset=(y_offset, y_offset), fill=0)
 
-newmask = np.ones(mask.shape)
-newmask = extend_horiz_border(left, newmask, y_offset=(2000,0), towards="bottom")
-plt.imshow(newmask)
 
 r2 = cv.bitwise_and(r, r, mask=newmask.astype('uint8'))
 plt.imshow(r2)
+
+# remove distance to water surface ---------------------------------------------
+y_offset = 1000
+mask = mrm(gray[:y_offset], 30, (60, 255), 50)
+plt.imshow(mask)
+# detect peaks
+left, right = detect_vertical_peaks(mask, height=250, width = 50)
+
+newmask = extend_horiz_border(
+    right, img=np.ones(gray.shape), towards="top", 
+    y_offset=(0, 0), fill=0)
+plt.imshow(newmask)
+
+r3 = cv.bitwise_and(r2, r2, mask=newmask.astype('uint8'))
+plt.imshow(r3)
+
+# remove water surface ---------------------------------------------------------
+y_offset = 1000
+
+viz.color_analysis(r3[0:1000,200:400,:], "b")
+
+
+plt.imshow(r3[:y_offset,:,2])
+# detect peaks
+mask = mrm(r3[:y_offset,:,2], 10, (10, 255), 50)
+plt.imshow(mask)
+left, right = detect_vertical_extrema(mask, smooth_n=10, derivative=1)
+newmask = extend_horiz_border(
+    left, img=np.zeros(gray.shape), towards=right, 
+    y_offset=(0, 0), fill=1, smooth_n=10)
+plt.imshow(newmask)
+
+r4 = cv.bitwise_and(r3, r3, mask=newmask.astype('uint8'))
+plt.imshow(r4)
+
+
+# plt.plot(gaussian_filter1d(right,100)); plt.plot(gaussian_filter1d(left,100))
+# len(left)
+
+
 
 # 3. apply mask until sediment is over
 # minimum filters are used for this, because when the 
