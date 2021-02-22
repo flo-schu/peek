@@ -8,6 +8,10 @@ from evaluation.plot import Viz as viz
 import evaluation.calc as calc
 from utils.manage import Files
 from matplotlib import pyplot as plt
+
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import argrelextrema, find_peaks
+
 import os
 import numpy as np
 import cv2 as cv
@@ -40,6 +44,103 @@ def max_filter(n, img):
 
     return cv.dilate(img, kernel)
 
+def mrm(img, min_kernel_n, range_threshold, max_kernel_n):
+    """
+    mrm - minimum filter followed by a range threshold and followed by a 
+    maximum filter. Is a sequence of image processing steps creates a mask.
+    This mask filters a bright and relatively homogeneous feature of an image 
+    which has a strong contrast to the surrounding.
+
+    xxx_kernel_n    stands for the kernel size of the respective minimum or 
+                    maximum functions. The kernel takes the minimum or maximum
+                    respectively for the N x N sized matrix of the kernel
+    
+    range_threshold transforms the continuous image to a mask consisting of 
+                    0 or 255 values. Takes a tuple like object and needs a 
+                    min and max threshold like: (20, 255). See cv.inRange()
+    """
+    img = min_filter(min_kernel_n, img)
+    mask = cv.inRange(img, range_threshold[0], range_threshold[1]) # red mask
+    mask = max_filter(max_kernel_n, mask)
+
+    return mask
+
+
+def detect_vertical_peaks(img, return_prop="ips", **peak_args):
+    """
+    Goes through an image by vertical slices and returns the first peak
+    encountered. Peak arguments can pe provided by keywords. Refer to
+    scipy.signal find_peaks method to know what arguments can be used. 
+    Well working are height and width. Particularly the width argument is 
+    important to ensure that only strong enough signals are detected.
+    """
+    y, x = img.shape
+    
+    left = [0]
+    right = [y]
+    
+    for i in range(x):
+        vline = img[:,i]
+        peak_x, props = find_peaks(vline, **peak_args)
+        try:
+            if len(peak_x) > 1:
+                print(i, "more than one peak")
+            left.append(props['left_'+return_prop][0])
+            right.append(props['right_'+return_prop][0])
+        except IndexError:
+            left.append(left[i-1])
+            right.append(right[i-1])
+
+    return left[1:], right[1:]
+
+
+def extend_horiz_border(border, img, towards="bottom", smooth_n=0, 
+                        y_offset=(0,0), fill=0):
+    
+    """
+    The method takes a 1D array or list as an input as well as an image. Both
+    must have the same x dimension (eg. if the border is of len 10, the image 
+    must by Y x 10 as well. It returns an image which is filled from the 
+    border until top or bottom or until a second border). 
+    
+    border      1D array of same x-dimension as img
+    img         2D array
+    smooth_n    if set to value greater 1, the array is smoothed beforehand
+    y_offset    array like of len=2, specifies if the border is offset and the
+                second interval is offset as well
+    fill        is the number with whihc the array is filled
+    """
+    y, x = img.shape
+    
+    if smooth_n > 0:
+        a = np.round(gaussian_filter1d(border, smooth_n)).astype('int')
+    else:
+        a = np.round(border).astype('int')
+
+    a = a + y_offset[0]
+    
+    assert len(a) == x, "img and border should have the same x dimension"
+    
+    if isinstance(towards, (np.ndarray, list)):
+        if smooth_n > 0:
+            b = np.round(gaussian_filter1d(towards, smooth_n)).astype('int')
+        else:
+            b = np.round(towards).astype('int')
+        
+        b = b + y_offset[1]
+        assert len(a) == len(b)
+    elif towards == "bottom":
+        b = np.repeat(y+y_offset[1], x)
+    elif towards == "top":
+        b = a
+        a = np.repeat(0+y_offset[1], x)
+
+
+    # im sure for this exists a numpy method        
+    for i in range(x):
+        newmask[a[i]:b[i], i] = fill
+
+    return newmask
 
 path = "../data/pics/"
 date = "20210204"
@@ -63,6 +164,19 @@ r = cv.bitwise_and(i, i, mask=masktop)
 
 plt.imshow(r)
 
+gray = cv.cvtColor(r, cv.COLOR_BGR2GRAY)
+
+mask = mrm(gray, 30, (50, 255), 100)
+plt.imshow(mask)
+
+left, right = detect_vertical_peaks(mask[2000:, ], height=250, width = 200)
+
+newmask = np.ones(mask.shape)
+newmask = extend_horiz_border(left, newmask, y_offset=(2000,0), towards="bottom")
+plt.imshow(newmask)
+
+r2 = cv.bitwise_and(r, r, mask=newmask.astype('uint8'))
+plt.imshow(r2)
 
 # 3. apply mask until sediment is over
 # minimum filters are used for this, because when the 
@@ -97,52 +211,17 @@ plt.imshow(r)
 # 3. detect change
 # 4. find beginning and then advance by closest location
 
-gray = cv.cvtColor(r, cv.COLOR_BGR2GRAY)
-imin = min_filter(30, gray)
-# imin = min_filter(30, r)
-plt.imshow(imin)
-plt.plot(imin[:,500])
-# mask = cv.inRange(imin[:,:,0], 20, 255) # red mask
-mask = cv.inRange(imin, 50, 255) # red mask
-mask = max_filter(100, mask)
-plt.imshow(mask)
 
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import argrelextrema, find_peaks
 
-start_sediment = [0]
-# end_sediment = [imin[:,:,0].shape[0]]
-newmask = np.ones(imin.shape)
-for i in range(mask.shape[1]):
-    y = mask[2000:,i]
-    # ys = gaussian_filter1d(y, 10)
-    # yg = np.gradient(np.gradient(ys))
-    yex, props = find_peaks(y, height=250, width=200)
-    try:
-        if len(yex) > 1:
-            print(i, "more than one peak")
-        start_sediment.append(props['left_ips'][0])
-        # end_sediment.append(props['right_bases'][0]+2000)
-    except IndexError:
-        start_sediment.append(start_sediment[i-1])
-        # end_sediment.append(end_sediment[i-1]+2000)
 
-# test = gaussian_filter1d(mask[2000:,260],10)
-# find_peaks(test, height=150, width=200)
 
-sss = gaussian_filter1d(start_sediment, 10)
-plt.plot(start_sediment); plt.plot(sss)
-for i in range(len(sss)-1):
-    newmask[round(sss[i])+2000:,i] = 0
 
-plt.plot()
+plt.plot(b)
 plt.plot(start_sediment)
 
 plt.imshow(mask)
-plt.imshow(newmask)
 
-r2 = cv.bitwise_and(r, r, mask=newmask.astype('uint8'))
-plt.imshow(r2)
+
 plt.imshow(r)
 
 # also promising:
