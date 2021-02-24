@@ -18,10 +18,9 @@ nitrite = {
 # 10 min warten
 phosphate = {
     0:"start, 6 Tropfen Lösung 1",
-    15: "schütteln, dann 6 Tropfen Lösung 2",
-    35: "schütteln, dann Warteschlange.",
-    45: "messen",
-    60: "60",
+    25: "schütteln, dann 6 Tropfen Lösung 2",
+    50: "schütteln, dann Warteschlange.",
+    60: "messen",
     90: "30",
     110: "10",
     120: ""
@@ -41,11 +40,6 @@ nitrate = {
     150: "",
 }
 
-test = {
-    0:"start",
-    5:"test",
-    10:""
-}
 
 # empfehlung 3 gleichzeitig für stressfreies messen
 # 4 geht aber super stressig
@@ -63,5 +57,5 @@ ammonium = {
 }
 
 
-Timer(100, phosphate, prep_time=0, sps=3)
+Timer(100, ammonium, prep_time=10, sps=3)
 
