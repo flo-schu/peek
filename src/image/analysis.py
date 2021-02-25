@@ -727,6 +727,35 @@ class Mask(Spectral):
         self.masks = {}
  
     def create_masks(self, pars):
+        """      
+        to detect the sediment border, the picture is split in half, because in the
+        lower half the sediment will start eventually.
+        the input is a minimum filter of input image, from which a mask is calculated
+        from the red channel because it has a very distinct transition from background 
+        to sediment. Then a max filter is calculated from this to make the sediment 
+        more homogeneous
+        [ ] this could be improved by including other color channels as well
+        [ ] or converting to greyscale beforehand
+
+        Next, vertical 1D slices are passed to np.gradient two times to get
+        the locations of the inflection points. The first one, marks the transition to 
+        the sediment. 
+        [ ] Maybe this could again be improved by finding the closest inflection
+            point to the previous, thus noisy (up and down moevements would be avoided)
+            !!!
+        From the resulting line, a mask is extended until the bottom and contains the
+        sediment.
+        The good thing with this, is that we are only slightly dependent on a color range 
+        because this changes with lighting conditions or sediment cover, the important
+        thing necessary is a big enough change. 
+
+        next time try out:
+        1. Greyscale
+        2. min filter --> mask --> max filter
+        3. detect change
+        4. find beginning and then advance by closest location
+        """
+
         if isinstance(pars, str):
             pars = Files.read_settings(pars)
 
