@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import imageio
 import pandas as pd
@@ -154,3 +155,10 @@ class Files:
         path = os.path.normpath(path)
         pparts = [add_path] + path.split(os.sep)[strip_levels:]
         return os.path.join(*pparts)
+
+    @staticmethod
+    def read_settings(path):
+        with open(path, "r") as f:
+            pars = json.load(f)
+
+        return pars

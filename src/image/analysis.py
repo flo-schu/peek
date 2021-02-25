@@ -535,9 +535,23 @@ class Data:
 
 class Spectral:
     @staticmethod
+    def trim(img, t=None, b=None, l=None, r=None):
+        if t is None:
+            t = 0
+        if b is None:
+            b = img.shape[0]
+        if l is None:
+            l = 0
+        if r is None:
+            r = img.shape[1]
+
+        return img[t:b, l:r, :]
+
+
+    @staticmethod
     def mask_from_top(mask):
         d = np.flipud(np.flipud(mask).cumsum(axis=0))
-        masktop = np.where(d > 0, 0, 255).astype('uint8')
+        masktop = np.where(d == 0, 0, 255).astype('uint8')
 
         return masktop
 
@@ -702,4 +716,116 @@ class Spectral:
         for i in range(x):
             img[a[i]:b[i], i] = fill
 
-        return img
+        return img.astype('uint8')
+
+
+
+class Mask(Spectral):
+    def __init__(self, img):
+        self.img = img
+        self.gray = np.array([])
+        self.masks = {}
+ 
+    def create_masks(self, pars):
+        if isinstance(pars, str):
+            pars = Files.read_settings(pars)
+
+        assert isinstance(pars, dict), "input parameters must be of type dict"
+
+        self.img = self.trim(self.img, **pars['trim'])
+        
+        self.remove_blue_tape(**pars['blue_tape'])
+        self.img = self.apply_mask(self.img, self.masks['blue_tape'])
+
+        self.mask_sediment(**pars['sediment'])
+        self.img = self.apply_mask(self.img, self.masks['sediment'])
+        
+        self.mask_airspace(**pars['airspace'])
+        self.img = self.apply_mask(self.img, self.masks['airspace'])
+        
+        self.mask_water_surface(**pars['water_surface'])
+        self.img = self.apply_mask(self.img, self.masks['water_surface'])
+
+    @staticmethod
+    def apply_mask(img, mask, action="remove"):
+        if action == "remove":
+            mask = mask == False
+            mask = mask.astype('uint8')
+        if action == "show":
+            mask = mask
+        
+        return cv.bitwise_and(img, img, mask=mask)
+
+    def remove_blue_tape(
+        self, blue_low=[0,0,0], blue_high=[0,0,0], 
+        min_kernel_n=0, max_kernel_n=255
+        ):
+        mask = self.mrm(
+            self.img, 
+            min_kernel_n=min_kernel_n, 
+            range_threshold=(np.array(blue_low), np.array(blue_high)), 
+            max_kernel_n=max_kernel_n)
+
+        self.masks['blue_tape'] = self.mask_from_top(mask)
+        
+    def mask_sediment(self, y_offset=0, min_kernel_n=1, max_kernel_n=1,
+                      gray_low=0, gray_high=255, peak_height=100, peak_width=50):
+
+        gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
+        mask = self.mrm(
+            gray[y_offset:], 
+            min_kernel_n=min_kernel_n,
+            range_threshold=(gray_low, gray_high),
+            max_kernel_n=max_kernel_n)
+
+        # detect peaks
+        left, right = self.detect_vertical_peaks(mask, height=peak_height, 
+                                                 width = peak_width)
+
+        # redraw mask based on peak analysis
+        # using np.zeros instead of np.ones with fill=1 instead of fill=0 
+        # inverts the process
+        newmask = self.extend_horiz_border(
+            left, img=np.zeros(gray.shape), towards="bottom", 
+            y_offset=(y_offset, y_offset), fill=1)
+
+        self.masks['sediment'] = newmask
+
+    def mask_airspace(self, y_offset=0, min_kernel_n=1, max_kernel_n=1,
+                      gray_low=0, gray_high=255, peak_height=100, peak_width=50):
+
+        gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
+        mask = self.mrm(
+            gray[:y_offset], 
+            min_kernel_n=min_kernel_n,
+            range_threshold=(gray_low, gray_high),
+            max_kernel_n=max_kernel_n)
+
+        # detect peaks
+        left, right = self.detect_vertical_peaks(mask, height=peak_height, 
+                                                 width=peak_width)
+
+        newmask = self.extend_horiz_border(
+            right, img=np.zeros(gray.shape), towards="top", 
+            y_offset=(0, 0), fill=1)
+        
+        self.masks['airspace'] = newmask
+
+    def mask_water_surface(self, y_offset=0, color_channel=2, min_kernel_n=1,
+                           max_kernel_n=1, color_low=0, color_high=255, smooth_n=0):
+        # detect peaks
+        gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
+        mask = self.mrm(
+            self.img[:y_offset,:,color_channel], 
+            min_kernel_n=min_kernel_n,
+            range_threshold=(color_low, color_high),
+            max_kernel_n=max_kernel_n)
+        left, right = self.detect_vertical_extrema(
+            mask, 
+            smooth_n=smooth_n, 
+            derivative=1)
+        newmask = self.extend_horiz_border(
+            left, img=np.zeros(gray.shape), towards=right, 
+            y_offset=(0, 0), fill=1, smooth_n=smooth_n)
+
+        self.masks['water_surface'] = newmask
