@@ -727,33 +727,49 @@ class Mask(Spectral):
         self.masks = {}
  
     def create_masks(self, pars):
-        """      
-        to detect the sediment border, the picture is split in half, because in the
-        lower half the sediment will start eventually.
-        the input is a minimum filter of input image, from which a mask is calculated
-        from the red channel because it has a very distinct transition from background 
-        to sediment. Then a max filter is calculated from this to make the sediment 
+        """
+        algorithm to create masks of different regions in the nanocosms
+        The algorithm nows:
+        - sediments (detection works very well)
+        - blue band (works very well too)
+        - airspace between blue band and water surface. Not yet ideal
+        - water surface, also not working perfectly
+
+        Mostly the subroutines work by homogenizing surfaces by applying a 
+        sequence of a minimum filter of input image, from which a mask is 
+        calculated from the a color channel which ideally it has a very distinct 
+        transition from the regions which are to be spearated. Afterwards, color
+        ranges are selected from the whole image or a specific channel. 
+        Then a max filter is calculated from this to make the region 
         more homogeneous
         [ ] this could be improved by including other color channels as well
-        [ ] or converting to greyscale beforehand
+        [x] or converting to greyscale beforehand
 
-        Next, vertical 1D slices are passed to np.gradient two times to get
-        the locations of the inflection points. The first one, marks the transition to 
-        the sediment. 
+        Then two methods are currently available:
+        1. Extract vertical peaks from the image with scipy.signal
+        2. Extract extrema in vertical spectral ranges with scipy.signal
+
+        Both methods work by passing 1D vertical slices to the respective function
+        to get extrema or peaks
         [ ] Maybe this could again be improved by finding the closest inflection
-            point to the previous, thus noisy (up and down moevements would be avoided)
-            !!!
-        From the resulting line, a mask is extended until the bottom and contains the
-        sediment.
+            point or peak to the previous, thus noisy (up and down moevements 
+            would be avoided) !!!
+        
+        From the resulting line, a mask is extended until the bottom or another 
+        line which contains the region of interest.
+        
         The good thing with this, is that we are only slightly dependent on a color range 
         because this changes with lighting conditions or sediment cover, the important
         thing necessary is a big enough change. 
 
-        next time try out:
-        1. Greyscale
-        2. min filter --> mask --> max filter
-        3. detect change
-        4. find beginning and then advance by closest location
+        In a nutshell
+        1. MIN -> RANGE -> MAX
+        2. PEAK/SIGNAL detection
+        3. MASKING
+
+        A further option would be to fit geometric shapes to regions like the 
+        water surface. Becaus it will follow an ellipsis every time. It should
+        be "relatively" easy to fit an ellipsis if there are several constraints.
         """
 
         if isinstance(pars, str):
@@ -762,18 +778,10 @@ class Mask(Spectral):
         assert isinstance(pars, dict), "input parameters must be of type dict"
 
         self.img = self.trim(self.img, **pars['trim'])
-        
         self.remove_blue_tape(**pars['blue_tape'])
-        self.img = self.apply_mask(self.img, self.masks['blue_tape'])
-
-        self.mask_sediment(**pars['sediment'])
-        self.img = self.apply_mask(self.img, self.masks['sediment'])
-        
-        self.mask_airspace(**pars['airspace'])
-        self.img = self.apply_mask(self.img, self.masks['airspace'])
-        
+        self.mask_sediment(**pars['sediment'])     
+        self.mask_airspace(**pars['airspace'])        
         self.mask_water_surface(**pars['water_surface'])
-        self.img = self.apply_mask(self.img, self.masks['water_surface'])
 
     @staticmethod
     def apply_mask(img, mask, action="remove"):
@@ -787,7 +795,7 @@ class Mask(Spectral):
 
     def remove_blue_tape(
         self, blue_low=[0,0,0], blue_high=[0,0,0], 
-        min_kernel_n=0, max_kernel_n=255
+        min_kernel_n=0, max_kernel_n=255, apply_mask=True
         ):
         mask = self.mrm(
             self.img, 
@@ -796,9 +804,14 @@ class Mask(Spectral):
             max_kernel_n=max_kernel_n)
 
         self.masks['blue_tape'] = self.mask_from_top(mask)
+
+        if apply_mask:
+            self.img = self.apply_mask(self.img, self.masks['blue_tape'])
+
         
     def mask_sediment(self, y_offset=0, min_kernel_n=1, max_kernel_n=1,
-                      gray_low=0, gray_high=255, peak_height=100, peak_width=50):
+                      gray_low=0, gray_high=255, peak_height=100, peak_width=50,
+                      apply_mask=True):
 
         gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
         mask = self.mrm(
@@ -819,9 +832,13 @@ class Mask(Spectral):
             y_offset=(y_offset, y_offset), fill=1)
 
         self.masks['sediment'] = newmask
+        
+        if apply_mask:
+            self.img = self.apply_mask(self.img, self.masks['sediment'])
 
     def mask_airspace(self, y_offset=0, min_kernel_n=1, max_kernel_n=1,
-                      gray_low=0, gray_high=255, peak_height=100, peak_width=50):
+                      gray_low=0, gray_high=255, peak_height=100, peak_width=50,
+                      apply_mask=True):
 
         gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
         mask = self.mrm(
@@ -840,8 +857,12 @@ class Mask(Spectral):
         
         self.masks['airspace'] = newmask
 
+        if apply_mask:
+            self.img = self.apply_mask(self.img, self.masks['airspace'])
+
     def mask_water_surface(self, y_offset=0, color_channel=2, min_kernel_n=1,
-                           max_kernel_n=1, color_low=0, color_high=255, smooth_n=0):
+                           max_kernel_n=1, color_low=0, color_high=255, 
+                           smooth_n=0, apply_mask=True):
         # detect peaks
         gray = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
         mask = self.mrm(
@@ -858,3 +879,6 @@ class Mask(Spectral):
             y_offset=(0, 0), fill=1, smooth_n=smooth_n)
 
         self.masks['water_surface'] = newmask
+
+        if apply_mask:
+            self.img = self.apply_mask(self.img, self.masks['water_surface'])
