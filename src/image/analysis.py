@@ -725,6 +725,7 @@ class Mask(Spectral):
         self.img = img
         self.gray = np.array([])
         self.masks = {}
+        self.pars = {}
  
     def create_masks(self, pars):
         """
@@ -773,15 +774,11 @@ class Mask(Spectral):
         """
 
         if isinstance(pars, str):
-            pars = Files.read_settings(pars)
+            self.pars = Files.read_settings(pars)
 
-        assert isinstance(pars, dict), "input parameters must be of type dict"
+        assert isinstance(self.pars, dict), "input parameters must be of type dict"
 
-        self.img = self.trim(self.img, **pars['trim'])
-        self.remove_blue_tape(**pars['blue_tape'])
-        self.mask_sediment(**pars['sediment'])     
-        self.mask_airspace(**pars['airspace'])        
-        self.mask_water_surface(**pars['water_surface'])
+
 
     @staticmethod
     def apply_mask(img, mask, action="remove"):
