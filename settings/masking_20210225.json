@@ -1,0 +1,47 @@
+{
+  "trim": {
+    "t": 1000,
+    "b": 4500
+  },
+  "blue_tape": {
+    "blue_low": [
+      0,
+      20,
+      60
+    ],
+    "blue_high": [
+      50,
+      90,
+      150
+    ],
+    "min_kernel_n": 20,
+    "max_kernel_n": 50
+  },
+  "sediment": {
+    "y_offset": 2000,
+    "gray_low": 50,
+    "gray_high": 100,
+    "min_kernel_n": 30,
+    "max_kernel_n": 100,
+    "peak_height": 250,
+    "peak_width": 200
+  },
+  "airspace": {
+    "y_offset": 1000,
+    "gray_low": 60,
+    "gray_high": 255,
+    "min_kernel_n": 30,
+    "max_kernel_n": 50,
+    "peak_height": 250,
+    "peak_width": 50
+  },
+  "water_surface": {
+    "y_offset": 1000,
+    "color_channel": 2,
+    "min_kernel_n": 10,
+    "max_kernel_n": 50,
+    "color_low": 5,
+    "color_high": 255,
+    "smooth_n": 10
+  }
+}
