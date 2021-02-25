@@ -257,7 +257,20 @@ class Series(Image):
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
             imageio.imwrite(os.path.join(self.path,name+"_"+str(i)+"."+file_ext), imlist[i])
-            
+
+    @staticmethod
+    def get_contours(img, threshold):
+        cnts = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
+        cnts_select = []
+        for c in cnts:
+            # fit a bounding box to the contour
+            if max(c.shape) > threshold:            
+                cnts_select.append(c)
+
+        return cnts_select
+
     def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
         """
         motion analysis algorithm. First computes the difference between images.
@@ -286,15 +299,9 @@ class Series(Image):
             #(remember 0 is black and 255 is absolute white)
             #the image is called binarised as any value less than 3 will be 0 and
             # all values equal to and more than 3 will be 255
-            thresh = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
-            cnts = cv2.findContours(thresh[1], cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            cnts = imutils.grab_contours(cnts)
 
-            cnts_select = []
-            for c in cnts:
-                # fit a bounding box to the contour
-                if max(c.shape) > thresh_size:            
-                    cnts_select.append(c)
+            thresh = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
+            cnts_select = self.get_contours(thresh[1], thresh_size)
 
             imtag = self.tag_image(orig_img, cnts_select, mar)
             imslc1 = self.cut_slices(orig_img, cnts_select, mar)
