@@ -66,17 +66,22 @@ def smart(roi):
     background[:,:,1] = median[:,:,1] - np.median(median[:,:,1].flatten())
     background[:,:,0] = median[:,:,0] - np.median(median[:,:,0].flatten())
     background = np.where(background > 0, background, 0).astype('uint8')
-    gray = cv.cvtColor(background, cv.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
     
     T, thresh = cv.threshold(gray, 10, 255, 0)
 
     return [roi, median, background, gray, thresh]
 
 steps = Detection.detect(
-    m1.img, pois[198], 50, 
+    m1.img, pois[20], 50, 
     smart, {}, 
     plot=True)
 
+contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
+roi = Detection.get_roi(m1.img, pois[198], 50)
+roi = cv.drawContours(roi, contours, 5, (0,255,0), 2)
+plt.imshow(roi)
 
 # steps:
 # 1: take contours
