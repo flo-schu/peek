@@ -6,6 +6,7 @@ import imageio
 import cv2 as cv
 import pandas as pd
 import numpy as np
+import itertools as it
 from icecream import ic
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -14,7 +15,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
 from utils.manage import Files
-from image.process import Image
+from image.process import Image, Series
 
 class Tag(Files):
     def __init__(self):
@@ -879,3 +880,72 @@ class Mask(Spectral):
 
         if apply_mask:
             self.img = self.apply_mask(self.img, self.masks['water_surface'])
+
+
+class Detection():
+
+    @staticmethod
+    def get_contour_centers(contours):
+        points = []
+        for c in contours:
+            box = cv.boundingRect(c)
+            center = (box[0] + int(np.round(box[2]/2)), 
+                      box[1] + int(np.round(box[3]/2)))
+            points.append(center)
+        
+        return points
+
+    @classmethod
+    def find_pois(cls, im1, im2, filter_fun=None, filter_args={}, threshold=20, sw=20, 
+                  erode_n=1, smooth=1, plot=False):
+        diff = Series.difference([im1, im2], lag=1, smooth=3)[0]
+        ret, thresh = cv.threshold(diff, threshold, 255,0)
+
+        # get intersection of thresholded values
+        intersec = ( thresh[:,:,0] * thresh[:,:,1] 
+                + thresh[:,:,0] * thresh[:,:,2] 
+                + thresh[:,:,2] * thresh[:,:,1] )
+        intersec = np.where(intersec >= 1, 255, 0).astype('uint8')
+
+        # combine elements
+        k = cv.getStructuringElement(cv.MORPH_ELLIPSE, ksize=(sw, sw))
+        morph = cv.morphologyEx(intersec, op=cv.MORPH_CLOSE, kernel=k)
+
+        # remove intersections of just 1 pixel (could maybe removed later)
+        morph = Spectral.min_filter(erode_n, morph)
+        contours, hierarchy = cv.findContours(morph, cv.RETR_TREE, 
+                                              cv.CHAIN_APPROX_SIMPLE)
+
+        if filter_fun is not None:
+            contours = filter_fun(contours, **filter_args)
+
+        points = cls.get_contour_centers(contours)
+
+        if plot:
+            fig, (ax1, ax2) = plt.subplots(1,2, sharey=True, sharex=True)
+            ax1.imshow(im2)
+            ax2.imshow(diff)
+
+        return points
+
+    @staticmethod
+    def detect(img, poi, search_width, detector_fun, detector_args={}, plot=False ):
+        # extract region of interest
+        im = img.copy()
+        y, x, c = img.shape
+        pt1 = tuple([max(p - search_width, 0) for p in poi])
+        pt2 = tuple([min(poi[0] + search_width, x), min(poi[1] + search_width, y)])
+        roi = im[pt1[1]:pt2[1], pt1[0]:pt2[0], :]
+
+        steps = detector_fun(roi, **detector_args)    
+        
+        if plot:
+            nrow = int(np.ceil(np.sqrt(len(steps))))
+            ncol = int(np.ceil(len(steps) / nrow))
+            fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True)
+            for i, ax in enumerate(it.product(range(nrow), range(ncol))):
+                try:
+                    axes[ax[0], ax[1]].imshow(steps[i])
+                except IndexError:
+                    pass
+                # axes[0,0].set_title("step 1: roi")
