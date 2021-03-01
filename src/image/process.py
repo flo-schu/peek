@@ -153,7 +153,6 @@ class Image(Files):
             
         return img
 
-
     def show(self):
         plt.imshow(self.img)
         plt.axis('off')
@@ -212,23 +211,22 @@ class Series(Image):
         
     #     return self.read_files_from_struct()
 
-
-    def difference(self, lag, smooth):
+    @staticmethod
+    def difference(images, lag=1, smooth=1):
         """
         calculates the RGB differences between every two consecutive images.
         The last difference is the diff between last and first image
         """
         # changing the dtype from uint to int is very important, because
         # uint does not allow values smaller 0
-        imlist = self.images.copy()
-        # imlist.append(self.images[0])
         kernel = np.ones((smooth,smooth),np.float32)/smooth**2
-        ims = np.array([cv2.filter2D(i.img,-1,kernel) for i in imlist], dtype=int)
+        images = np.array([cv2.filter2D(i, -1, kernel) for i in images], dtype=int)
         # ims = np.array([i.img for i in imlist], dtype=int)
-        diff = np.diff(ims, n=lag, axis=0)
+        diff = np.diff(images, n=lag, axis=0)
         diffs = np.where(diff >= 0, diff, 0)
 
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
+
 
     def read_images(self, **params):
         # if len()
@@ -282,7 +280,7 @@ class Series(Image):
         thresh_size:    after tag boxes have been drawn, choose select boxes
                         with maximum extension (x or y) of 'thresh_size'
         """
-        diffs = self.difference(lag, smooth)
+        diffs = self.difference([i.img for i in self.images], lag, smooth)
         contours = []
         tagged_ims = []
 
