@@ -895,6 +895,13 @@ class Detection():
         
         return points
 
+    @staticmethod
+    def intersection(img, maxval=255):
+        intersec = ( img[:,:,0] * img[:,:,1] 
+                   + img[:,:,0] * img[:,:,2] 
+                   + img[:,:,2] * img[:,:,1] )
+        return np.where(intersec >= maxval, 255, 0).astype('uint8')
+
     @classmethod
     def find_pois(cls, im1, im2, filter_fun=None, filter_args={}, threshold=20, sw=20, 
                   erode_n=1, smooth=1, plot=False):
@@ -902,10 +909,7 @@ class Detection():
         ret, thresh = cv.threshold(diff, threshold, 255,0)
 
         # get intersection of thresholded values
-        intersec = ( thresh[:,:,0] * thresh[:,:,1] 
-                + thresh[:,:,0] * thresh[:,:,2] 
-                + thresh[:,:,2] * thresh[:,:,1] )
-        intersec = np.where(intersec >= 1, 255, 0).astype('uint8')
+        intersec = cls.intersection(thresh, 1)
 
         # combine elements
         k = cv.getStructuringElement(cv.MORPH_ELLIPSE, ksize=(sw, sw))
@@ -929,13 +933,17 @@ class Detection():
         return points
 
     @staticmethod
-    def detect(img, poi, search_width, detector_fun, detector_args={}, plot=False ):
-        # extract region of interest
+    def get_roi(img, poi, search_width):
         im = img.copy()
         y, x, c = img.shape
         pt1 = tuple([max(p - search_width, 0) for p in poi])
         pt2 = tuple([min(poi[0] + search_width, x), min(poi[1] + search_width, y)])
-        roi = im[pt1[1]:pt2[1], pt1[0]:pt2[0], :]
+        return im[pt1[1]:pt2[1], pt1[0]:pt2[0], :]
+
+    @classmethod
+    def detect(cls, img, poi, search_width, detector_fun, detector_args={}, plot=False ):
+        # extract region of interest
+        roi = cls.get_roi(img, poi, search_width)
 
         steps = detector_fun(roi, **detector_args)    
         
@@ -949,3 +957,5 @@ class Detection():
                 except IndexError:
                     pass
                 # axes[0,0].set_title("step 1: roi")
+
+        return steps

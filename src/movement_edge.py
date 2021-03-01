@@ -18,7 +18,8 @@ s = Series(os.path.join(path, date, "7"))
 # img = Image(os.path.join(path, date, "7", "091355"))
 # img = Image(os.path.join(path, date, "6", "090953"))
 # img = Image(os.path.join(path, date, "12", "091920"))
-# img = Image(os.path.join(path, date, "10", "091544"))
+img1 = Image(os.path.join(path, date, "10", "091544"))
+img2 = Image(os.path.join(path, date, "10", "091546"))
 img1 = Image(os.path.join(path, date, "11", "091732"))
 img2 = Image(os.path.join(path, date, "11", "091734"))
 
@@ -58,20 +59,6 @@ pois = Detection.find_pois(
     m0.img, m1.img, filter_fun=filter_contours, 
     threshold=20, sw=20, erode_n=3)
 
-from skimage import measure
-roi = Detection.get_roi(m1.img, pois[51], 50)
-
-gray = cv.cvtColor(roi, cv.COLOR_RGB2GRAY)
-contours = measure.find_contours(gray,60)
-contours
-
-fig, ax = plt.subplots()
-ax.imshow(gray, cmap=plt.cm.gray)
-
-for n, contour in enumerate(contours):
-    ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
-
-
 def smart(roi):
     median = cv.medianBlur(roi, 5)
     background = median.astype('int')
@@ -86,12 +73,19 @@ def smart(roi):
     return [roi, median, background, gray, thresh]
 
 steps = Detection.detect(
-    m1.img, pois[100], 50, 
+    m1.img, pois[198], 50, 
     smart, {}, 
     plot=True)
 
 
-
+# steps:
+# 1: take contours
+# 2: select one contour which is:
+#    - is not very small
+#    - is not a near, horizontal line of length of the search window (water surface)
+#    - closest to the center
+#    - and one of the largest
+    
 
 
 
