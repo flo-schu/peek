@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import os
 import numpy as np
 import itertools as it
@@ -41,7 +41,7 @@ class Slice(Mask):
 def filter_contours(contours):
     cnts = []
     for c in contours:
-        if cv2.moments(c)['m01'] / max(1, cv2.moments(c)['m10']) > 100:
+        if cv.moments(c)['m01'] / max(1, cv.moments(c)['m10']) > 100:
             pass
         else:
             cnts.append(c)
@@ -50,10 +50,9 @@ def filter_contours(contours):
        
 def structured_edge(roi, detector=None, thresh=0.06, morph_kernel=20):
     edges = detector.detectEdges(roi.astype(np.float32) / 255.0)
-    ret, thresh = cv2.threshold(edges,thresh,1,0)
-    morph = cv2.morphologyEx(thresh, op=cv2.MORPH_CLOSE, kernel=morph_kernel)
+    ret, thresh = cv.threshold(edges,thresh,1,0)
+    morph = cv.morphologyEx(thresh, op=cv.MORPH_CLOSE, kernel=morph_kernel)
     return [roi, edges, thresh, morph]
-
 
 
 m0 = Slice(img2.img)
@@ -63,15 +62,81 @@ m1.create_masks(pars="../settings/masking_20210225.json")
 
 i = 34
 bw = 50
-edge_detector = cv2.ximgproc.createStructuredEdgeDetection('../data/dnn/model.yml')
-k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, ksize=(40,40))
+edge_detector = cv.ximgproc.createStructuredEdgeDetection('../data/dnn/model.yml')
 
+k = cv.getStructuringElement(cv.MORPH_ELLIPSE, ksize=(40,40))
 pois = Detection.find_pois(
     m0.img, m1.img, filter_fun=filter_contours, 
     threshold=20, sw=20, erode_n=3)
 
-detector_args = {'detector': edge_detector, 'morph_kernel': k, 'thresh': 0.06}
-Detection.detect(m1.img, pois[13], 50, structured_edge, detector_args, plot=True)
+
+def crange(roi, smooth=3, morph_kernel=None):
+    mini = Spectral.min_filter(9, roi)
+    gray = cv.cvtColor(mini, cv.COLOR_RGB2GRAY)
+    smooth = cv.filter2D(gray, ddepth=-1, kernel=np.ones((smooth,smooth))/smooth**2)
+    horiz = cv.Sobel(smooth, 0, 1, 0, cv.CV_64F, ksize=5)
+    vert  = cv.Sobel(smooth, 0, 0, 1, cv.CV_64F, ksize=5)
+    sob = cv.bitwise_or(horiz,vert)
+    T, thresh = cv.threshold(sob, 50, 255, 0)
+    morph = cv.morphologyEx(thresh, op=cv.MORPH_CLOSE, kernel=morph_kernel)
+    return [roi, mini, gray, smooth, thresh, morph]
+
+
+def analytic(roi, detector):
+    edges = detector.detectEdges(roi.astype(np.float32) / 255.0)
+    ret, thresh = cv.threshold(edges.astype('uint8'),30,255,0)
+    print(thresh)
+    contours, h = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    img = roi.copy()
+    for i, c in enumerate(contours):
+        if cv.contourArea(c) > 10:
+            e = cv.fitEllipse(c)
+
+            img = cv.ellipse(img,e,(255,0,0),1)
+
+    return [roi, edges, thresh, img]
+
+def sobel(roi, smooth):
+    # mini = Spectral.min_filter(13, roi)
+    smooth = cv.filter2D(roi, ddepth=-1, kernel=np.ones((smooth,smooth))/smooth**2)
+    col = smooth[:,:,0] - smooth[:,:,2]
+    maxi = Spectral.max_filter(10, col)
+    horiz = cv.Sobel(maxi, 0, 1, 0, cv.CV_64F, ksize=5)
+    vert  = cv.Sobel(maxi, 0, 0, 1, cv.CV_64F, ksize=5)
+    sob = cv.bitwise_or(horiz,vert)
+    T, thresh = cv.threshold(sob, 80, 255, 0)
+
+    return [roi, smooth, col, maxi, sob]
+
+def canny(roi, smooth):
+    # mini = Spectral.min_filter(13, roi)
+    # mini = Spectral.min_filter(5, roi)
+    smooth = cv.filter2D(roi, ddepth=-1, kernel=np.ones((smooth,smooth))/smooth**2)
+    col = smooth[:,:,0] - smooth[:,:,2]
+    maxi = Spectral.max_filter(5, col)
+
+    canny = cv.Canny(maxi, 20, 40)
+
+    contours, h = cv.findContours(canny, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    img = roi.copy()
+    for i, c in enumerate(contours):
+        e = cv.fitEllipse(c)
+
+        img = cv.ellipse(img,e,(255,0,0),1)
+
+    return [roi, smooth, col, maxi, canny, img]
+
+crange_args = {'smooth':7, 'morph_kernel':k}
+se_args = {'detector': edge_detector, 'thresh': 0.03, 'morph_kernel': k}
+ana_args = {'detector': edge_detector}
+sobel_args = {'smooth':5}
+
+
+
+steps = Detection.detect(
+    m1.img, pois[30], 50, 
+    structured_edge, se_args, 
+    plot=True)
 
 
 
