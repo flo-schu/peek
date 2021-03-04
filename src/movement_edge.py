@@ -90,8 +90,14 @@ for i, e in enumerate(properties):
     e['select'] = e['select'] and not (e['distance'] > 20 and e['area'] < 50)
     e['select'] = e['select'] and not (e['angle'] > 85 and e['angle'] < 95 and e['len_major'] > 90)
 
-roi, properties, contours = Detection.find_ellipses_in_contours(steps[0], [contours[i] for i in c_select], draw=True)
+c_select = [(p['distance'], p['id']) for p in properties if p['select']]
+c_select = [i for _, i in sorted(c_select)][0]
+
+roi, properties, contours = Detection.find_ellipses_in_contours(steps[0], [contours[c_select]], draw=True)
 plt.imshow(roi)
+
+
+
 
 # plt.imshow(steps[0])
 # new_tags = {
@@ -102,9 +108,8 @@ plt.imshow(roi)
 
 
 # steps:
-# 1. select closest contour
-# 2. run analysis for whole image.
-# 3. Integrate into Annotations framework
+# 1. run analysis for whole image.
+# 2. Integrate into Annotations framework
 #    --> passing lists to img.    
 
 
