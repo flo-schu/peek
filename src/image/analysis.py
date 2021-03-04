@@ -939,7 +939,7 @@ class Detection():
         return points
 
     @staticmethod
-    def substract_median(img):
+    def substract_median(img, ignore_value=None):
         im = img.copy().astype('int')
         assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
 
@@ -950,7 +950,10 @@ class Detection():
             y, x, colors = img.shape
 
             for c in range(colors):
-                im[:,:,c] = im[:,:,c] - np.median(im[:,:,c].flatten())
+                data = im[:,:,c].flatten()
+                if ignore_value is not None:
+                    data = np.ma.masked_where(data == ignore_value, data).compressed()
+                im[:,:,c] = im[:,:,c] - np.median(data)
 
         return np.where(im > 0, im, 0).astype('uint8')
 
@@ -1011,6 +1014,8 @@ class Detection():
 
     @staticmethod
     def unite_family(hierarchy, contours):
+        if hierarchy is None:
+            return []
         h = hierarchy.copy()[0]
         children = np.where(np.logical_and(h[:,2] == -1, h[:,3] != -1))[0].tolist()
         remove_childs = list()
@@ -1033,12 +1038,13 @@ class Detection():
         return contours
 
     @classmethod
-    def find_ellipses_in_contours(cls, roi, contours, draw=False):
+    def find_ellipses_in_contours(cls, img, contours, draw=False):
         """
         only consider contours whose area can be determined. Otherwise they are
         of no use. The if else conditions can remain hardcoded, because they are the
         absolute minimal requirements for determining an ellipsis.
         """
+        roi = img.copy() 
         center = np.array(cls.get_center_2D(roi))
         properties = []
         for i, c in enumerate(contours):
@@ -1058,10 +1064,10 @@ class Detection():
                 properties.append(props)
                 
                 if draw:
-                    for p in range(c.shape[0]):
-                        roi = cls.draw_cross(
-                            roi, c[p][0][0], c[p][0][1], 1, 
-                            color=(0, 100,0))
+                    # for p in range(c.shape[0]):
+                    #     roi = cls.draw_cross(
+                    #         roi, c[p][0][0], c[p][0][1], 1, 
+                    #         color=(0, 100,0))
                     roi = cv.ellipse(roi, e, (0,255,0), 1)
                     roi = cls.draw_cross(
                         roi, round(e[0][0]), round(e[0][1]), 1, 

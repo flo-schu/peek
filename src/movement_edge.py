@@ -34,7 +34,7 @@ def filter_contours(contours):
 
 def smart(roi):
     median = cv.medianBlur(roi, 5)
-    background = Detection.substract_median(median)
+    background = Detection.substract_median(median, ignore_value=0)
     gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
     T, thresh = cv.threshold(gray, 10, 255, 0)
 
@@ -52,8 +52,8 @@ s = Series(os.path.join(path, date, "7"))
 # img = Image(os.path.join(path, date, "12", "091920"))
 img1 = Image(os.path.join(path, date, "10", "091544"))
 img2 = Image(os.path.join(path, date, "10", "091546"))
-img1 = Image(os.path.join(path, date, "11", "091732"))
-img2 = Image(os.path.join(path, date, "11", "091734"))
+# img1 = Image(os.path.join(path, date, "11", "091732"))
+# img2 = Image(os.path.join(path, date, "11", "091734"))
 
 m0 = Slice(img2.img)
 m1 = Slice(img1.img)
@@ -65,9 +65,11 @@ pois = Detection.find_pois(
     threshold=20, sw=20, erode_n=3)
 
 steps = Detection.detect(
-    m1.img, pois[4], 50, 
+    m1.img, pois[181], 50, 
     smart, {}, 
     plot=True)
+
+# Viz.color_analysis(steps[1], "r")
 
 contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
 contours = Detection.unite_family(hierarchy, contours)
@@ -78,10 +80,20 @@ roi = Detection.draw_center_cross(roi, color=(255,255,0))
 plt.imshow(roi)
 properties
 
-# selection
+# selection criteria (basically logic gates)
+for i, e in enumerate(properties):
+    e['select'] = True
+    e['select'] = e['select'] and not e['len_major'] > 500
+    e['select'] = e['select'] and not e['len_minor'] > 500
+    e['select'] = e['select'] and not e['area'] < 5
+    e['select'] = e['select'] and not e['area'] > 3000
+    e['select'] = e['select'] and not (e['distance'] > 20 and e['area'] < 50)
+    e['select'] = e['select'] and not (e['angle'] > 85 and e['angle'] < 95 and e['len_major'] > 90)
 
+roi, properties, contours = Detection.find_ellipses_in_contours(steps[0], [contours[i] for i in c_select], draw=True)
+plt.imshow(roi)
 
-
+# plt.imshow(steps[0])
 # new_tags = {
 #     'tag_contour': cnts_select,
 #     'tag_image_orig': imslc1,
@@ -90,13 +102,10 @@ properties
 
 
 # steps:
-# 1: take contours
-# 2: select one contour which is:
-#    - is not very small
-#    - is not a near, horizontal line of length of the search window (water surface)
-#    - closest to the center
-#    - and one of the largest
-    
+# 1. select closest contour
+# 2. run analysis for whole image.
+# 3. Integrate into Annotations framework
+#    --> passing lists to img.    
 
 
 
