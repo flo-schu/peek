@@ -20,15 +20,21 @@ from image.process import Image, Series
 class Tag(Files):
     def __init__(self):
         # tag attributes which are saved to df
-        self.id = 0
-        self.x = 0
-        self.y = 0
-        self.width = 0
-        self.height = 0
-        self.label = ""
-        self.time = ''
-        self.analysis = 'none'
-        self.annotated = False
+        # IF POSSIBLE NEVER CHANGE THESE NAMES. WHY?
+        # THEN THE DATA WILL BE HOMOGENEOUSLY NAMED ACCROSS ALL ANALYSES
+        # ----------------------------------------------------------------------
+        self.id = 0                 # id of tag in image
+        self.x = 0                  # top left corner of bounding box (x-axis)
+        self.y = 0                  # top left corner of bounding box (y-axis)
+        self.width = 0              # width of bounding box
+        self.height = 0             # height of bounding box
+        self.label = ""             # label of manual classification
+        self.time = ''              # time of detection
+        self.analysis = 'none'      # name of analysis 
+        self.annotated = False      # was the label manually annotated
+        self.x_center               # x-coordinate of center of detected object
+        self.y_center               # y-coordinate of center of detected object
+        # ----------------------------------------------------------------------
 
         # temporary attributes
         self.path = ""
@@ -933,6 +939,22 @@ class Detection():
         return points
 
     @staticmethod
+    def substract_median(img):
+        im = img.copy().astype('int')
+        assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
+
+        if len(img.shape) == 2:
+            im[:,:] = im[:,:] - np.median(im[:,:].flatten())
+            
+        elif len(img.shape) == 3:
+            y, x, colors = img.shape
+
+            for c in range(colors):
+                im[:,:,c] = im[:,:,c] - np.median(im[:,:,c].flatten())
+
+        return np.where(im > 0, im, 0).astype('uint8')
+
+    @staticmethod
     def get_roi(img, poi, search_width):
         im = img.copy()
         y, x, c = img.shape
@@ -959,3 +981,99 @@ class Detection():
                 # axes[0,0].set_title("step 1: roi")
 
         return steps
+
+    @staticmethod
+    def get_center_2D(img):
+        assert len(img.shape) == 2 or len(img.shape) == 3, "img has wrong number of dimensions"
+        y = round(img.shape[0]/2)
+        x = round(img.shape[1]/2)
+        return x, y
+
+    @staticmethod
+    def draw_cross(img, x, y, size, color):
+        ybar = range(max(0,y-size), min(y+size+1, img.shape[0]))
+        xbar = range(max(0,x-size), min(x+size+1, img.shape[1]))
+        if len(img.shape) == 3:
+            img[y,xbar] = color # midpoint
+            img[ybar,x] = color # midpoint
+
+        if len(img.shape) == 2:
+            assert len(color) == 3, "probably greyscale image. Color should be int, recommended: 0 or 255"
+            img[y,xbar] = color # midpoint
+            img[ybar,x] = color # midpoint
+        
+        return img
+
+    @classmethod
+    def draw_center_cross(cls, img, size=1, color=(255,0,0)):
+        x, y = cls.get_center_2D(img)
+        return cls.draw_cross(img, x, y, size, color)
+
+    @staticmethod
+    def unite_family(hierarchy, contours):
+        h = hierarchy.copy()[0]
+        children = np.where(np.logical_and(h[:,2] == -1, h[:,3] != -1))[0].tolist()
+        remove_childs = list()
+        while len(children) > 0:
+            parents = h[children,3].tolist()
+
+            for p, c in zip(parents, children):
+                contours[p] = np.row_stack((contours[p], contours[c]))
+
+            h = np.delete(h, children, axis=0)
+            remove_childs.extend(children)
+            # children = np.where(h[:,2] == -1)[0].tolist()
+            children = np.where(np.logical_and(h[:,2] == -1, h[:,3] != -1))[0].tolist()
+
+
+        remove_childs.sort(reverse=True)
+        for child in remove_childs:
+            del contours[child]
+
+        return contours
+
+    @classmethod
+    def find_ellipses_in_contours(cls, roi, contours, draw=False):
+        """
+        only consider contours whose area can be determined. Otherwise they are
+        of no use. The if else conditions can remain hardcoded, because they are the
+        absolute minimal requirements for determining an ellipsis.
+        """
+        center = np.array(cls.get_center_2D(roi))
+        properties = []
+        for i, c in enumerate(contours):
+            m = cv.moments(c)
+            
+            if len(c) >= 5:
+                props = {}
+                e = cv.fitEllipse(c)
+                props['id'] = i
+                props['distance'] = np.linalg.norm(np.array(e[0]) - center) 
+                props['area'] = m['m00'] 
+                props['xcenter'] = e[0][0]
+                props['ycenter'] = e[0][1]
+                props['len_minor'] = e[1][0]
+                props['len_major'] = e[1][1]
+                props['angle'] = e[2]
+                properties.append(props)
+                
+                if draw:
+                    for p in range(c.shape[0]):
+                        roi = cls.draw_cross(
+                            roi, c[p][0][0], c[p][0][1], 1, 
+                            color=(0, 100,0))
+                    roi = cv.ellipse(roi, e, (0,255,0), 1)
+                    roi = cls.draw_cross(
+                        roi, round(e[0][0]), round(e[0][1]), 1, 
+                        color=(0,255,0))
+            
+            elif len(c) >= 4:
+                if draw:
+                    roi = cv.drawContours(roi, contours, i, (0,200,200), 1)
+            
+            elif m['m00'] == 0:
+                if draw:
+                    roi = cv.drawContours(roi, contours, i, (255,0,0), 1)
+
+        return roi, properties, contours
+        
