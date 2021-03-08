@@ -18,6 +18,17 @@ class MovementEdgeDetector(Detector):
             # self.mask_airspace(**self.pars['airspace'])        
             # self.mask_water_surface(**self.pars['water_surface'])
             
+    class DetectSelectSortTagger(Tagger):
+        def wrap_up(self, search_radius, trim_top):
+            self.move(search_width=search_radius, manual=(0, trim_top))
+            self.update_props("xpoi", [px+0 for px, py in self.pois])
+            self.update_props("ypoi", [py+trim_top for px, py in self.pois])
+            self.update_props("search_radius", search_radius)
+            self.drop('id')
+            self.drop('select')
+            del self.pois
+
+
     @staticmethod
     def filter_contours(contours):
         cnts = []
@@ -48,44 +59,59 @@ class MovementEdgeDetector(Detector):
         d['select'] = d['select'] and not (d['angle'] > 85 and d['angle'] < 95 and d['len_major'] > 90)
         return d
 
-    class DetectSelectSortTagger(Tagger):
-        def tag_image(self, mask_img1, mask_img2, pois, dect_fct, dect_args, 
-                      test_fct, search_radius, crit_multiple='distance'):
-            # main loop
-            for poi in pois:
-                steps = Detector.detect(mask_img1.img, poi, search_radius, dect_fct, 
-                                        dect_args, plot=False)
-                contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
-                                                    cv.CHAIN_APPROX_NONE)
-                contours = Detector.unite_family(hierarchy, contours)
-                roi, properties, contours = Detector.find_ellipses_in_contours(
-                    steps[0], contours, draw=False
-                    )
-                
-                for p in properties:
-                    p = test_fct(p)
 
-                select = Detector.select_and_sort(zip(properties, contours), 
-                                                by='distance')
+    def tag_image(self, im1, im2, dect_args, parfile,
+                  search_radius, crit_multiple='distance'):
+        
+        # initialize Tagger
+        tags = self.DetectSelectSortTagger()
 
-                try:
-                    properties = select[0][0]
-                    contours = select[0][1]
-                except IndexError:
-                    contours = np.empty((0,1,2), dtype=int)
-                    properties = {}
-                
-                self.add("pois", poi)
-                self.add("properties", properties)
-                self.add("tag_contour", contours)
-                self.add("tag_image_orig", steps[0])
-                self.add("tag_image_diff", Detector.get_roi(mask_img2.img, poi, search_radius))
+        # mask images
+        m1 = self.Slice(im1)
+        m2 = self.Slice(im2)
+        m1.create_masks(pars=parfile)
+        m2.create_masks(pars=parfile)
 
-            # wrap up
-            self.move(search_width=search_radius, manual=(0, mask_img1.pars['trim']['t']))
-            self.update_props("xpoi", [px+0 for px, py in self.pois])
-            self.update_props("ypoi", [py+mask_img1.pars['trim']['t'] for px, py in self.pois])
-            self.update_props("search_radius", search_radius)
-            self.drop('id')
-            self.drop('select')
-            del self.pois
+        # determin points of interest
+        pois = self.find_pois(
+            m1.img, m2.img, filter_fun=self.filter_contours, 
+            threshold=20, sw=20, erode_n=3)
+
+        # main loop
+        for poi in pois:
+            steps = Detector.detect(
+                m1.img, poi, search_radius, 
+                self.median_threshold, dect_args, plot=False
+                )
+
+            contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
+                                                  cv.CHAIN_APPROX_NONE)
+            
+            contours = self.unite_family(hierarchy, contours)
+            roi, properties, contours = self.find_ellipses_in_contours(
+                steps[0], contours, draw=False
+                )
+            
+            for p in properties:
+                p = self.pass_tests(p)
+
+            select = self.select_and_sort(zip(properties, contours), 
+                                            by='distance')
+
+            try:
+                properties = select[0][0]
+                contours = select[0][1]
+            except IndexError:
+                contours = np.empty((0,1,2), dtype=int)
+                properties = {}
+            
+            tags.add("pois", poi)
+            tags.add("properties", properties)
+            tags.add("tag_contour", contours)
+            tags.add("tag_image_orig", steps[0])
+            tags.add("tag_image_diff", Detector.get_roi(m2.img, poi, search_radius))
+
+        # wrap up
+        tags.wrap_up(search_radius, trim_top=m1.pars['trim']['t'])
+
+        return tags

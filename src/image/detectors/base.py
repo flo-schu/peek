@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import imutils
 import itertools as it
 from matplotlib import pyplot as plt
 from utils.manage import Files
@@ -170,6 +171,35 @@ class Mask(Spectral):
 class Detector():
 
     @staticmethod
+    def difference(images, lag=1, smooth=1):
+        """
+        calculates the RGB differences between every two consecutive images.
+        The last difference is the diff between last and first image
+        """
+        # changing the dtype from uint to int is very important, because
+        # uint does not allow values smaller 0
+        kernel = np.ones((smooth,smooth),np.float32)/smooth**2
+        images = np.array([cv.filter2D(i, -1, kernel) for i in images], dtype=int)
+        # ims = np.array([i.img for i in imlist], dtype=int)
+        diff = np.diff(images, n=lag, axis=0)
+        diffs = np.where(diff >= 0, diff, 0)
+
+        return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
+
+    @staticmethod
+    def get_contours(img, threshold):
+        cnts = cv.findContours(img, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
+        cnts_select = []
+        for c in cnts:
+            # fit a bounding box to the contour
+            if max(c.shape) > threshold:            
+                cnts_select.append(c)
+
+        return cnts_select
+
+    @staticmethod
     def pass_tests(dict):
         return dict
 
@@ -194,7 +224,7 @@ class Detector():
     @classmethod
     def find_pois(cls, im1, im2, filter_fun=None, filter_args={}, threshold=20, sw=20, 
                   erode_n=1, smooth=1, plot=False):
-        diff = Series.difference([im1, im2], lag=1, smooth=3)[0]
+        diff = cls.difference([im1, im2], lag=1, smooth=3)[0]
         ret, thresh = cv.threshold(diff, threshold, 255,0)
 
         # get intersection of thresholded values

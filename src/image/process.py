@@ -217,8 +217,6 @@ class Series(Image):
 
         return i, series_dir, image_dir
 
-
-
     def read_files_from_struct(self, import_image):
         images = []
         for i, path in self.struct.items():
@@ -227,35 +225,6 @@ class Series(Image):
             images.append(img)
            
         return images   
-
-    # def load_images(self, image_list):
-    #     # import passed list
-    #     if len(image_list) > 0:
-    #         return image_list
-        
-    #     # import files from struct if exist, otherwise
-    #     # return empty list
-    #     if len(self.struct) == 0:
-    #         return image_list
-        
-    #     return self.read_files_from_struct()
-
-    @staticmethod
-    def difference(images, lag=1, smooth=1):
-        """
-        calculates the RGB differences between every two consecutive images.
-        The last difference is the diff between last and first image
-        """
-        # changing the dtype from uint to int is very important, because
-        # uint does not allow values smaller 0
-        kernel = np.ones((smooth,smooth),np.float32)/smooth**2
-        images = np.array([cv2.filter2D(i, -1, kernel) for i in images], dtype=int)
-        # ims = np.array([i.img for i in imlist], dtype=int)
-        diff = np.diff(images, n=lag, axis=0)
-        diffs = np.where(diff >= 0, diff, 0)
-
-        return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
-
 
     def read_images(self, **params):
         # if len()
@@ -284,70 +253,6 @@ class Series(Image):
     def save_list(self, imlist, name='image', file_ext='tiff'):
         for i in range(len(imlist)):
             imageio.imwrite(os.path.join(self.path,name+"_"+str(i)+"."+file_ext), imlist[i])
-
-    @staticmethod
-    def get_contours(img, threshold):
-        cnts = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-
-        cnts_select = []
-        for c in cnts:
-            # fit a bounding box to the contour
-            if max(c.shape) > threshold:            
-                cnts_select.append(c)
-
-        return cnts_select
-
-    def motion_analysis(self, lag=1, thresh_binary=15, thresh_size=10, mar=10, smooth=1):
-        """
-        motion analysis algorithm. First computes the difference between images.
-        
-        lag:            is the step between images which are differenced. Default is 1.
-                        the higher the step the more pronounced the images should be. 
-                        but consequently fewer images are available
-        thresh_binary:  threshold to create a binary image from a gray image
-        thresh_size:    after tag boxes have been drawn, choose select boxes
-                        with maximum extension (x or y) of 'thresh_size'
-        """
-        diffs = self.difference([i.img for i in self.images], lag, smooth)
-        contours = []
-        tagged_ims = []
-
-        for i in range(len(diffs)):
-
-            orig_obj = self.images[ lag + i ]
-            orig_img = orig_obj.img
-            comp_img = self.images[i].img
-
-            gray = cv2.cvtColor(diffs[i], cv2.COLOR_BGR2GRAY)
-
-            #threshold the gray image to binarise it. Anything pixel that has
-            #value more than 3 we are converting to white
-            #(remember 0 is black and 255 is absolute white)
-            #the image is called binarised as any value less than 3 will be 0 and
-            # all values equal to and more than 3 will be 255
-
-            thresh = cv2.threshold(gray, thresh_binary, 255, cv2.THRESH_BINARY)
-            cnts_select = self.get_contours(thresh[1], thresh_size)
-
-            imtag = self.tag_image(orig_img, cnts_select, mar)
-            imslc1 = self.cut_slices(orig_img, cnts_select, mar)
-            imslc2 = self.cut_slices(comp_img, cnts_select, mar)
-
-            tags = {
-                'tag_contour': cnts_select,
-                'tag_image_orig': imslc1,
-                'tag_image_diff': imslc2,
-            }
-
-            orig_obj.new_tags = tags
-
-            contours.append(cnts_select)
-            tagged_ims.append(imtag)
-
-
-        return diffs, contours, tagged_ims
-
 
 class Session(Series):
     def __init__(self, directory):
