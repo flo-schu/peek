@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
 from image.detectors.base import Detector, Mask, Tagger
+from progress.bar import IncrementalBar
+import gc
 
 # here I can create my own individual program of functions, that I want to execute
 # This is very nice, because here it makes it explicit what is to be done,
@@ -18,6 +20,10 @@ class MovementEdgeDetector(Detector):
             # self.mask_airspace(**self.pars['airspace'])        
             # self.mask_water_surface(**self.pars['water_surface'])
             
+        def apply_multi(self, masks):
+            for m in masks.values():
+                self.img = self.apply_mask(self.img, m)
+
     class DetectSelectSortTagger(Tagger):
         def wrap_up(self, search_radius, trim_top):
             self.move(search_width=search_radius, manual=(0, trim_top))
@@ -68,9 +74,13 @@ class MovementEdgeDetector(Detector):
 
         # mask images
         m1 = self.Slice(im1)
-        m2 = self.Slice(im2)
         m1.create_masks(pars=parfile)
-        m2.create_masks(pars=parfile)
+
+        m2 = self.Slice(im1)
+        m2.img = m2.trim(im2, **m1.pars['trim'])
+        m2.apply_multi(masks=m1.masks)
+
+        from matplotlib import pyplot as plt
 
         # determin points of interest
         pois = self.find_pois(
@@ -78,6 +88,7 @@ class MovementEdgeDetector(Detector):
             threshold=20, sw=20, erode_n=3)
 
         # main loop
+        bar = IncrementalBar('Processing', max=len(pois))
         for poi in pois:
             steps = Detector.detect(
                 m1.img, poi, search_radius, 
@@ -111,8 +122,12 @@ class MovementEdgeDetector(Detector):
             tags.add("tag_image_orig", steps[0])
             tags.add("tag_image_diff", Detector.get_roi(m2.img, poi, search_radius))
 
+            gc.collect()
+            bar.next()
+
         # wrap up
         tags.wrap_up(search_radius, trim_top=m1.pars['trim']['t'])
+        bar.finish()
 
         return tags
 

@@ -92,7 +92,19 @@ class Mask(Spectral):
         if apply_mask:
             self.img = self.apply_mask(self.img, self.masks['blue_tape'])
 
-        
+    @staticmethod
+    def trim(img, t=None, b=None, l=None, r=None):
+        if t is None:
+            t = 0
+        if b is None:
+            b = img.shape[0]
+        if l is None:
+            l = 0
+        if r is None:
+            r = img.shape[1]
+
+        return img[t:b, l:r, :]
+
     def mask_sediment(self, y_offset=0, min_kernel_n=1, max_kernel_n=1,
                       gray_low=0, gray_high=255, peak_height=100, peak_width=50,
                       apply_mask=True):

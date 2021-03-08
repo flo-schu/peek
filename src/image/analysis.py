@@ -553,20 +553,6 @@ class Data:
 
 class Spectral:
     @staticmethod
-    def trim(img, t=None, b=None, l=None, r=None):
-        if t is None:
-            t = 0
-        if b is None:
-            b = img.shape[0]
-        if l is None:
-            l = 0
-        if r is None:
-            r = img.shape[1]
-
-        return img[t:b, l:r, :]
-
-
-    @staticmethod
     def mask_from_top(mask):
         d = np.flipud(np.flipud(mask).cumsum(axis=0))
         masktop = np.where(d == 0, 0, 255).astype('uint8')

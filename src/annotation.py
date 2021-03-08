@@ -19,7 +19,7 @@ nano = 6
 
 # open series and load image
 s = Series(os.path.join(path,date,str(nano)))
-i = s.images[0]
+i = s.images[0] 
 i.path
 keymap = {
     'd':"Daphnia Magna",
@@ -30,7 +30,7 @@ keymap = {
 a = Annotations(i, 'moving_edge', tag_db_path="../data/tag_db.csv", keymap=keymap)
 a.load_processed_tags()
 a.start()
-a.show_tag_number(30)
+a.show_tag_number(0)
 
 # store annotated tags
 Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")
