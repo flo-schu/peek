@@ -186,60 +186,6 @@ class Image(Files):
         return cls.draw_cross(img, x, y, size, color)
 
 
-
-class Tagger():
-    def __init__(self):
-        self.tag_contour = []
-        self.tag_image_orig = []
-        self.tag_image_diff = []
-        self.properties = []
-        self.pois = []
-    
-    def add(self, tag, value):
-        getattr(self, tag).append(value)
-
-    def set_none(self, keys=[]):
-        for k in keys:
-            getattr(self, k).append(None)
-
-    def move(self, search_width=50, manual=(0,0)):
-        for i, (p, cont, prop) in enumerate(zip(self.pois, self.tag_contour, self.properties)):
-            if cont is not None and prop is not None:
-                self.tag_contour[i] = cont - search_width + p + manual
-                try:
-                    self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0] + manual[0]
-                    self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1] + manual[1]
-                except KeyError:
-                    pass
-
-    def show(self, img):
-        cs = [c for c in self.tag_contour if c is not None]
-
-        im = img.copy()
-        im = Image.tag_image(im, cs)
-
-        for p in self.pois:
-            Image.draw_cross(im, p[0], p[1], 3, (255,0,0))
-
-        plt.imshow(im)
-
-    def update_props(self, key, val):
-        if isinstance(val, list):
-            assert len(val) == len(self.properties), "val should have the same length as properties"
-        
-        else:
-            val = [val for i in range(len(self.properties))]
-
-        for p, v in zip(self.properties, val):
-            p[key] = v
-
-    def drop(self, key):
-        for p in self.properties:
-            if key in p:
-                del p[key]
-
-    
-
 class Series(Image):
     def __init__(
         self, 
