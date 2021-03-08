@@ -74,7 +74,7 @@ class MovementEdgeDetector(Detector):
 
         # determin points of interest
         pois = self.find_pois(
-            m1.img, m2.img, filter_fun=self.filter_contours, 
+            m2.img, m1.img, filter_fun=self.filter_contours, 
             threshold=20, sw=20, erode_n=3)
 
         # main loop
@@ -115,3 +115,8 @@ class MovementEdgeDetector(Detector):
         tags.wrap_up(search_radius, trim_top=m1.pars['trim']['t'])
 
         return tags
+
+
+# improvements:
+# - use the same mask once created to avoid detection of changes,
+#   just because of mask issues. Also saves processing power

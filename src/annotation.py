@@ -9,8 +9,8 @@ import os
 
 path = "../data/pics/"
 copy_to="../data/annotations"
-date = "20210111"
-nano = 10
+date = "20210226"
+nano = 6
 
 # open image and attributes
 # i = Image(path+"21/184248/PNAN2092.tiff")
@@ -19,19 +19,18 @@ nano = 10
 
 # open series and load image
 s = Series(os.path.join(path,date,str(nano)))
-i = s.images[1]
-
+i = s.images[0]
+i.path
 keymap = {
     'd':"Daphnia Magna",
     'c':"Culex Pipiens, larva",
     'p':"Culex Pipiens, pupa",
     'u':"unidentified",
 }
-a = Annotations(i, 'motion_analysis', tag_db_path="../data/tag_db.csv", keymap=keymap)
+a = Annotations(i, 'moving_edge', tag_db_path="../data/tag_db.csv", keymap=keymap)
 a.load_processed_tags()
-%matplotlib
 a.start()
-a.show_tag_number(40)
+a.show_tag_number(30)
 
 # store annotated tags
 Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")

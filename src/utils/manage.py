@@ -162,3 +162,11 @@ class Files:
             pars = json.load(f)
 
         return pars
+
+    @staticmethod    
+    def get_folders_excluding(path, exclude=[]):
+        folders = set(Files.find_subdirs(path))
+        for ex in exclude:
+            folders = folders.difference([ex])
+
+        return list(sorted(folders))
