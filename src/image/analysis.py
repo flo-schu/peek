@@ -32,10 +32,10 @@ class Tag(Files):
         self.time = ''              # time of detection
         self.analysis = 'none'      # name of analysis 
         self.annotated = False      # was the label manually annotated
-        self.x_center               # x-coordinate of center of detected object
-        self.y_center               # y-coordinate of center of detected object
+        self.xcenter = 0            # x-coordinate of center of detected object
+        self.ycenter = 0            # y-coordinate of center of detected object
         # ----------------------------------------------------------------------
-
+        
         # temporary attributes
         self.path = ""
         
@@ -43,6 +43,16 @@ class Tag(Files):
         self.tag_contour = np.array([])
         self.tag_image_orig = np.array([])
         self.tag_image_diff = np.array([])
+    
+    def unpack_dictionaries(self):
+        pop_dicts = []
+        for key, item in self.__dict__.items():
+            if isinstance(item, dict):
+                pop_dicts.append(key)
+        
+        for d in pop_dicts:
+            for key, value in self.__dict__.pop(d).items():
+                setattr(self, key, value)
 
     def load_special(self):
         path = self.change_dir(self.analysis)
@@ -240,6 +250,7 @@ class Annotations(Tag):
     def save_new_tags(self, new_tags):
         for i in range(len(new_tags)):
             t = self.read_tag(new_tags, i)
+            t.unpack_dictionaries()
             t.get_tag_box_coordinates()
             t, p = t.save()
             self.tags = self.tags.append(t, ignore_index=True)
