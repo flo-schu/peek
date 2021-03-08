@@ -202,13 +202,13 @@ class Tagger():
         for k in keys:
             getattr(self, k).append(None)
 
-    def move(self, search_width=50):
+    def move(self, search_width=50, manual=(0,0)):
         for i, (p, cont, prop) in enumerate(zip(self.pois, self.tag_contour, self.properties)):
             if cont is not None and prop is not None:
-                self.tag_contour[i] = cont - search_width + p
+                self.tag_contour[i] = cont - search_width + p + manual
                 try:
-                    self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0]
-                    self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1]
+                    self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0] + manual[0]
+                    self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1] + manual[1]
                 except KeyError:
                     pass
 

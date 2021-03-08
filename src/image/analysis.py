@@ -1071,3 +1071,7 @@ class Detector():
 
         return roi, properties, contours
         
+    @staticmethod
+    def select_and_sort(zipper, by):
+        select = [(p[by], p, c) for p, c in zipper if p['select']]
+        return [(p, c) for by, p, c in sorted(select)]

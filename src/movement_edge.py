@@ -33,14 +33,12 @@ def filter_contours(contours):
 
     return cnts
 
-def smart(roi):
-    median = cv.medianBlur(roi, 5)
+def median_threshold(roi, blur, thresh):
+    median = cv.medianBlur(roi, blur)
     background = Detector.substract_median(median, ignore_value=0)
     gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
-    T, thresh = cv.threshold(gray, 10, 255, 0)
-
+    T, thresh = cv.threshold(gray, thresh, 255, 0)
     return [roi, median, background, gray, thresh]
-
 
 def pass_tests(d):
     d['select'] = True
@@ -52,73 +50,78 @@ def pass_tests(d):
     d['select'] = d['select'] and not (d['angle'] > 85 and d['angle'] < 95 and d['len_major'] > 90)
     return d
 
+def tag_image(mask_img1, mask_img2, pois, dect_fct, dect_args, search_radius, 
+              crit_multiple='distance'):
+    # main loop
+    for poi in pois:
+        steps = Detector.detect(mask_img1.img, poi, search_radius, dect_fct, 
+                                dect_args, plot=False)
+        contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
+                                              cv.CHAIN_APPROX_NONE)
+        contours = Detector.unite_family(hierarchy, contours)
+        roi, properties, contours = Detector.find_ellipses_in_contours(
+            steps[0], contours, draw=False
+            )
+
+        for p in properties:
+            p = pass_tests(p)
+
+        select = Detector.select_and_sort(zip(properties, contours), 
+                                          by='distance')
+
+        try:
+            properties = select[0][0]
+            contours = select[0][1]
+        except IndexError:
+            contours = np.empty((0,1,2), dtype=int)
+            properties = {}
+        
+        tags.add("pois", poi)
+        tags.add("properties", properties)
+        tags.add("tag_contour", contours)
+        tags.add("tag_image_orig", steps[0])
+        tags.add("tag_image_diff", Detector.get_roi(mask_img2.img, poi, search_radius))
+
+    # wrap up
+    tags.move(search_width=search_radius, manual=(0, m0.pars['trim']['t']))
+    tags.update_props("xpoi", [px+0 for px, py in tags.pois])
+    tags.update_props("ypoi", [py+m0.pars['trim']['t'] for px, py in tags.pois])
+    tags.update_props("search_radius", search_radius)
+    tags.drop('id')
+    tags.drop('select')
+    del tags.pois
+
+    return tags
 
 
 path = "../data/pics/"
+copy_to = "../data/annotations/"
 date = "20210204"
+n = "10"
+rad = 50
 
-s = Series(os.path.join(path, date, "7"))
+# load images
+img1 = Image(os.path.join(path, date, n, "091544"))
+img2 = Image(os.path.join(path, date, n, "091548"))
 
-# img = Image(os.path.join(path, date, "8", "091155"))
-# img = Image(os.path.join(path, date, "7", "091355"))
-# img = Image(os.path.join(path, date, "6", "090953"))
-# img = Image(os.path.join(path, date, "12", "091920"))
-img1 = Image(os.path.join(path, date, "10", "091544"))
-img2 = Image(os.path.join(path, date, "10", "091546"))
-img2 = Image(os.path.join(path, date, "10", "091548"))
-# img1 = Image(os.path.join(path, date, "11", "091732"))
-# img2 = Image(os.path.join(path, date, "11", "091734"))
-
+# mask images
 m0 = Slice(img2.img)
 m1 = Slice(img1.img)
 m0.create_masks(pars="../settings/masking_20210225.json")
 m1.create_masks(pars="../settings/masking_20210225.json")
 
+# determin points of interest
 pois = Detector.find_pois(
     m0.img, m1.img, filter_fun=filter_contours, 
     threshold=20, sw=20, erode_n=3)
 
+# initialize tagger
 tags = Tagger()
-rad = 50
+dect_args = {'blur':5, 'thresh':10}
+tag_image(m0, m1, pois, median_threshold, dect_args, 50)
 
-for poi in pois:
-    
-    tags.add("pois", poi)
-    steps = Detector.detect(m1.img, poi, rad, smart, {}, plot=False)
-    contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-    contours = Detector.unite_family(hierarchy, contours)
-    roi, properties, contours = Detector.find_ellipses_in_contours(steps[0], contours, draw=False)
 
-    for p in properties:
-        p = pass_tests(p)
-
-    c_select = [(p['distance'], p['id']) for p in properties if p['select']]
-    
-    try:
-        c_select = [i for _, i in sorted(c_select)][0]
-        roi, properties, contours = Detector.find_ellipses_in_contours(steps[0], [contours[c_select]], draw=True)
-    except IndexError:
-        contours = [np.empty((0,1,2), dtype=int)]
-        roi = steps[0]
-        properties = [{}]
-
-    tags.add("properties", properties[0])
-    tags.add("tag_contour", contours[0])
-    tags.add("tag_image_orig", roi)
-    tags.add("tag_image_diff", Detector.get_roi(m0.img, poi, rad))
-
-tags.properties[1]
-tags.move(rad)
-tags.update_props("xpoi", [px for px, py in tags.pois])
-tags.update_props("ypoi", [py for px, py in tags.pois])
-tags.update_props("search_radius", 50)
-tags.drop('id')
-del tags.pois
-
+# export
 a = Annotations(img1, 'moving_edge', tag_db_path="")
 a.read_new_tags(pd.DataFrame(tags.__dict__))
-
-
-
-
-
+Files.copy_files(os.path.join(path, date, n), os.path.join(copy_to, date, n), ex1='.tiff', ex2="PNAN")
