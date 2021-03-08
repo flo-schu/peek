@@ -157,6 +157,69 @@ class Image(Files):
         plt.imshow(self.img)
         plt.axis('off')
 
+    
+    @staticmethod
+    def get_center_2D(img):
+        assert len(img.shape) == 2 or len(img.shape) == 3, "img has wrong number of dimensions"
+        y = round(img.shape[0]/2)
+        x = round(img.shape[1]/2)
+        return x, y
+
+    @staticmethod
+    def draw_cross(img, x, y, size, color):
+        ybar = range(max(0,y-size), min(y+size+1, img.shape[0]))
+        xbar = range(max(0,x-size), min(x+size+1, img.shape[1]))
+        if len(img.shape) == 3:
+            img[y,xbar] = color # midpoint
+            img[ybar,x] = color # midpoint
+
+        if len(img.shape) == 2:
+            assert len(color) == 3, "probably greyscale image. Color should be int, recommended: 0 or 255"
+            img[y,xbar] = color # midpoint
+            img[ybar,x] = color # midpoint
+        
+        return img
+
+    @classmethod
+    def draw_center_cross(cls, img, size=1, color=(255,0,0)):
+        x, y = cls.get_center_2D(img)
+        return cls.draw_cross(img, x, y, size, color)
+
+
+
+class Tags():
+    def __init__(self):
+        self.tag_contour = []
+        self.tag_image_orig = []
+        self.tag_image_diff = []
+        self.properties = []
+        self.pois = []
+    
+    def add(self, tag, value):
+        getattr(self, tag).append(value)
+
+    def set_none(self, keys=[]):
+        for k in keys:
+            getattr(self, k).append(None)
+
+    def move(self, search_width=50):
+        for i, (p, cont, prop) in enumerate(zip(self.pois, self.tag_contour, self.properties)):
+            if cont is not None and prop is not None:
+                self.tag_contour[i] = cont - search_width + p
+                self.properties[i]['xcenter'] = prop['xcenter'] + p[0]
+                self.properties[i]['ycenter'] = prop['ycenter'] + p[1]
+
+    def show(self, img):
+        cs = [c for c in self.tag_contour if c is not None]
+
+        im = img.copy()
+        im = Image.tag_image(im, cs)
+
+        for p in tags.pois:
+            Detection.draw_cross(im, p[0], p[1], 3, (255,0,0))
+
+        plt.imshow(im)
+
 class Series(Image):
     def __init__(
         self, 

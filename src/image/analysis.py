@@ -888,7 +888,11 @@ class Mask(Spectral):
             self.img = self.apply_mask(self.img, self.masks['water_surface'])
 
 
-class Detection():
+class Detector():
+
+    @staticmethod
+    def pass_tests(dict):
+        return dict
 
     @staticmethod
     def get_contour_centers(contours):
@@ -986,33 +990,6 @@ class Detection():
         return steps
 
     @staticmethod
-    def get_center_2D(img):
-        assert len(img.shape) == 2 or len(img.shape) == 3, "img has wrong number of dimensions"
-        y = round(img.shape[0]/2)
-        x = round(img.shape[1]/2)
-        return x, y
-
-    @staticmethod
-    def draw_cross(img, x, y, size, color):
-        ybar = range(max(0,y-size), min(y+size+1, img.shape[0]))
-        xbar = range(max(0,x-size), min(x+size+1, img.shape[1]))
-        if len(img.shape) == 3:
-            img[y,xbar] = color # midpoint
-            img[ybar,x] = color # midpoint
-
-        if len(img.shape) == 2:
-            assert len(color) == 3, "probably greyscale image. Color should be int, recommended: 0 or 255"
-            img[y,xbar] = color # midpoint
-            img[ybar,x] = color # midpoint
-        
-        return img
-
-    @classmethod
-    def draw_center_cross(cls, img, size=1, color=(255,0,0)):
-        x, y = cls.get_center_2D(img)
-        return cls.draw_cross(img, x, y, size, color)
-
-    @staticmethod
     def unite_family(hierarchy, contours):
         if hierarchy is None:
             return []
@@ -1037,15 +1014,15 @@ class Detection():
 
         return contours
 
-    @classmethod
-    def find_ellipses_in_contours(cls, img, contours, draw=False):
+    @staticmethod
+    def find_ellipses_in_contours(img, contours, draw=False):
         """
         only consider contours whose area can be determined. Otherwise they are
         of no use. The if else conditions can remain hardcoded, because they are the
         absolute minimal requirements for determining an ellipsis.
         """
         roi = img.copy() 
-        center = np.array(cls.get_center_2D(roi))
+        center = np.array(Image.get_center_2D(roi))
         properties = []
         for i, c in enumerate(contours):
             m = cv.moments(c)
@@ -1069,7 +1046,7 @@ class Detection():
                     #         roi, c[p][0][0], c[p][0][1], 1, 
                     #         color=(0, 100,0))
                     roi = cv.ellipse(roi, e, (0,255,0), 1)
-                    roi = cls.draw_cross(
+                    roi = Image.draw_cross(
                         roi, round(e[0][0]), round(e[0][1]), 1, 
                         color=(0,255,0))
             

@@ -3,8 +3,8 @@ import os
 import numpy as np
 import itertools as it
 
-from image.process import Series, Image
-from image.analysis import Mask, Spectral, Detection
+from image.process import Series, Image, Tags
+from image.analysis import Mask, Spectral, Detector
 from evaluation.plot import Viz
 from utils.manage import Files
 from matplotlib import pyplot as plt
@@ -34,11 +34,23 @@ def filter_contours(contours):
 
 def smart(roi):
     median = cv.medianBlur(roi, 5)
-    background = Detection.substract_median(median, ignore_value=0)
+    background = Detector.substract_median(median, ignore_value=0)
     gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
     T, thresh = cv.threshold(gray, 10, 255, 0)
 
     return [roi, median, background, gray, thresh]
+
+
+def pass_tests(d):
+    d['select'] = True
+    d['select'] = d['select'] and not d['len_major'] > 500
+    d['select'] = d['select'] and not d['len_minor'] > 500
+    d['select'] = d['select'] and not d['area'] < 5
+    d['select'] = d['select'] and not d['area'] > 5000
+    d['select'] = d['select'] and not (d['distance'] > 20 and d['area'] < 50)
+    d['select'] = d['select'] and not (d['angle'] > 85 and d['angle'] < 95 and d['len_major'] > 90)
+    return d
+
 
 
 path = "../data/pics/"
@@ -52,6 +64,7 @@ s = Series(os.path.join(path, date, "7"))
 # img = Image(os.path.join(path, date, "12", "091920"))
 img1 = Image(os.path.join(path, date, "10", "091544"))
 img2 = Image(os.path.join(path, date, "10", "091546"))
+img2 = Image(os.path.join(path, date, "10", "091548"))
 # img1 = Image(os.path.join(path, date, "11", "091732"))
 # img2 = Image(os.path.join(path, date, "11", "091734"))
 
@@ -60,43 +73,41 @@ m1 = Slice(img1.img)
 m0.create_masks(pars="../settings/masking_20210225.json")
 m1.create_masks(pars="../settings/masking_20210225.json")
 
-pois = Detection.find_pois(
+pois = Detector.find_pois(
     m0.img, m1.img, filter_fun=filter_contours, 
     threshold=20, sw=20, erode_n=3)
 
-steps = Detection.detect(
-    m1.img, pois[181], 50, 
-    smart, {}, 
-    plot=True)
+tags = Tags()
+rad = 50
 
-# Viz.color_analysis(steps[1], "r")
+for ip, poi in enumerate(pois):
+    
+    tags.add("pois", poi)
+    steps = Detector.detect(m1.img, poi, rad, smart, {}, plot=False)
+    contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    contours = Detector.unite_family(hierarchy, contours)
+    roi, properties, contours = Detector.find_ellipses_in_contours(steps[0], contours, draw=False)
 
-contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-contours = Detection.unite_family(hierarchy, contours)
+    for p in properties:
+        p = pass_tests(p)
 
-roi, properties, contours = Detection.find_ellipses_in_contours(steps[0], contours, draw=True)
+    c_select = [(p['distance'], p['id']) for p in properties if p['select']]
+    
+    try:
+        c_select = [i for _, i in sorted(c_select)][0]
+        roi, properties, contours = Detector.find_ellipses_in_contours(steps[0], [contours[c_select]], draw=True)
+        tags.add("tag_contour", contours[0])
+        tags.add("tag_image_orig", roi)
+        tags.add("tag_image_diff", Detector.get_roi(m0.img, poi, rad))
+        tags.add("properties", properties[0])
 
-roi = Detection.draw_center_cross(roi, color=(255,255,0))
-plt.imshow(roi)
-properties
+    except IndexError:
+        tags.set_none(["tag_contour", "tag_image_orig", "tag_image_diff", "properties"])        
 
-# selection criteria (basically logic gates)
-for i, e in enumerate(properties):
-    e['select'] = True
-    e['select'] = e['select'] and not e['len_major'] > 500
-    e['select'] = e['select'] and not e['len_minor'] > 500
-    e['select'] = e['select'] and not e['area'] < 5
-    e['select'] = e['select'] and not e['area'] > 3000
-    e['select'] = e['select'] and not (e['distance'] > 20 and e['area'] < 50)
-    e['select'] = e['select'] and not (e['angle'] > 85 and e['angle'] < 95 and e['len_major'] > 90)
-
-c_select = [(p['distance'], p['id']) for p in properties if p['select']]
-c_select = [i for _, i in sorted(c_select)][0]
-
-roi, properties, contours = Detection.find_ellipses_in_contours(steps[0], [contours[c_select]], draw=True)
-plt.imshow(roi)
+    print(ip)
 
 
+tags.move()
 
 
 # plt.imshow(steps[0])
