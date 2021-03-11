@@ -12,6 +12,6 @@ echo "processing chunk $SLURM_ARRAY_TASK_ID ..."
 PROJECT_DIR="/home/$USER/projects/nanocosm/"
 
 source "$PROJECT_DIR/env/bin/activate"
-MY_INPUT_DIR=$1
+INPUT_DIR=$1
 
-python "/$PROJECT_DIR/src/read.py" "$MY_INPUT_DIR" -f $SLURM_ARRAY_TASK_ID
+python "/$PROJECT_DIR/src/read.py" "$INPUT_DIR" -f $SLURM_ARRAY_TASK_ID
