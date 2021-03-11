@@ -2,7 +2,7 @@ from exifread import process_file
 from image.process import Image
 import datetime as dt
 
-# path = "../data/pics/20210223/PNAN7193.RW2"
+path = "../data/pics/20210223/PNAN7193.RW2"
 # i = Image(path)
 # i.read_raw()
 
