@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #SBATCH -D /work/%u
-#SBATCH -J nanocosm_detection_med
+#SBATCH -J nanocosm_detection_series_med
 #SBATCH -t 0-00:05:00
 #SBATCH --mem-per-cpu 12G 
-#SBATCH -o /work/%u/%x-%A-%a.out
-#SBATCH -e /work/%u/%x-%A-%a.err
+#SBATCH -o /work/%u/logs/%x-%A-%a.out
+#SBATCH -e /work/%u/logs/%x-%A-%a.err
 
 echo "processing chunk $SLURM_ARRAY_TASK_ID ..."
 

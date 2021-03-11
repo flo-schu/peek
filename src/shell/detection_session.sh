@@ -13,6 +13,8 @@ source "$PROJECT_DIR/env/bin/activate"
 echo "activated virtual environment"
 
 INPUT_DIR=$1
+SETTINGS=$2
+
 SESSION=`ls -d $INPUT_DIR*/ | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
 echo "processing $SESSION ..."
 
