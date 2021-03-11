@@ -157,7 +157,10 @@ class Files:
         return os.path.join(*pparts)
 
     @staticmethod
-    def read_settings(path):
+    def read_settings(path=""):
+        if path == "":
+            return {}
+            
         with open(path, "r") as f:
             pars = json.load(f)
 

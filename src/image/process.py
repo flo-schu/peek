@@ -119,7 +119,7 @@ class Image(Files):
             # message = code.data.decode("utf-8")
             detector = cv2.QRCodeDetector()
             message, bbox, _ = detector.detectAndDecode(thresh)
-            print(message, bbox, _)
+            # print(message, bbox, _)
             parts = message.split(sep="_")
             self.id = int(parts[1])
         except IndexError:        
@@ -202,12 +202,13 @@ class Series(Image):
         self.struct = self.browse_subdirs_for_files(directory, "tiff")
         self.images = self.read_files_from_struct(import_image)
 
-    def process_image(self, file_name, **params):
+    def process_image(self, file_name, delete_old=False, **params):
         path = os.path.join(self.path,file_name)
         i = Image(path=path)
         i.read_raw(**params)
         i.read_qr_code()
-        i.delete() # removing with old path
+        if delete_old:
+            i.delete() # removing with old path
 
         # create directory for Image and copy files (also updates image path)
         # delete old, save new and save structure of image
@@ -261,14 +262,20 @@ class Session(Series):
     def __init__(self, directory):
         self.path = directory
 
-    def read_images(self, stop_after=None, **params):
+    def read_images(self, stop_after=None, file_number=None, 
+                    delete_old=False, params={}):
         
         files = Files.find_files(self.path, file_type="RW2")
 
-        if stop_after is None:
-            stop_after = len(files)
-
-        print('processing a total of {} files. Stopping after {} files'.format(len(files), stop_after))
+        if file_number is not None:
+            files = [files[file_number]]
+            stop_after = 1
+        else:        
+            if stop_after is None:
+                stop_after = len(files)
+        
+        print('processing a total of {} files. Stopping after {} files'.format(
+            len(files), stop_after))
 
         for j, f in enumerate(files):
             # break after n images
@@ -276,7 +283,8 @@ class Session(Series):
                 break
             
             # read image and qr code
-            image, series_dir, image_dir = self.process_image(f, **params)
+            image, series_dir, image_dir = self.process_image(
+                f, delete_old=delete_old, **params)
 
             # report
             print("processed file: {}".format(f))
