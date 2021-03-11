@@ -17,6 +17,7 @@ import imutils
 import json
 import shutil
 import datetime as dt
+from exifread import process_file
 from utils.manage import Files
 
 class Image(Files):
@@ -34,20 +35,25 @@ class Image(Files):
     def read_raw(self, **params):
         """
         reads raw file using rawpy module. 
-        A future version could use pillow (PIL), because of the possibility to
-        read metadata better. However, RW2 files are currently not supported. 
-        It is possible though to write a custom image plugin which recognizes the
-        raw file.
-        https://pillow.readthedocs.io/en/stable/handbook/writing-your-own-file-decoder.html
+        with exifread. Reading Metadata is super easy.
         """
         with rawpy.imread(self.path) as f:
              raw = f.postprocess(**params)
 
-        ts = dt.datetime.fromtimestamp(os.path.getmtime(self.path))
+        # get image time
+        img_time = self.get_meta(tag="EXIF DateTimeOriginal")
+        ts = dt.datetime.strptime(img_time.values, "%Y:%m:%d %H:%M:%S")
         self.date = ts.strftime('%Y%m%d')
         self.time = ts.strftime('%H%M%S')
+
         self.img = raw
         self.hash = str(raw.sum())
+
+    def get_meta(self, tag=""):
+        with open(self.path, 'rb') as f:
+            tags = process_file(f)
+
+        return tags[tag]
 
     def read_struct(self, import_image=True):
         if not os.path.exists(self.path):
