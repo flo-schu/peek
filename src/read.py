@@ -1,23 +1,13 @@
-# ======= read images and qr code and store in subfolders =====================
-# takes long time
 from image.process import Session
+import argparse
 
-path = "../data/pics/20210118/"
-s = Session(path)
-s.read_images(stop_after=None)
+parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
+parser.add_argument('input' , type=str, help='path to image directory')
+parser.add_argument('-n', '--number_files' , type=int, help='number of files to process', default=None)
+args = parser.parse_args()
 
-path = "../data/pics/20210121/"
-s = Session(path)
-s.read_images(stop_after=None)
-
-path = "../data/pics/20210125/"
-s = Session(path)
-s.read_images(stop_after=None)
-
-path = "../data/pics/20210128/"
-s = Session(path)
-s.read_images(stop_after=None)
-
+s = Session(args.input)
+s.read_images(stop_after=args.number_files)
 
 # Next Steps:
 # - [ ] write code that moves all images out of subfolders (for first sessions) [easy]
