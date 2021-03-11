@@ -7,7 +7,6 @@ import cv2 as cv
 import pandas as pd
 import numpy as np
 import itertools as it
-from icecream import ic
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
@@ -156,7 +155,7 @@ class Annotations(Tag):
 
         self.show_original()
         plt.ion()
-
+        plt.show()
 
     def load_processed_tags(self):
         try:

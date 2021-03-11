@@ -1,6 +1,6 @@
 # ======= annotation of prepared tags ============
 
-from IPython import get_ipython
+# from IPython import get_ipython
 from image.process import Image, Series
 from utils.manage import Files
 from image.analysis import Annotations
@@ -20,18 +20,20 @@ nano = 6
 # open series and load image
 s = Series(os.path.join(path,date,str(nano)))
 i = s.images[0] 
-i.path
+print(i.path)
 keymap = {
     'd':"Daphnia Magna",
     'c':"Culex Pipiens, larva",
     'p':"Culex Pipiens, pupa",
     'u':"unidentified",
+    's':"save"
 }
 a = Annotations(i, 'moving_edge', tag_db_path="../data/tag_db.csv", keymap=keymap)
+print(a.tags)
 a.load_processed_tags()
 a.start()
+# plt.show()
 a.show_tag_number(0)
-
 # store annotated tags
 Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")
 
