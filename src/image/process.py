@@ -9,7 +9,7 @@ import os
 import rawpy
 import imageio
 import cv2
-from pyzbar import pyzbar
+# from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -115,8 +115,11 @@ class Image(Files):
         
         # read QR Code & convert to string
         try:
-            code = pyzbar.decode(thresh)[0]
-            message = code.data.decode("utf-8")
+            # code = pyzbar.decode(thresh)[0]
+            # message = code.data.decode("utf-8")
+            detector = cv2.QRCodeDetector()
+            message, bbox, _ = detector.detectAndDecode(thresh)
+            print(message, bbox, _)
             parts = message.split(sep="_")
             self.id = int(parts[1])
         except IndexError:        
