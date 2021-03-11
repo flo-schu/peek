@@ -57,3 +57,4 @@ d.data
 # - [x] make sure image is not necessessary when Annotations class is initiated
 # - [ ] write functions to plot the timeseries (Then I have at least the performance of 
 #       Daphnia)
+# - [ ] for algae calculations use Scipy.signal (Spectral analysis!!!)
