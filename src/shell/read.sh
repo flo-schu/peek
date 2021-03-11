@@ -4,8 +4,8 @@
 #SBATCH -t 0-00:05:00
 #SBATCH --mem-per-cpu 1G 
 
-#SBATCH -o /work/%u/%x/%A/%a.out
-#SBATCH -e /work/%u/%x/%A/%a.err
+#SBATCH -o /work/%u/%x-%A-%a.out
+#SBATCH -e /work/%u/%x-%A-%a.err
 
 echo "processing chunk $SLURM_ARRAY_TASK_ID ..."
 
