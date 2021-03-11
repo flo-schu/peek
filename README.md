@@ -56,13 +56,27 @@ per session. Can be upscaled for all sessions at once)
 
 ## priorities
 
-1. [ ] write functions to plot the timeseries (Then I have at least the performance of Daphnia)
-2. [ ] Important: Write detector for Culex
-3. [ ] write code that moves all images out of subfolders (for first sessions)
-4. [ ] Control QR codes
-5. [ ] manually label QR codes which could not be read
-6. [ ] what about zero sized images?
-7. [ ] Address memory problems when six images were taken from one nanocosm (need 1.2 GB memory)
-8. [x] write cluster script to process images
-9. [ ] change design of struct path --> relative import to base directory. Otherwise its quite shit. should be possible and not too much work. Until then, write helper function
-to strip everything until datefolder and preprend current path.
+1. [ ] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
+2. [ ] __Control QR codes__. I need to write something which lets me quickly or automatically assign images from 999 to folders
+       if the diff to any time is <= 4s, than it can go into the respective folder (this should already fix a lot of the problems)
+       for the rest, I can do manual sorting, also I can improve the QR code
+       Also it would be nice to code into submit scripts that 999 is always excluded.
+3. [ ] classify organisms. Write small tool which accesses the tag file of
+       moving edge. Then I can control how well the classification works.
+4. [ ] use data tool to collect all data files.
+5. [ ] write functions to plot the timeseries (Then I have at least the performance of Daphnia)
+6. [ ] continue to build detection database in order to get ML going
+
+Later:
+
+1. [ ] what about zero sized images?
+2. [ ] change design of struct path --> relative import to base directory.
+       Otherwise its quite shit. should be possible and not too much work.
+       Until then, write helper function to strip everything until datefolder
+       and preprend current path.
+
+Done:
+
+1. [x] Important: Write detector for Culex
+2. [x] Address memory problems when six images were taken from one nanocosm (need 1.2 GB memory). Not really a problem any more when I can request 20G on cluster :)
+3. [x] write cluster script to process images
