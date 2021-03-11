@@ -1,8 +1,8 @@
 import cv2 as cv
 import numpy as np
 from image.detectors.base import Detector, Mask, Tagger
-from progress.bar import IncrementalBar
-import gc
+# from progress.bar import IncrementalBar
+# import gc
 
 # here I can create my own individual program of functions, that I want to execute
 # This is very nice, because here it makes it explicit what is to be done,
@@ -52,7 +52,7 @@ class MovementEdgeDetector(Detector):
         background = Detector.substract_median(median, ignore_value=0)
         gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
         T, thresh = cv.threshold(gray, thresh, 255, 0)
-        return [roi, median, background, gray, thresh]
+        return [roi, thresh]
 
     @staticmethod
     def pass_tests(d):
@@ -80,7 +80,7 @@ class MovementEdgeDetector(Detector):
         m2.img = m2.trim(im2, **m1.pars['trim'])
         m2.apply_multi(masks=m1.masks)
 
-        from matplotlib import pyplot as plt
+        # from matplotlib import pyplot as plt
 
         # determin points of interest
         pois = self.find_pois(
@@ -88,7 +88,7 @@ class MovementEdgeDetector(Detector):
             threshold=20, sw=20, erode_n=3)
 
         # main loop
-        bar = IncrementalBar('Processing', max=len(pois))
+        # bar = IncrementalBar('Processing', max=len(pois))
         for poi in pois:
             steps = Detector.detect(
                 m1.img, poi, search_radius, 
@@ -122,12 +122,12 @@ class MovementEdgeDetector(Detector):
             tags.add("tag_image_orig", steps[0])
             tags.add("tag_image_diff", Detector.get_roi(m2.img, poi, search_radius))
 
-            gc.collect()
-            bar.next()
+            # gc.collect()
+            # bar.next()
 
         # wrap up
         tags.wrap_up(search_radius, trim_top=m1.pars['trim']['t'])
-        bar.finish()
+        # bar.finish()
 
         return tags
 

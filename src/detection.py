@@ -12,7 +12,7 @@ parser.add_argument('path' , type=str, help='path to images')
 parser.add_argument('config', type=str, help='path to config file used for analysis')
 parser.add_argument('-i1', '--image1', type=int, nargs='?', help='list of images to process', default=0)
 parser.add_argument('-i2', '--image2', type=int, nargs='?', help='list of images to process', default=-1)
-parser.add_argument('-b', '--backup', type=str, nargs='?', help='path to backup folder', default='../data/annotations')
+parser.add_argument('-b', '--backup', type=str, nargs='?', help='path to backup folder', default='')
 parser.add_argument('-s', '--search_radius', type=int, nargs='?', help='radius of search box', default=50)
 parser.add_argument('-r', '--blur', type=int, nargs='?', help='detector setting blur', default=5)
 parser.add_argument('-t', '--threshold', type=int, nargs='?', help='detector setting threshold', default=10)
@@ -37,7 +37,8 @@ tags = detector.tag_image(
 # export tags
 a = Annotations(img1, 'moving_edge', tag_db_path="")
 a.read_new_tags(pd.DataFrame(tags.__dict__))
-Files.copy_files(args.path, args.backup, ex1='.tiff', ex2="PNAN")
+if args.backup != '':
+    Files.copy_files(args.path, args.backup, ex1='.tiff', ex2="PNAN")
 
 
 # to customize it is recommended to write a new detector class under 
