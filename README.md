@@ -30,7 +30,7 @@ useful commands:
 + `|`           pipe commands (pass result from one command as input to next)
 + `cat *job-id* exec in logs. get the output and error messages of all array jobs
                 concerning this job. Replace job-id with the number
-
++ `ls -d */ | xargs rm -r` delete all subdirectories but not any files.
 ### reading files
 read a single foto session (takes a few minutes tops). Exchange the image folder specified at the end and increase the number of array jobs if needed (1-N)
 `sbatch -a 1-160 /home/schunckf/projects/nanocosm/src/shell/read_image.sh /work/schunckf/nanocosm/data/pics/20210226/`
@@ -80,3 +80,11 @@ Done:
 1. [x] Important: Write detector for Culex
 2. [x] Address memory problems when six images were taken from one nanocosm (need 1.2 GB memory). Not really a problem any more when I can request 20G on cluster :)
 3. [x] write cluster script to process images
+
+
+# copy the following folders with raw data:
+
++ [x] 20210111 delete processed files
++ [ ] copy raw files to 20210114
++ [ ] execute move file script to files on Y drive, once I made sure to have backed up everythin and then also on harddrive
++ [ ] run an analysis and remove files to try if it works
