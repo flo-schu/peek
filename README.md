@@ -11,11 +11,27 @@ Nanocosm experiment with Daphnia Magna and Culex Pipiens
 + install requirements: pip install -r requirements.txt
 
 ## working on eve cluster
+
 it is recommended to use full paths, because than the scripts can be submitted
 from any location, which helps a lot. The whole analysis of all files can probably
 be done in less than an hour if there are enough free cores on EVE.
 
+### copy files
+
+copy single session to eve
+`scp .\20210226\* schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/pics/20210226/`
+
+copy all image folders. For this use rsync on cygwin. Everything else did not work
+In the future I could try mounting the Y: drive on wsl
+I have to try out if the rsync command works now (3) with the last, one an 
+extra dictionary was created
+
+1. start cygwin
+2. cd into Y: `cd Y:` and `cd Home/schunckf/papers/nanocosm/data`
+3. `rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/`
+
 ### aliases
+
 aliases are specified in ~/.bashrc
 `cdw` cd into work directory of schunckf
 `cdh` cd into home directory of schunckf
@@ -23,6 +39,7 @@ aliases are specified in ~/.bashrc
 `sq`  show squeue for user schunckf
 
 useful commands:
+
 + `sjeff -1d`   successful jobs including ressouce usage
 + `ctrl+r`      search command history
 + `history`     print history
@@ -43,24 +60,23 @@ move RW2 files out of their directory:
 read a single foto session (takes a few minutes tops). Exchange the image folder specified at the end and increase the number of array jobs if needed (1-N)
 `sbatch -a 1-160 /home/schunckf/projects/nanocosm/src/shell/read_image.sh /work/schunckf/nanocosm/data/pics/20210226/`
 
-Number of files can be determined with 
+Number of files can be determined with
 `tree /work/schunckf/nanocosm/data/pics/20210226/`
 
-process for instance 10 sessions (increase with argument 1-N). 
+process for instance 10 sessions (increase with argument 1-N).
 `sbatch -a 1-10 /home/schunckf/projects/nanocosm/src/shell/read_session.sh /work/schunckf/nanocosm/data/pics/`
 
 ### detection of organisms
+
 read e.g. first 5 series of a specific session. As an array job. This is fast.
 The whole session will be finished in less than a minute
 There were memory problems in the past
 `sbatch -a 1-5 /home/schunckf/projects/nanocosm/src/shell/detection_series.sh /work/schunckf/nanocosm/data/pics/20210226/ /home/schunckf/projects/nanocosm/settings/masking_20210225.json`
 
-This will perform detection for a whole session (with a loop. Probably not 
+This will perform detection for a whole session (with a loop. Probably not
 super efficient, but the algorithm is quite fast. Takes only a few minutes
 per session. Can be upscaled for all sessions at once)
 `sbatch -a 1-1 /home/schunckf/projects/nanocosm/src/shell/detection_session.sh /work/schunckf/nanocosm/data/pics/ /home/schunckf/projects/nanocosm/settings/masking_20210225.json`
-
-
 
 ## priorities
 
@@ -88,7 +104,7 @@ Done:
 1. [x] Important: Write detector for Culex
 2. [x] Address memory problems when six images were taken from one nanocosm (need 1.2 GB memory). Not really a problem any more when I can request 20G on cluster :)
 3. [x] write cluster script to process images
-
+4. [x] copy all files to work (cygwin and rsync works wonderfully)
 
 # copy the following folders with raw data:
 
