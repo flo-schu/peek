@@ -287,11 +287,11 @@ class Session(Series):
             # break after n images
             if j >= stop_after:
                 break
+            print("processing file: {}".format(f))
             
             # read image and qr code
             image, series_dir, image_dir = self.process_image(
                 f, delete_old=delete_old, **params)
 
             # report
-            print("processed file: {}".format(f))
             print("read QR code: {}".format(image.id))

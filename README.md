@@ -31,7 +31,15 @@ useful commands:
 + `cat *job-id* exec in logs. get the output and error messages of all array jobs
                 concerning this job. Replace job-id with the number
 + `ls -d */ | xargs rm -r` delete all subdirectories but not any files.
+
 ### reading files
+
+deleting analysis files (tiff, csv, json, npy):
+`source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh /work/schunckf/nanocosm/data/pics/`
+
+move RW2 files out of their directory:
+`source /home/schunckf/projects/nanocosm/src/shell/move_files.sh /work/schunckf/nanocosm/data/pics/`
+
 read a single foto session (takes a few minutes tops). Exchange the image folder specified at the end and increase the number of array jobs if needed (1-N)
 `sbatch -a 1-160 /home/schunckf/projects/nanocosm/src/shell/read_image.sh /work/schunckf/nanocosm/data/pics/20210226/`
 
@@ -56,7 +64,7 @@ per session. Can be upscaled for all sessions at once)
 
 ## priorities
 
-1. [ ] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
+1. [x] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
 2. [ ] __Control QR codes__. I need to write something which lets me quickly or automatically assign images from 999 to folders
        if the diff to any time is <= 4s, than it can go into the respective folder (this should already fix a lot of the problems)
        for the rest, I can do manual sorting, also I can improve the QR code
