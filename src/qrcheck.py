@@ -6,3 +6,8 @@
 # 6. create CSV file with labels friom (5) in the same order (should be automatic due to date and time format YYYYMMDD_HHMM_NAME.tiff)
 #    this should be kept and only updated with new unclear nanos, so that not everything has to be ran twice
 # 7. read the file and move images from 999 to appropriate locations
+
+import os
+
+with open("data/image_analysis/qr_check.txt", "r") as f:
+    mqr = f.read()
