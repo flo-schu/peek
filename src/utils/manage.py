@@ -24,8 +24,8 @@ class Files:
 
     def create_dir(self, subdir):
         path = self.change_dir(subdir)
-        if not os.path.exists(path):
-            os.mkdir(path)
+        # if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
         return path
 
     @classmethod

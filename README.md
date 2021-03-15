@@ -51,6 +51,9 @@ useful commands:
 
 ### reading files
 
+count number of files:
+`find nanocosm/data/pics/ -mindepth 1 -maxdepth 2 -name "*.RW2" | sort -n | wc -l`
+
 deleting analysis files (tiff, csv, json, npy):
 `source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh /work/schunckf/nanocosm/data/pics/`
 

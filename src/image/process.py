@@ -9,6 +9,7 @@ import os
 import rawpy
 import imageio
 import cv2
+import gc
 # from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
@@ -111,25 +112,43 @@ class Image(Files):
 
     def read_qr_code(self):
         # improve image 
-        contrast = cv2.addWeighted( self.img, 2, self.img, 0, 0)
-        gray = cv2.cvtColor(contrast,cv2.COLOR_BGR2GRAY)
-        # plt.imshow(gray, cmap='gray'), plt.axis("off")
-        blur = cv2.GaussianBlur(gray, (9,9), 0)
-        # plt.imshow(blur, cmap='gray'), plt.axis("off")
-        thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        # plt.imshow(thresh, cmap='gray'), plt.axis("off")
-        
+        im = self.img.copy()[500:1500, 1300:2600,:]
+        # im = cv2.resize(im, (0,0), fx=0.5, fy=0.5)
+        im = cv2.addWeighted( im, 2, im, 0, 0)
+        im = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
+        im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        im = self.max_filter(3, im)
+        # im = self.min_filter(3, im)
+
         # read QR Code & convert to string
         try:
             # code = pyzbar.decode(thresh)[0]
             # message = code.data.decode("utf-8")
+            gc.collect()
             detector = cv2.QRCodeDetector()
-            message, bbox, _ = detector.detectAndDecode(thresh)
+            message, bbox, _ = detector.detectAndDecode(im)
             # print(message, bbox, _)
             parts = message.split(sep="_")
             self.id = int(parts[1])
-        except IndexError:        
+        except:        
             self.id = 999
+
+    def process_image(self, file_name, delete_old=False, **params):
+        self.read_raw(**params)
+        self.read_qr_code()
+        if delete_old:
+            self.delete() # removing with old path
+
+        # create directory for Image and copy files (also updates image path)
+        # delete old, save new and save structure of image
+        series_dir = self.create_dir(str(self.id))
+        image_dir = self.create_dir(os.path.join(str(self.id), self.time))
+        self.change_path(os.path.join(image_dir, file_name)) # change path
+
+        self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
+        self.dump_struct(self.__dict__)
+
+        return self, series_dir, image_dir
 
     def read_tags(self):
         self.tags = pd.csv
@@ -194,6 +213,23 @@ class Image(Files):
         x, y = cls.get_center_2D(img)
         return cls.draw_cross(img, x, y, size, color)
 
+    @staticmethod
+    def max_filter(n, img):
+        size = (n, n)
+        shape = cv2.MORPH_RECT
+        kernel = cv2.getStructuringElement(shape, size)
+
+        return cv2.dilate(img, kernel)
+
+    @staticmethod
+    def min_filter(n, img):
+        size = (n, n)
+        shape = cv2.MORPH_RECT
+        kernel = cv2.getStructuringElement(shape, size)
+
+        # Applies the minimum filter with kernel NxN
+        return cv2.erode(img, kernel)
+
 
 class Series(Image):
     def __init__(
@@ -207,25 +243,6 @@ class Series(Image):
         self.id = os.path.basename(self.path)
         self.struct = self.browse_subdirs_for_files(directory, "tiff")
         self.images = self.read_files_from_struct(import_image)
-
-    def process_image(self, file_name, delete_old=False, **params):
-        path = os.path.join(self.path,file_name)
-        i = Image(path=path)
-        i.read_raw(**params)
-        i.read_qr_code()
-        if delete_old:
-            i.delete() # removing with old path
-
-        # create directory for Image and copy files (also updates image path)
-        # delete old, save new and save structure of image
-        series_dir = i.create_dir(str(i.id))
-        image_dir = i.create_dir(os.path.join(str(i.id), i.time))
-        i.change_path(os.path.join(image_dir, file_name)) # change path
-
-        i.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
-        i.dump_struct(i.__dict__)
-
-        return i, series_dir, image_dir
 
     def read_files_from_struct(self, import_image):
         images = []
@@ -290,8 +307,12 @@ class Session(Series):
             print("processing file: {}".format(f))
             
             # read image and qr code
-            image, series_dir, image_dir = self.process_image(
+            i = Image(path=os.path.join(self.path, f))
+            image, series_dir, image_dir = i.process_image(
                 f, delete_old=delete_old, **params)
 
             # report
             print("read QR code: {}".format(image.id))
+            
+            del image
+            gc.collect()
