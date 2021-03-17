@@ -17,7 +17,7 @@ import pandas as pd
 import imutils
 import json
 import shutil
-import datetime as dt
+from datetime import datetime as dt
 from exifread import process_file
 from utils.manage import Files
 
@@ -43,18 +43,37 @@ class Image(Files):
 
         # get image time
         img_time = self.get_meta(tag="EXIF DateTimeOriginal")
-        ts = dt.datetime.strptime(img_time.values, "%Y:%m:%d %H:%M:%S")
+        ts = dt.strptime(img_time, "%Y:%m:%d %H:%M:%S")
         self.date = ts.strftime('%Y%m%d')
         self.time = ts.strftime('%H%M%S')
-
+        self.night = self.image_at_night(start_night_h=21, end_night_h=5)
         self.img = raw
         self.hash = str(raw.sum())
 
-    def get_meta(self, tag=""):
+        # get additional metadata (depends on tags, to see which tags can be
+        # accessed try get_meta.py with a sample image)
+        self.iso = self.get_meta(tag="Image Tag 0x0037", index=0, return_as=str)
+        self.focal_length = self.get_meta(tag="EXIF FocalLength", index=0, return_as=str)
+        self.exposure_time = self.get_meta(tag="EXIF ExposureTime", index=0, return_as=str)
+        self.f_value = self.get_meta(tag="EXIF FNumber", index=0, return_as=str)
+        self.max_aperture = self.get_meta(tag="EXIF MaxApertureValue", index=0, return_as=str)
+        camera = self.get_meta(tag="Image Make", return_as=str)
+        model = self.get_meta(tag="Image Model", return_as=str)
+        self.camera = " ".join([camera, model])
+
+    def get_meta(self, tag="", index=None, return_as=None):
         with open(self.path, 'rb') as f:
             tags = process_file(f)
+        
+        tags = tags[tag].values
+        
+        if index is not None:
+            tags = tags[index]
 
-        return tags[tag]
+        if return_as is not None:
+            tags = return_as(tags)
+
+        return tags
 
     def read_struct(self, import_image=True):
         if not os.path.exists(self.path):
@@ -112,18 +131,11 @@ class Image(Files):
 
     def read_qr_code(self):
         # improve image 
-        im = self.img.copy()[500:1500, 1300:2600,:]
-        # im = cv2.resize(im, (0,0), fx=0.5, fy=0.5)
-        im = cv2.addWeighted( im, 2, im, 0, 0)
-        im = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
-        im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        im = self.max_filter(3, im)
-        # im = self.min_filter(3, im)
+        im = self.img.copy()[500:1500, 1200:2700,:]
+        im = 255-cv2.inRange(im, np.array([0,0,0]), np.array([70,40,40]))
+        im = self.min_filter(5, im)
 
-        # read QR Code & convert to string
         try:
-            # code = pyzbar.decode(thresh)[0]
-            # message = code.data.decode("utf-8")
             gc.collect()
             detector = cv2.QRCodeDetector()
             message, bbox, _ = detector.detectAndDecode(im)
@@ -132,6 +144,16 @@ class Image(Files):
             self.id = str(int(parts[1])).zfill(2)
         except:        
             self.id = str(999)
+
+    def image_at_night(self, start_night_h=21, end_night_h=5):
+        night = [dt.strptime(str(start_night_h),'%H'), 
+                 dt.strptime(str(end_night_h),'%H')]
+
+        if night[0] > dt.strptime(self.time, "%H%M%S") > night[1]:
+            self.night = True
+        else:
+            self.night = False
+
 
     def process_image(self, file_name, delete_old=False, **params):
         self.read_raw(**params)

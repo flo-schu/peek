@@ -84,10 +84,12 @@ per session. Can be upscaled for all sessions at once)
 ## priorities
 
 1. [x] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
-2. [ ] __Control QR codes__. I need to write something which lets me quickly or automatically assign images from 999 to folders
+2. [ ] __Control QR codes__. I need to write something which lets me quickly or 
+       automatically assign images from 999 to folders
        if the diff to any time is <= 4s, than it can go into the respective folder (this should already fix a lot of the problems)
        for the rest, I can do manual sorting, also I can improve the QR code
        Also it would be nice to code into submit scripts that 999 is always excluded.
+       [ ] improve QR detection script particularly for 34
 3. [ ] classify organisms. Write small tool which accesses the tag file of
        moving edge. Then I can control how well the classification works.
 4. [ ] use data tool to collect all data files.
@@ -109,9 +111,10 @@ Done:
 3. [x] write cluster script to process images
 4. [x] copy all files to work (cygwin and rsync works wonderfully)
 
-# copy the following folders with raw data:
+copy the following folders with raw data
 
 + [x] 20210111 delete processed files
-+ [ ] copy raw files to 20210114
++ [x] copy raw files to 20210114
++ [ ] copy files in C:/.../pics to Y:/.../pics once my quota was increased
 + [ ] execute move file script to files on Y drive, once I made sure to have backed up everythin and then also on harddrive
 + [ ] run an analysis and remove files to try if it works

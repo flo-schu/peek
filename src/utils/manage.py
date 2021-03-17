@@ -116,6 +116,7 @@ class Files:
 
         imageio.imwrite(self.change_file_ext(file_ext), obj)
 
+    @staticmethod
     def is_date(string, fuzzy=False):
         """
         Return whether the string can be interpreted as a date.
