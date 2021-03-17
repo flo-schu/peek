@@ -82,6 +82,14 @@ super efficient, but the algorithm is quite fast. Takes only a few minutes
 per session. Can be upscaled for all sessions at once)
 `sbatch -a 1-1 /home/schunckf/projects/nanocosm/src/shell/detection_session.sh /work/schunckf/nanocosm/data/pics/ /home/schunckf/projects/nanocosm/settings/masking_20210225.json`
 
+### check QR detection
+
+get error list
+`scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.txt .\data\image_analysis\QR\qr_errors.txt`
+
+get error image thumbnails
+`scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.tar .\data\image_analysis\QR\qr_errors.tar`
+
 ## priorities
 
 1. [x] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
