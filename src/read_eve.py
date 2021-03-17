@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser(description='Carry out object detection on two 
 parser.add_argument('input' , type=str, help='path to image')
 parser.add_argument('-p', '--img_params' , type=str, help='path to settings for image processing', default="")
 parser.add_argument('-d', '--delete_original' , type=bool, help='should the original image be deleted', default=False)
+parser.add_argument('-t', '--thumbnail' , type=bool, help='create a thumbnail img of the region scanned for qr code', default=False)
 args = parser.parse_args()
 
 print('reading paramteters ...')
@@ -19,6 +20,7 @@ print('processing {}'.format(args.input))
 i.process_image(
     file_name=os.path.basename(args.input), 
     delete_old=args.delete_original,
+    qr_thumb=args.thumbnail,
     **params)
 
 print("read QR code: {}".format(i.id))

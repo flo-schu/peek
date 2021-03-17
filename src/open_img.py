@@ -28,12 +28,11 @@ im = 255-cv2.inRange(im, np.array([0,0,0]), np.array([70,40,40]))
 # im = i.max_filter(3, im)
 # im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 im = i.min_filter(5, im)
+im = i.max_filter(3, im)
 
 detector = cv2.QRCodeDetector()
 message, bbox, _ = detector.detectAndDecode(im)
 
 print(message)
-print(i.img)
-print(np.median(i.img[:,:,0].flatten()))
-plt.imshow(i.img)
+plt.imshow(im)
 plt.show()

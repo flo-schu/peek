@@ -131,19 +131,51 @@ class Image(Files):
 
     def read_qr_code(self):
         # improve image 
-        im = self.img.copy()[500:1500, 1200:2700,:]
-        im = 255-cv2.inRange(im, np.array([0,0,0]), np.array([70,40,40]))
-        im = self.min_filter(5, im)
+        imo = self.img.copy()[500:1500, 1200:2700,:]
+        im = 255-cv2.inRange(imo, np.array([0,0,0]), np.array([70,40,40]))
+        
+        # first detection attempt
+        message = self.detect(im)
+        img_id = self.extract_id(message, error_id='999')
+        
+        # second attempt after passing through MIN filter
+        if img_id == '999':
+            im = self.min_filter(5, im)
+            message = self.detect(im)
+            img_id = self.extract_id(message, error_id='999')
 
+        # second attempt after passing through MAX filter
+        if img_id == '999':
+            im = self.max_filter(3, im)
+            message = self.detect(im)
+            img_id = self.extract_id(message, error_id='999')
+
+        self.id = img_id
+        self.qr_thumb = cv2.resize(imo, (0,0), fx=0.1, fy=0.1)
+    
+    @staticmethod
+    def extract_id(message, error_id='999'):
+        if message == "error":
+            return error_id
+        
         try:
-            gc.collect()
-            detector = cv2.QRCodeDetector()
-            message, bbox, _ = detector.detectAndDecode(im)
-            # print(message, bbox, _)
             parts = message.split(sep="_")
-            self.id = str(int(parts[1])).zfill(2)
-        except:        
-            self.id = str(999)
+            nano_id = parts[1].zfill(2)
+        except IndexError:
+            nano_id = error_id
+
+        return nano_id
+
+    @staticmethod
+    def detect(image, error_msg="error"):
+        gc.collect()
+        try:
+            detector = cv2.QRCodeDetector()
+            message, bbox, _ = detector.detectAndDecode(image)
+        except:
+            message = error_msg
+        
+        return message
 
     def image_at_night(self, start_night_h=21, end_night_h=5):
         night = [dt.strptime(str(start_night_h),'%H'), 
@@ -155,7 +187,7 @@ class Image(Files):
             self.night = False
 
 
-    def process_image(self, file_name, delete_old=False, **params):
+    def process_image(self, file_name, delete_old=False, qr_thumb=False, **params):
         self.read_raw(**params)
         self.read_qr_code()
         if delete_old:
@@ -166,8 +198,12 @@ class Image(Files):
         series_dir = self.create_dir(self.id)
         image_dir = self.create_dir(os.path.join(self.id, self.time))
         self.change_path(os.path.join(image_dir, file_name)) # change path
-
+        
         self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
+        if qr_thumb:
+            self.save(attr="qr_thumb", file_ext=".jpeg", remove_from_instance=True ) # save as tiff to new path
+        else:
+            del self.qr_thumb
         self.dump_struct(self.__dict__)
 
         return self, series_dir, image_dir
