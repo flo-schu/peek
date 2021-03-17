@@ -49,7 +49,7 @@ useful commands:
                 concerning this job. Replace job-id with the number
 + `ls -d */ | xargs rm -r` delete all subdirectories but not any files.
 
-### reading files
+### handling files
 
 count number of files:
 `find nanocosm/data/pics/ -mindepth 1 -maxdepth 2 -name "*.RW2" | sort -n | wc -l`
@@ -60,14 +60,15 @@ deleting analysis files (tiff, csv, json, npy):
 move RW2 files out of their directory:
 `source /home/schunckf/projects/nanocosm/src/shell/move_files.sh /work/schunckf/nanocosm/data/pics/`
 
-read a single foto session (takes a few minutes tops). Exchange the image folder specified at the end and increase the number of array jobs if needed (1-N)
-`sbatch -a 1-160 /home/schunckf/projects/nanocosm/src/shell/read_image.sh /work/schunckf/nanocosm/data/pics/20210226/`
-
 Number of files can be determined with
 `tree /work/schunckf/nanocosm/data/pics/20210226/`
 
-process for instance 10 sessions (increase with argument 1-N).
-`sbatch -a 1-10 /home/schunckf/projects/nanocosm/src/shell/read_session.sh /work/schunckf/nanocosm/data/pics/`
+### reading images and QR Codes
+
+determine the number of files with `tree /work/schunckf/nanocosm/data/pics/`
+this function works also in any other directory because of usage of `find`.
+`sbatch -a 1-9352 /home/schunckf/projects/nanocosm/src/shell/read_image_better.sh /work/schunckf/nanocosm/data/pics/`
+
 
 ### detection of organisms
 
