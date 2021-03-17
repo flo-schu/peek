@@ -2,7 +2,7 @@
 #SBATCH -D /work/%u
 #SBATCH -J nanocosm_read
 #SBATCH -t 0-00:01:00
-#SBATCH -c 4
+#SBATCH -c 1
 #SBATCH --mem-per-cpu 10G 
 #SBATCH -o /work/%u/logs/%x-%A-%a.out
 #SBATCH -e /work/%u/logs/%x-%A-%a.err
