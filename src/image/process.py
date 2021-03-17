@@ -129,9 +129,9 @@ class Image(Files):
             message, bbox, _ = detector.detectAndDecode(im)
             # print(message, bbox, _)
             parts = message.split(sep="_")
-            self.id = int(parts[1])
+            self.id = str(int(parts[1])).zfill(2)
         except:        
-            self.id = 999
+            self.id = str(999)
 
     def process_image(self, file_name, delete_old=False, **params):
         self.read_raw(**params)
@@ -141,8 +141,8 @@ class Image(Files):
 
         # create directory for Image and copy files (also updates image path)
         # delete old, save new and save structure of image
-        series_dir = self.create_dir(str(self.id))
-        image_dir = self.create_dir(os.path.join(str(self.id), self.time))
+        series_dir = self.create_dir(self.id)
+        image_dir = self.create_dir(os.path.join(self.id, self.time))
         self.change_path(os.path.join(image_dir, file_name)) # change path
 
         self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
