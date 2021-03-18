@@ -256,11 +256,11 @@ class Image(Files):
         image_dir = self.create_dir(os.path.join(self.id, self.time))
         self.change_path(os.path.join(image_dir, file_name)) # change path
         
-        self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
         if qr_thumb:
             self.save(attr="qr_thumb", file_ext=".jpeg", remove_from_instance=True ) # save as tiff to new path
         else:
             del self.qr_thumb
+        self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
         self.dump_struct(self.__dict__)
 
         return self, series_dir, image_dir

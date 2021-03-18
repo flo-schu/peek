@@ -73,7 +73,7 @@ class Files:
     @classmethod
     def find_single_file(cls, directory, file_type):
         f = cls.find_files(path=directory, file_type=file_type)
-        assert len(f) == 1, print(f)
+        assert len(f) == 1, print('more than 1 file', f)
         return os.path.join(directory, f[0])
 
     @classmethod
