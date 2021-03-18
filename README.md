@@ -83,19 +83,31 @@ per session. Can be upscaled for all sessions at once)
 
 ### check QR detection
 
+create an archive of problem qr codes
+`source nanocosm/src/shell/archive_qrerrors.sh`
+
 get error list
 `scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.txt .\data\image_analysis\QR\qr_errors.txt`
 
 get error image thumbnails
 `scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.tar .\data\image_analysis\QR\qr_errors.tar`
+
+then the image thumbnails have to be checked and the correct id has to be added in a second column next to
+the error list (qr_errors.txt). Don't add column names
+upload the list again to `/work/schunckf/nanocosm/data/qr/qrcorrections.csv` and execute
+`python /home/schunckf/projects/nanocosm/src/qrcorrect.py /work/schunckf/nanocosm/data/qr/qrcorrections.csv`
+
+finally delete empty directories
+`find /work/schunckf/nanocosm/data/pics/ -empty -type d -delete -print`
+
+check if any errors are still present. There should be none after 20201207
+`find /work/schunckf/nanocosm/data/pics/*/999/ -type f -name "*.tiff" -print`
+
 ### check if jobs were successful
 
 exchange the job id and output to jobs.txt
 `sacct -j 1200452 -o JobID,AveRSS,MaxRSS,CPUTime,TotalCPU,State,Timelimit,Elapsed --units=G > /home/schunckf/projects/data/jobs.txt`
 `tree /work/schunckf/nanocosm/data/pics/ > /home/schunckf/projects/data/file_tree.txt`
-
-read incorrect QR codes and forward to file
-`find /work/schunckf/nanocosm/data/pics/*/999/ -type f -name "*.jpeg" > /home/schunckf/projects/data/qr_errors.txt`
 
 ## priorities
 
