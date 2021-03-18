@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 import shutil
@@ -159,7 +160,7 @@ class Files:
 
     @staticmethod
     def read_settings(path=""):
-        if path == "":
+        if os.path.basename(path) == "":
             return {}
             
         with open(path, "r") as f:
@@ -174,3 +175,13 @@ class Files:
             folders = folders.difference([ex])
 
         return list(sorted(folders))
+
+    @staticmethod
+    def load_settings_dir():
+        return os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), 
+                '..', '..', 
+                'settings'
+                )
+            )

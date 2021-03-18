@@ -46,7 +46,7 @@ class Image(Files):
         ts = dt.strptime(img_time, "%Y:%m:%d %H:%M:%S")
         self.date = ts.strftime('%Y%m%d')
         self.time = ts.strftime('%H%M%S')
-        self.night = self.image_at_night(start_night_h=21, end_night_h=5)
+        self.night = self.image_at_night(start_night_h=21, end_night_h=6)
         self.img = raw
         self.hash = str(raw.sum())
 
@@ -129,26 +129,82 @@ class Image(Files):
         # take subset of cuts from left and right
         self.img = self.img[:, np.logical_and(cutl,cutr),:]
 
-    def read_qr_code(self):
+    def read_qr_code(
+        self, rqr=None, threshold={'r':30,'g':30,'b':30}, 
+        night_id='999', error_id='999', 
+        extract_fun="extract_id", extract_kwds={}
+        ):
+        """
+        Cut slice from image, where the QR code is expected, then go on and 
+        carry out a range of image processing methods and try to detect always in
+        between steps. If detection was unsuccessful after all attempts, it
+        is checked if the image was taken at night (automatic 24 hr pictures)
+        and assigns a pre determined id to that picture.
+        ATTENTION: The ID is extracted based on a custom function based on the
+
+        rqr          dict: bounding box of expected QR Code region 
+                     (top, bottom, left, right). Defaults to the whole image
+        threshold    dict: numpy array to specify the threshold for QR code 
+                     Either length 1 for grayscale or length 3 for RGB pictures
+        night_id     str: id of images which were always taken at night and are 
+                     therfore unreadable
+        error_id     id which is assigned to images which cannot be read
+        extract_fun  str: method name of Image class. Depends on the QR code
+                     extracts the id which is the second part of a string
+                     separated by "_" (e.g.: NANO_2)
+        extract_kwds dict: additional keyword arguments passed to extract_fun
+        """
+        # import variables
+        extract = getattr(self, extract_fun, self.extract_id)
+
+        if rqr is None:
+            t, l = (0, 0)
+            b, r = self.img.shape[:2]
+        else:
+            t, b, l, r = rqr.values()
+
+        threshold = np.array(list(threshold.values()))
         # improve image 
-        imo = self.img.copy()[500:1500, 1200:2700,:]
-        im = 255-cv2.inRange(imo, np.array([0,0,0]), np.array([70,40,40]))
+        imo = self.img.copy()[t:b, l:r,:]
+        im = 255-cv2.inRange(imo, np.array([0,0,0]), threshold)
         
         # first detection attempt
         message = self.detect(im)
-        img_id = self.extract_id(message, error_id='999')
+        img_id = extract(message, error_id, **extract_kwds)
         
         # second attempt after passing through MIN filter
-        if img_id == '999':
+        if img_id == error_id:
+            gc.collect()
             im = self.min_filter(5, im)
             message = self.detect(im)
-            img_id = self.extract_id(message, error_id='999')
+            img_id = extract(message, error_id, **extract_kwds)
 
         # second attempt after passing through MAX filter
-        if img_id == '999':
+        if img_id == error_id:
+            gc.collect()
             im = self.max_filter(3, im)
             message = self.detect(im)
-            img_id = self.extract_id(message, error_id='999')
+            img_id = extract(message, error_id, **extract_kwds)
+
+        # third attempt. Iterate over original image 
+        if img_id == error_id:
+            gc.collect()
+            imos = cv2.resize(imo, (0,0), fx=0.3, fy=0.3)
+            for r in range(0,10):
+
+                upper = np.array([0,0,0]) + r*10
+                im = 255-cv2.inRange(imos, np.array([0,0,0]), upper)
+                im = self.min_filter(3, im)
+
+                message = self.detect(im)
+                img_id = extract(message, error_id, **extract_kwds)
+
+                if message != "":
+                    break
+        
+        # if nothing works. Check if the image was taken at night
+        if img_id == error_id and self.atnight:
+            img_id = night_id
 
         self.id = img_id
         self.qr_thumb = cv2.resize(imo, (0,0), fx=0.1, fy=0.1)
@@ -167,13 +223,13 @@ class Image(Files):
         return nano_id
 
     @staticmethod
-    def detect(image, error_msg="error"):
+    def detect(image):
         gc.collect()
         try:
             detector = cv2.QRCodeDetector()
             message, bbox, _ = detector.detectAndDecode(image)
         except:
-            message = error_msg
+            message = "error"
         
         return message
 
@@ -181,15 +237,16 @@ class Image(Files):
         night = [dt.strptime(str(start_night_h),'%H'), 
                  dt.strptime(str(end_night_h),'%H')]
 
-        if night[0] > dt.strptime(self.time, "%H%M%S") > night[1]:
-            self.night = True
+        if night[0] < dt.strptime(self.time, "%H%M%S") < night[1]:
+            self.atnight = True
         else:
-            self.night = False
+            self.atnight = False
 
 
-    def process_image(self, file_name, delete_old=False, qr_thumb=False, **params):
+    def process_image(self, file_name, delete_old=False, qr_thumb=False, 
+                      qr_params={}, **params):
         self.read_raw(**params)
-        self.read_qr_code()
+        self.read_qr_code(**qr_params)
         if delete_old:
             self.delete() # removing with old path
 
