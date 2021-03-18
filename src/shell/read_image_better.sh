@@ -17,4 +17,4 @@ INPUT_DIR=$1
 IMG=`find $INPUT_DIR -name "*.RW2" | sort -n | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
 
 echo "working on $IMG ..."
-python "/$PROJECT_DIR/src/read_eve.py" $IMG
+python "/$PROJECT_DIR/src/read_eve.py" $IMG -t TRUE

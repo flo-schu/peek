@@ -69,7 +69,6 @@ determine the number of files with `tree /work/schunckf/nanocosm/data/pics/`
 this function works also in any other directory because of usage of `find`.
 `sbatch -a 1-9352 /home/schunckf/projects/nanocosm/src/shell/read_image_better.sh /work/schunckf/nanocosm/data/pics/`
 
-
 ### detection of organisms
 
 read e.g. first 5 series of a specific session. As an array job. This is fast.
@@ -89,6 +88,14 @@ get error list
 
 get error image thumbnails
 `scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.tar .\data\image_analysis\QR\qr_errors.tar`
+### check if jobs were successful
+
+exchange the job id and output to jobs.txt
+`sacct -j 1200452 -o JobID,AveRSS,MaxRSS,CPUTime,TotalCPU,State,Timelimit,Elapsed --units=G > /home/schunckf/projects/data/jobs.txt`
+`tree /work/schunckf/nanocosm/data/pics/ > /home/schunckf/projects/data/file_tree.txt`
+
+read incorrect QR codes and forward to file
+`find /work/schunckf/nanocosm/data/pics/*/999/ -type f -name "*.jpeg" > /home/schunckf/projects/data/qr_errors.txt`
 
 ## priorities
 
