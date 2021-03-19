@@ -16,20 +16,6 @@ it is recommended to use full paths, because than the scripts can be submitted
 from any location, which helps a lot. The whole analysis of all files can probably
 be done in less than an hour if there are enough free cores on EVE.
 
-### copy files
-
-copy single session to eve
-`scp .\20210226\* schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/pics/20210226/`
-
-copy all image folders. For this use rsync on cygwin. Everything else did not work
-In the future I could try mounting the Y: drive on wsl
-I have to try out if the rsync command works now (3) with the last, one an 
-extra dictionary was created
-
-1. start cygwin
-2. cd into Y: `cd Y:` and `cd Home/schunckf/papers/nanocosm/data`
-3. `rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/`
-
 ### aliases
 
 aliases are specified in ~/.bashrc
@@ -48,6 +34,21 @@ useful commands:
 + `cat *job-id* exec in logs. get the output and error messages of all array jobs
                 concerning this job. Replace job-id with the number
 + `ls -d */ | xargs rm -r` delete all subdirectories but not any files.
++ `find`
+
+### copy files
+
+copy single session to eve
+`scp .\20210226\* schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/pics/20210226/`
+
+copy all image folders. For this use rsync on cygwin. Everything else did not work
+In the future I could try mounting the Y: drive on wsl
+I have to try out if the rsync command works now (3) with the last, one an 
+extra dictionary was created
+
+1. start cygwin
+2. cd into Y: `cd Y:` and `cd Home/schunckf/papers/nanocosm/data`
+3. `rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/`
 
 ### handling files
 
