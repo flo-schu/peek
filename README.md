@@ -55,8 +55,11 @@ extra dictionary was created
 count number of files:
 `find nanocosm/data/pics/ -mindepth 1 -maxdepth 2 -name "*.RW2" | sort -n | wc -l`
 
-deleting analysis files (tiff, csv, json, npy):
-`source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh /work/schunckf/nanocosm/data/pics/`
+deleting analysis files (tiff, csv, json, npy) and print output to log:
+`source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh > /home/schunckf/projects/data/delete_log.txt`
+
+reset directory to only raw files:
+`source /home/schunckf/projects/nanocosm/src/shell/reset_files.sh /work/schunckf/nanocosm/data/pics/`
 
 move RW2 files out of their directory:
 `source /home/schunckf/projects/nanocosm/src/shell/move_files.sh /work/schunckf/nanocosm/data/pics/`
