@@ -46,7 +46,7 @@ class Image(Files):
         ts = dt.strptime(img_time, "%Y:%m:%d %H:%M:%S")
         self.date = ts.strftime('%Y%m%d')
         self.time = ts.strftime('%H%M%S')
-        self.night = self.image_at_night(start_night_h=21, end_night_h=6)
+        self.atnight = self.image_at_night(start_night_h=21, end_night_h=6)
         self.img = raw
         self.hash = str(raw.sum())
 
@@ -238,10 +238,11 @@ class Image(Files):
                  dt.strptime(str(end_night_h),'%H')]
 
         if night[0] < dt.strptime(self.time, "%H%M%S") < night[1]:
-            self.atnight = True
+            atnight = True
         else:
-            self.atnight = False
+            atnight = False
 
+        return atnight
 
     def process_image(self, file_name, delete_old=False, qr_thumb=False, 
                       qr_params={}, **params):
