@@ -26,6 +26,10 @@ args = parser.parse_args()
 
 qr = pd.read_table(args.input, sep=args.separator, names=['path','id_correct'], nrows=args.nrows)
 for i, row in qr.iterrows():
+
+    if not os.path.exists(row.path):
+        print("no QR problem with", row.path)
+        continue
     # read paths and edit paths
     p = os.path.normpath(os.path.dirname(row.path))
     f = os.path.basename(row.path).replace('.jpeg', '')
