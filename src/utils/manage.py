@@ -62,12 +62,18 @@ class Files:
             return [f for f in files if search_string in f]
 
     @classmethod
-    def browse_subdirs_for_files(cls, path, file_type):
+    def browse_subdirs_for_files(cls, path, file_type, return_full_path=False):
         dirs = cls.find_subdirs(path)
         struct = {}
-        for i, d in enumerate(dirs):
-            p = cls.find_single_file(os.path.join(path, d), file_type)
-            struct.update({str(i):p})
+        i = 0
+        for d in dirs:
+            subpath = os.path.join(path, d)
+            files = cls.find_files(subpath, file_type)
+            for f in files: 
+                struct.update({str(i):os.path.abspath(os.path.join(subpath, f))})
+                i += 1
+        # print(struct)
+        
         return struct
 
     @classmethod

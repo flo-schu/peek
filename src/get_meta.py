@@ -21,7 +21,8 @@ t = tags['EXIF DateTimeOriginal']
 
 ts = dt.datetime.strptime(t.values, "%Y:%m:%d %H:%M:%S")
 date = ts.strftime('%Y%m%d')
-print(ts, date)
+time = ts.strftime('%H%M%S.%f')
+print(ts, date, time)
 
 
 print("---------------- ISO -----------------------------")

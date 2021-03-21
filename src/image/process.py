@@ -87,7 +87,7 @@ class Image(Files):
                 print("Did not import {} correctly. more than one structure in image folder".format(self.path))
         else:
             sname = self.append_to_filename(self.path, "_struct.json")
-
+            
         try:
             with open(sname, "r") as f:
                 struct = json.load(f)
@@ -363,7 +363,7 @@ class Series(Image):
         images = []
         for i, path in self.struct.items():
             img = Image(path)
-            img.read_struct(import_image)
+            # img.read_struct(import_image)
             images.append(img)
            
         return images   
