@@ -19,8 +19,9 @@ parser.add_argument('-t', '--threshold', type=int, nargs='?', help='detector set
 args = parser.parse_args()
 
 
-print('reading parameters ...')
 sdir = Files.load_settings_dir()
+parfile = os.path.join(sdir, args.config)
+print("reading settings from:", parfile)
 
 # load images
 s = Series(args.path)
@@ -28,7 +29,6 @@ img1 = s.images[args.image1]
 img2 = s.images[args.image2]
 nano = os.path.basename(args.path)
 
-print(img1, img2)
 # initialize detector
 detector = MovementEdgeDetector()
 
@@ -36,15 +36,17 @@ detector = MovementEdgeDetector()
 tags = detector.tag_image(
     img1.img, img2.img, 
     dect_args={'blur':args.blur, 'thresh':args.threshold}, 
-    parfile=os.path.join(sdir, args.config),
+    parfile=parfile,
     search_radius=args.search_radius)
 
+print('tagging complete')
 # export tags
 a = Annotations(img1, 'moving_edge', tag_db_path="")
 a.read_new_tags(pd.DataFrame(tags.__dict__))
 if args.backup != '':
     Files.copy_files(args.path, args.backup, ex1='.tiff', ex2="PNAN")
 
+print("analysis complete.")
 
 # to customize it is recommended to write a new detector class under 
 # image.detectors in the same style as motion and movement_edge

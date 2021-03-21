@@ -55,8 +55,11 @@ extra dictionary was created
 count number of files:
 `find nanocosm/data/pics/ -mindepth 1 -maxdepth 2 -name "*.RW2" | sort -n | wc -l`
 
-deleting analysis files (tiff, csv, json, npy):
-`source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh /work/schunckf/nanocosm/data/pics/`
+deleting analysis files (tiff, csv, json, npy) and print output to log:
+`source /home/schunckf/projects/nanocosm/src/shell/delete_analysis_files.sh > /home/schunckf/projects/data/delete_log.txt`
+
+reset directory to only raw files:
+`source /home/schunckf/projects/nanocosm/src/shell/reset_files.sh /work/schunckf/nanocosm/data/pics/`
 
 move RW2 files out of their directory:
 `source /home/schunckf/projects/nanocosm/src/shell/move_files.sh /work/schunckf/nanocosm/data/pics/`
@@ -95,14 +98,11 @@ get error image thumbnails
 
 then the image thumbnails have to be checked and the correct id has to be added in a second column next to
 the error list (qr_errors.txt). Don't add column names
-upload the list again to `/work/schunckf/nanocosm/data/qr/qrcorrections.csv` and execute
-`python /home/schunckf/projects/nanocosm/src/qrcorrect.py /work/schunckf/nanocosm/data/qr/$DATE/qr_corrections.csv`
-
-finally delete empty directories
-`find /work/schunckf/nanocosm/data/pics/ -empty -type d -delete -print`
+upload the list again to `/work/schunckf/nanocosm/data/qr/$DATE/qr_corrections.csv` and execute
+`source src/shell/apply_qr_corrections.sh > /work/schunckf/nanocosm/data/qr/log.txt`
 
 check if any errors are still present. There should be none after 20201207
-`find /work/schunckf/nanocosm/data/pics/*/999/ -type f -name "*.tiff" -print`
+`cat /work/schunckf/data/qr/qr_errors_unresolved.txt`
 
 ### check if jobs were successful
 
