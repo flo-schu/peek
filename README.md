@@ -85,7 +85,7 @@ per session. Can be upscaled for all sessions at once)
 ### check QR detection
 
 create an archive of problem qr codes
-`source nanocosm/src/shell/archive_qrerrors.sh`
+`source /home/schunckf/projects/nanocosm/src/shell/archive_qrerrors.sh`
 
 get error list
 `scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.txt .\data\image_analysis\QR\qr_errors.txt`
@@ -96,7 +96,7 @@ get error image thumbnails
 then the image thumbnails have to be checked and the correct id has to be added in a second column next to
 the error list (qr_errors.txt). Don't add column names
 upload the list again to `/work/schunckf/nanocosm/data/qr/qrcorrections.csv` and execute
-`python /home/schunckf/projects/nanocosm/src/qrcorrect.py /work/schunckf/nanocosm/data/qr/qrcorrections.csv`
+`python /home/schunckf/projects/nanocosm/src/qrcorrect.py /work/schunckf/nanocosm/data/qr/$DATE/qr_corrections.csv`
 
 finally delete empty directories
 `find /work/schunckf/nanocosm/data/pics/ -empty -type d -delete -print`
