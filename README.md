@@ -113,12 +113,12 @@ exchange the job id and output to jobs.txt
 ## priorities
 
 1. [x] __write code that moves all images out of subfolders (for first sessions)__. I pretty sure I can do that easily with a shell script
-2. [ ] __Control QR codes__. I need to write something which lets me quickly or 
+2. [x] __Control QR codes__. I need to write something which lets me quickly or 
        automatically assign images from 999 to folders
        if the diff to any time is <= 4s, than it can go into the respective folder (this should already fix a lot of the problems)
        for the rest, I can do manual sorting, also I can improve the QR code
        Also it would be nice to code into submit scripts that 999 is always excluded.
-       [ ] improve QR detection script particularly for 34
+       [x] improve QR detection script particularly for 34
 3. [ ] classify organisms. Write small tool which accesses the tag file of
        moving edge. Then I can control how well the classification works.
 4. [ ] use data tool to collect all data files.
@@ -132,6 +132,18 @@ Later:
        Otherwise its quite shit. should be possible and not too much work.
        Until then, write helper function to strip everything until datefolder
        and preprend current path.
+3. [ ] there is a problem with the initial image sessions. Several pictures were
+       taken at the same second. Hence here more than one image is present in 
+       each the folders sometimes. Because of this the motion analysis scripts will
+       fail. The best fix for this would be to improve the folder structure. Because
+       it is very good to keep the time folder as the lowest integration unit for
+       each image. It would be easiest if time were recorded as nanoseconds. This
+       is unlikely. Problematically in array jobs, the image are processed simultaneously
+       so that creating folders like 120001_1 if 120001 exist is problematic.
+       It would be possible to create a folder like 120001_PNAN001, or simply
+       PNAN001 and the name the new file nano.tiff or whatever. Another option
+       is to separate files after reading the images was done. For now,
+       these folders are ignored.
 
 Done:
 
@@ -144,6 +156,6 @@ copy the following folders with raw data
 
 + [x] 20210111 delete processed files
 + [x] copy raw files to 20210114
-+ [ ] copy files in C:/.../pics to Y:/.../pics once my quota was increased
-+ [ ] execute move file script to files on Y drive, once I made sure to have backed up everythin and then also on harddrive
-+ [ ] run an analysis and remove files to try if it works
++ [x] copy files in C:/.../pics to Y:/.../pics once my quota was increased
++ [x] execute move file script to files on Y drive, once I made sure to have backed up everythin and then also on harddrive
++ [x] run an analysis and remove files to try if it works

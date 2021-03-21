@@ -9,7 +9,7 @@ from image.detectors.movement_edge import MovementEdgeDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('path' , type=str, help='path to images')
-parser.add_argument('config', type=str, help='path to config file used for analysis')
+parser.add_argument('-c', '--config', type=str, help='path to config file used for analysis', default='masking_20210225.json')
 parser.add_argument('-i1', '--image1', type=int, nargs='?', help='list of images to process', default=0)
 parser.add_argument('-i2', '--image2', type=int, nargs='?', help='list of images to process', default=-1)
 parser.add_argument('-b', '--backup', type=str, nargs='?', help='path to backup folder', default='')
@@ -18,12 +18,17 @@ parser.add_argument('-r', '--blur', type=int, nargs='?', help='detector setting 
 parser.add_argument('-t', '--threshold', type=int, nargs='?', help='detector setting threshold', default=10)
 args = parser.parse_args()
 
+
+print('reading parameters ...')
+sdir = Files.load_settings_dir()
+
 # load images
 s = Series(args.path)
 img1 = s.images[args.image1]
 img2 = s.images[args.image2]
 nano = os.path.basename(args.path)
 
+print(img1, img2)
 # initialize detector
 detector = MovementEdgeDetector()
 
@@ -31,7 +36,7 @@ detector = MovementEdgeDetector()
 tags = detector.tag_image(
     img1.img, img2.img, 
     dect_args={'blur':args.blur, 'thresh':args.threshold}, 
-    parfile=args.config,
+    parfile=os.path.join(sdir, args.config),
     search_radius=args.search_radius)
 
 # export tags
