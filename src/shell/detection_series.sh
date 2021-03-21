@@ -9,11 +9,11 @@
 echo "processing chunk $SLURM_ARRAY_TASK_ID ..."
 
 INPUT_DIR=$1
-SETTINGS=$2
-SERIES=`ls -d $INPUT_DIR*/ | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
+# SETTINGS=$3
+SERIES=`find $INPUT_DIR -mindepth 1 -maxdepth 1 -type d | sort -n | grep -v 999 | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
 
 echo "processing $SERIES ..."
 
 PROJECT_DIR="/home/$USER/projects/nanocosm/"
 source "$PROJECT_DIR/env/bin/activate"
-python "/$PROJECT_DIR/src/detection.py" "$SERIES" "$SETTINGS"
+python "/$PROJECT_DIR/src/detection.py" "$SERIES"
