@@ -549,7 +549,7 @@ class Data:
         images = []
         for p in paths:
             i = Image(p)
-            i.read_struct(import_image=import_images)
+            i.read_struct(import_image=import_images, ignore_struct_path=False)
             if correct_path[0]:
                 i.path = Files.change_top_dirs(i.path, strip_levels=correct_path[1], add_path=correct_path[2])
             i.tags = Annotations(image=i, analysis=search_keyword, tag_db_path="")

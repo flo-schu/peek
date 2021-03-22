@@ -11,6 +11,29 @@ def show_ts(ts_data):
     ax.set_ylabel("n organisms")
     plt.show()
 
+def show_ts_classes(ts_data):
+    idi = np.where(np.array(list(ts_data.index.names)) == "id")[0][0]
+    ids = ts_data.index.levels[idi]
+
+    idl = np.where(np.array(list(ts_data.index.names)) == "label_auto")[0][0]
+    labels = ts_data.index.levels[idl]
+
+    ax = plt.subplot()
+    # ax2 = ax1.twinx()
+    # axes = (ax1, ax2)
+    colors = ("tab:blue", "tab:orange")
+
+    for i in ids:
+        sub = ts_data.xs(i, level="id")
+        for l, c in zip(labels, colors):
+            # ax.plot(sub.xs(l, level="label_auto"), color=c, label=l, linestyle="--")
+            ax.plot(sub.xs(l, level="label_auto"), color=c, label=l, marker="o")
+    ax.set_xlabel("time")
+    ax.set_ylim(0, np.max(ts_data['count']))
+    ax.set_ylabel("Abundance")
+    ax.legend()
+    plt.show()
+
 def color_analysis(img, channel="r"):
     if channel == "r" or channel == "red":
         c = 0
@@ -37,3 +60,7 @@ class Viz:
     @staticmethod
     def show_ts(ts_data):
         show_ts(ts_data)
+
+    @staticmethod
+    def show_ts_classes(ts_data):
+        show_ts_classes(ts_data)

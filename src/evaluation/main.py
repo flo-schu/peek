@@ -5,6 +5,7 @@ def save(
     data,
     path,
     algorithm=None,
+    algoargs=(),
     sample_id='all', 
     date='all', 
     img_num='all'
@@ -18,7 +19,7 @@ def save(
     # 2. processing steps
     if algorithm is not None:
         algorithm = getattr(algs, algorithm)
-        data = algorithm(data)
+        data = algorithm(data, *algoargs)
 
     data.to_csv(path)
 
@@ -26,6 +27,8 @@ def analyse(
     data,
     algorithm,
     plot,
+    algoargs=(),
+    plotargs={},
     sample_id='all', 
     date='all', 
     img_num='all'
@@ -42,10 +45,9 @@ def analyse(
     
     # 2. processing steps
     algorithm = getattr(algs, algorithm)
-    data = algorithm(data)
-
+    data = algorithm(data, **algoargs)
     # 3. plot 
     plot = getattr(viz, plot)
-    plot(data)
+    plot(data, **plotargs)
 
 
