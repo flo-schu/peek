@@ -1,18 +1,25 @@
-from image.analysis import Data
-import evaluation.calc as calc
-from matplotlib import pyplot as plt
+import os
+import tarfile
+import json
 import pandas as pd
+from matplotlib import pyplot as plt
+from image.process import Image
+from image.analysis import Data, Annotations
+import evaluation.calc as calc
 
-# import measurements
-# m = pd.read_csv("../data/measurements.csv")
-# m['time'] = pd.to_datetime(m['time'])
-# m.index = pd.MultiIndex.from_frame(m[['time', 'ID_nano']], names=['time','id'])
-# m = m.drop(columns=["time","ID_nano"])
+# f = tarfile.open("./data/annotations/moving_edge-20210321_2355-slim.tar")
+# names = f.getnames()
+# names.sort()
+# i = Image()
+# i.read_processed(json.load(f.extractfile(names[105])), import_image=False)
+# i.tags = Annotations(image=i, analysis="moving_edge", tag_db_path="")
+# i.tags.find_annotations(f)
+# # i.tags.load_processed_tags_from_tar(f)
 
 # import image data
-d = Data("../data/annotations/", sample_id='6', date='all', img_num='all', 
-         search_keyword="motion_analysis", import_images=False,
-         correct_path=(True, 3, '../data/annotations/'))
+d = Data("./data/annotations/work/schunckf/nanocosm/data/pics/", sample_id='56', date='all', img_num='all', 
+         search_keyword="moving_edge", import_images=False,
+         correct_path=(True, 0, './data/annotations/'))
 
 d.collect()
 d.index_images()

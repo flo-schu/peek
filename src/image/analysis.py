@@ -133,9 +133,6 @@ class Annotations(Tag):
         
         fname = '_'+analysis+'_tags.csv'
         self.path = self.image.append_to_filename(self.image.path, fname)
-        
-
-
 
     def start(self):
         # create figure
@@ -163,6 +160,11 @@ class Annotations(Tag):
         except FileNotFoundError:
             self.error = (True, self.path)
 
+    def load_processed_tags_from_tar(self, tar):
+        try:
+            self.tags = pd.read_csv(tar.extractfile(self.path))
+        except FileNotFoundError:
+            self.error = (True, self.path)
 
 
     def press(self, event):
