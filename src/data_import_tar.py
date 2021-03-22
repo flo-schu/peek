@@ -1,26 +1,13 @@
-import os
-import tarfile
-import json
-import pandas as pd
-from matplotlib import pyplot as plt
-from image.process import Image
-from image.analysis import Data, Annotations
-import evaluation.calc as calc
-
-# f = tarfile.open("./data/annotations/moving_edge-20210321_2355-slim.tar")
-# names = f.getnames()
-# names.sort()
-# i = Image()
-# i.read_processed(json.load(f.extractfile(names[105])), import_image=False)
-# i.tags = Annotations(image=i, analysis="moving_edge", tag_db_path="")
-# i.tags.find_annotations(f)
-# # i.tags.load_processed_tags_from_tar(f)
+from image.analysis import Data
+from evaluation.main import analyse, save
 
 # import image data
-d = Data("./data/annotations/work/schunckf/nanocosm/data/pics/", sample_id='56', date='all', img_num='all', 
+d = Data("./data/annotations/work/schunckf/nanocosm/data/pics/",
          search_keyword="moving_edge", import_images=False,
          correct_path=(True, 0, './data/annotations/'))
 
-d.collect()
-d.index_images()
-d.order()
+# analyse(data=d, algorithm="count_and_average_over_id", plot="show_ts", sample_id="10")
+# analyse(data=d, algorithm="count_and_average_over_id", plot="show_ts", sample_id="17")
+
+save(d, "./data/results/ts.csv", date="20210302")
+

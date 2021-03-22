@@ -433,15 +433,23 @@ class Data:
 
         return df
 
-    def collect(self):
+    def collect(self, sample_id=None, date=None, img_num=None):
+        if sample_id is not None:
+            self.id = sample_id
+        if date is not None:
+            self.date = date
+        if img_num is not None:
+            self.img_num = img_num
         paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
         self.images = self.collect_files(paths, self.keyword, self.import_images, self.correct_path)
         self.data = self.extract_data(self.images, self.attrs)
         self.check_for_errors()
         self.data = self.rename_columns(self.data, self.index_names, 'tag')
 
-        # self.index()
-        # self.order()
+        self.index_images()
+        self.order()
+
+        return self.data
 
     def index_images(self):
         tstamp = pd.to_datetime(self.data.img_date+self.data.img_time, format='%Y%m%d%H%M%S').to_numpy()

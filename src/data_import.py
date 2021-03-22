@@ -15,8 +15,6 @@ d = Data("../data/annotations/", sample_id='6', date='all', img_num='all',
          correct_path=(True, 3, '../data/annotations/'))
 
 d.collect()
-d.index_images()
-d.order()
 
 # process image data
 dat = calc.count_organisms(d.data)

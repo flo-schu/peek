@@ -28,3 +28,11 @@ def id_max(df, freq='D'):
     returns dataframe or series depending on input
     """
     return df.groupby([pd.Grouper(freq=freq, level='time'), 'id']).max()
+
+
+class Algorithms:
+    @staticmethod
+    def count_and_average_over_id(data):
+        data = count_organisms(data)
+        data = id_average(data)
+        return data
