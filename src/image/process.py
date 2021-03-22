@@ -22,7 +22,7 @@ from exifread import process_file
 from utils.manage import Files
 
 class Image(Files):
-    def __init__(self, path="", import_image=True):
+    def __init__(self, path="", import_image=True, ignore_struct_path=False):
         self.path = path
         self.img = None
         self.time = 0
@@ -31,7 +31,7 @@ class Image(Files):
         self.tags = {}
         self.analyses = {}
 
-        self.read_struct(import_image)
+        self.read_struct(import_image, ignore_struct_path)
 
     def read_raw(self, **params):
         """
@@ -75,7 +75,7 @@ class Image(Files):
 
         return tags
 
-    def read_struct(self, import_image=True):
+    def read_struct(self, import_image, ignore_struct_path):
         if not os.path.exists(self.path):
             print("Path does not exist. Check spelling.")
             return
@@ -91,12 +91,14 @@ class Image(Files):
         try:
             with open(sname, "r") as f:
                 struct = json.load(f)
-            self.read_processed(struct, import_image)
+            self.read_processed(struct, import_image, ignore_struct_path)
 
         except FileNotFoundError:
             print("no struct json file found. Proceeding without")
 
-    def read_processed(self, struct, import_image):
+    def read_processed(self, struct, import_image, ignore_struct_path):
+        if ignore_struct_path:
+            del struct['path']
         for item in struct.items():
             setattr(self, item[0], item[1])
 

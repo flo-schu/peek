@@ -1,0 +1,9 @@
+{
+    "keymap":{
+        "d":"Daphnia Magna",
+        "c":"Culex Pipiens, larva",
+        "p":"Culex Pipiens, pupa",
+        "u":"unidentified",
+        "s":"save"
+    }
+}

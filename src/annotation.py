@@ -1,62 +1,33 @@
-# ======= annotation of prepared tags ============
-
-# from IPython import get_ipython
-from image.process import Image, Series
-from utils.manage import Files
-from image.analysis import Annotations
-from matplotlib import pyplot as plt
 import os
+import argparse
+from matplotlib import pyplot as plt
 
-path = "../data/pics/"
-copy_to="../data/annotations"
-date = "20210226"
-nano = 6
+from utils.manage import Files
+from image.process import Image
+from image.analysis import Annotations
 
-# open image and attributes
-# i = Image(path+"21/184248/PNAN2092.tiff")
-# open existing anotations and tags
-# i.read_struct()
+parser = argparse.ArgumentParser(description='Annotate images')
+parser.add_argument('image' , type=str, help='path to image')
+parser.add_argument('db' , type=str, help='path to annotations database')
+parser.add_argument('analysis', type=str, help='applied analysis, this was usually specified in the detection arguments')
+parser.add_argument('-s', '--settings' , type=str, help='path to settings file', default="annotations_default.json")
+args = parser.parse_args()
+
+sdir = Files.load_settings_dir()
+settings = Files.read_settings(os.path.join(sdir, args.settings))
+
+print('working on image:', args.image)
+print('annotating analysis:', args.analysis)
+print('storing output in:', args.db)
+print('using settings:', settings)
 
 # open series and load image
-s = Series(os.path.join(path,date,str(nano)))
-i = s.images[0] 
-print(i.path)
-keymap = {
-    'd':"Daphnia Magna",
-    'c':"Culex Pipiens, larva",
-    'p':"Culex Pipiens, pupa",
-    'u':"unidentified",
-    's':"save"
-}
-a = Annotations(i, 'moving_edge', tag_db_path="../data/tag_db.csv", keymap=keymap)
-print(a.tags)
+i = Image(args.image, ignore_struct_path=True)
+
+a = Annotations(i, args.analysis, tag_db_path=args.db, keymap=settings['keymap'])
+
 a.load_processed_tags()
 a.start()
-# plt.show()
-a.show_tag_number(0)
-# store annotated tags
-Files.copy_files(os.path.join(path, date, str(nano)), os.path.join(copy_to, date, str(nano)), ex1='.tiff', ex2="PNAN")
+a.show_tag_number(73)
+plt.show()
 
-
-
-
-
-
-
-# help
-# annotate image with keys as displayed in keymap by pressing keys
-# n - next image
-# b - previous image
-# other keys as specified in keymap
-
-
-
-# Next Steps
-# - [x] collect tags (same objective as in motion_analysis.py)
-#       - this should be run after the labelling in order to 
-#         store labelled images in a secure spot where they
-#         cannot be overwritten.
-# - [/] only show not annotated images
-# - [ ] train object detection algorithm for Daphnia/Culex
-# - [ ] option to change the bounding box
-# 
