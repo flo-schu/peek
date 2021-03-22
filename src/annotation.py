@@ -28,6 +28,6 @@ a = Annotations(i, args.analysis, tag_db_path=args.db, keymap=settings['keymap']
 
 a.load_processed_tags()
 a.start()
-a.show_tag_number(73)
+a.show_tag_number(0)
 plt.show()
 
