@@ -4,14 +4,16 @@
 
 # 0. make directories in work, make sure project directory exists
 
-# 1. upload images
+# 1. Extract new sessions on local drive
+
+# 2. upload images
 cd Y:
 cd Home/schunckf/papers/nanocosm/data
 rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/
 
-# 2. upload QR corrections
+# 3. upload QR corrections
 
-# 3. start script B) on cluster via ssh
+# 4. start script B) on cluster via ssh
 
 # SCRIPT B)
 
