@@ -6,7 +6,7 @@ from utils.manage import Files
 from image.process import Image
 from image.analysis import Annotations
 
-parser = argparse.ArgumentParser(description='Annotate images')
+parser = argparse.ArgumentParser(description='Annotate images execute with python -i ...')
 parser.add_argument('image' , type=str, help='path to image')
 parser.add_argument('db' , type=str, help='path to annotations database')
 parser.add_argument('analysis', type=str, help='applied analysis, this was usually specified in the detection arguments')

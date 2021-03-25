@@ -192,11 +192,59 @@ class Annotations(Tag):
         self.save_progress()
 
     def save_tag_to_database(self, tag, add_attrs=[]):
-        db = pd.read_csv(self.tag_db_path)
+        try:
+            db = pd.read_csv(self.tag_db_path)
+        except FileNotFoundError:
+            db = pd.DataFrame()
+
         for a in add_attrs:
             tag['img_'+a] = getattr(self.image, a)
+        # print(db.loc[:,("id","img_id", "img_time","img_date")])
         db = db.append(tag, ignore_index=True)
+        db.img_time = db.img_time.astype(str).str.zfill(6)
+        db.img_date = db.img_date.astype(str).str.zfill(8)
+        db.img_id = db.img_id.astype(str).str.zfill(2)
+        db.id = db.id.astype(int).astype(str)
+        
+        # remove duplicates
+        db = self.remove_duplicates(db)
+        db.sort_values(by=["img_date","img_id", "img_time","id"], ascending=True)
+        # print(db.loc[:,("id","img_id", "img_time","img_date")])
+
+        # save updated database
         db.to_csv(self.tag_db_path, index=False)
+        
+        # save tagged image to folder according to a unique identifier
+        self.copy_tag_image(tag)
+
+    def copy_tag_image(self, tag):
+        from_path = os.path.join(
+            os.path.dirname(self.image.path), 
+            self.analysis, 
+            "tag_image_orig",
+            str(int(tag.id)) + ".tiff"
+        )
+
+        to_path = os.path.join(
+            os.path.dirname(self.tag_db_path), 
+            "annotated_images", 
+             "_".join([tag.img_date, tag.img_id, tag.img_time, str(int(tag.id))])+".tiff"
+        )
+
+        os.makedirs(os.path.dirname(to_path), exist_ok=True)
+        shutil.copy(from_path, to_path)
+
+    @staticmethod
+    def remove_duplicates(df):
+        """
+        id          refers to tag id (running number 1-N)
+        img_id      id of image (1-Nsamples)
+        img_date    date at which image was taken (Ymd)
+        img_time    time at which image was taken (HMS)
+        """
+        duplicates = df.duplicated(subset=["id","img_id","img_date","img_time"], 
+                                   keep="last")
+        return df.loc[~duplicates, :].copy()
         
 
     @staticmethod
@@ -230,7 +278,8 @@ class Annotations(Tag):
         self.axes[0].set_xlim(self.origx)
         self.axes[0].set_ylim(self.origy)
 
-    def show_original(self):
+    def show_original(self, resize=.1):
+        img = cv.resize(self.image.img.copy(), (0,0), fx=resize, fy=resize)
         self.axes[0].imshow(self.image.img)
 
     def show_tagged(self):
