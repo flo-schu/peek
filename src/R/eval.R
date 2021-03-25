@@ -51,3 +51,28 @@ make_drm(
     # save_plot_to = "plots/20210217_pre_experiment/Esfen_Daphnia"
 )
 
+
+
+## pre experiment 2
+
+obs <- read.csv("data/pre_experiment/20210224/pesticide_trials_observations.csv")
+trt <- read.csv("data/pre_experiment/20210224/pesticide_trials_treatments.csv")
+
+source("src/R/drm.R")
+
+use_cols <- ! colnames(obs) %in% c("treatment", "size_class")
+data <- merge(trt, obs[, use_cols], by = "id")
+
+colnames(data)
+
+data[, "survival_20210226"] <- data[, "survival_20210226"] / data[, "n_organisms"] 
+data[, "survival_20210302"] <- data[, "survival_20210302"] / data[, "n_organisms"] 
+
+drm_DE <- make_drm(
+    data = data, 
+    dose = c("concentration", "Esfenvalerate concentration µg L-1"),
+    response = c("survival_20210302", "survival Daphnia after 6 days"),
+    data_sub = list(size_class = "large", species="Daphnia"),
+    max_response = 0, min_response = 1,
+    # save_plot_to = "plots/20210217_pre_experiment/Esfen_Daphnia"
+)
