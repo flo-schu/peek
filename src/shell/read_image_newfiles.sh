@@ -15,7 +15,7 @@ source "$PROJECT_DIR/env/bin/activate"
 INPUT_DIR=$1
 NEWER_THAN=$2
 
-IMG=`find $INPUT_DIR -name "*.RW2" -newermt $NEWER_THAN | sort -n | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
+IMG=`find $INPUT_DIR -name "*.RW2" -newermt "mar 12, 2021 18:50" | sort -n | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
 
 echo "working on $IMG ..."
 python "/$PROJECT_DIR/src/read_eve.py" $IMG -t TRUE
