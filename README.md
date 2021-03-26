@@ -48,7 +48,7 @@ extra dictionary was created
 
 1. start cygwin
 2. cd into Y: `cd Y:` and `cd Home/schunckf/papers/nanocosm/data`
-3. `rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/`
+3. `rsync -avh --progress /cygdrive/y/Home/schunckf/papers/nanocosm/data/pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/`
 
 ### handling files
 
