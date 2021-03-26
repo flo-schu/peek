@@ -77,3 +77,12 @@ fpr, tpr, thresholds = skm.roc_curve(y_train==1, y_probas[:,1])
 
 # area under the curve
 plot_roc_curve(fpr, tpr, "Roc Curve")
+
+# How to implement for my data.
+# [ ] improve image segmentation. better selection of organisms. 
+#     There must be a better way for this...
+#     https://www.upgrad.com/blog/image-segmentation-techniques/
+# [ ] organisms must be centered in the image. Otherwise I'm pretty sure
+#     random forests will have problems -> no features are generated
+# [ ] read: https://benanne.github.io/2015/03/17/plankton.html
+# [ ] artificially increase dataset size (see blog post)
