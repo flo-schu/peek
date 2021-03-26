@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
 
+LOCAL_PROJ="/c/Users/schunckf/Documents/Florian/papers/nanocosm/"
+DATA_STORAGE="/y/Home/schunckf/papers/nanocosm/data/"
+REMOTE_PROJ="/Home/schunckf/projects/nanocosm/"
+REMOTE_DATA="/work/schunckf/nanocosm/data/"
+
+PROJ_PICS="data/pics/"
+PROJ_CORRECTIONS="data/"
 # SCRIPT A)
 
 # 0. make directories in work, make sure project directory exists
 
+
 # 1. Extract new sessions on local drive
+`source ${LOCAL_PROJ}src/shell/move_files.sh ${LOCAL_PROJ}${PROJ_PICS}`
+echo "extracting pictures in ${LOCAL_PROJ}${PROJ_PICS}"
+
+# 1a. copy pictures to data storage (network drive)
 
 # 2. upload images
-cd Y:
-cd Home/schunckf/papers/nanocosm/data
-rsync -avh --progress ./pics schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/
+rsync -avh --progress "${DATA_STORAGE}pics/" schunckf@frontend1.eve.ufz.de:$REMOTE_DATA
 
 # 3. upload QR corrections
+scp ${LOCAL_PROJ}
 
 # 4. start script B) on cluster via ssh
 
