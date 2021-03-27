@@ -89,7 +89,7 @@ class Files:
         files = cls.search_files(basedir)
         if file_type != "":
             # remove files that are not of type e.g. "RW2" or "tiff", etc.
-            files = [i  for i in files if i.split(".")[1] == file_type]   
+            files = [f for f in files if file_type in f]   
         
         return files
 

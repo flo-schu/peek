@@ -120,6 +120,7 @@ class Annotations(Tag):
             }
         ):
         self.image = image
+        self.display_whole_img = False
         self.tag_db_path = tag_db_path
         self.analysis = analysis
         self.origx = (0,0)
@@ -130,30 +131,75 @@ class Annotations(Tag):
         self.ctag = None
         self.error = (False, "no message")
         self.keymap = keymap
-        
-        fname = '_'+analysis+'_tags.csv'
-        self.path = self.image.append_to_filename(self.image.path, fname)
+        self.path = self.find_annotations(analysis)
 
-    def start(self):
-        # create figure
-        self.origx = (0, self.image.img.shape[1])
-        self.origy = (self.image.img.shape[0],0)
-        self.gs = plt.GridSpec(nrows=2, ncols=2)
+    def find_annotations(self, analysis):
+        path = self.image.path
+
+        if os.path.isfile(path):
+            fname = '_'+analysis+'_tags.csv'
+            path = self.image.append_to_filename(path, fname)
+        
+        if os.path.isdir(path):
+            tag_file = [f for f in Files.find_files(path, 'tags.csv') if analysis in f]
+            print(tag_file)
+            assert len(tag_file) == 1, "more than one tag file. something is not right"
+            path = os.path.join(path, tag_file[0])
+        
+        return path
+                
+
+    def start(self, plot_type="plot_complete_tag_diff"):
+        """
+        plot_type   one of "plot_complete_tag_diff", "plot_tag", "plot_tag_diff"
+        """
         self.figure = plt.figure()
         self.figure.canvas.mpl_connect('key_press_event', self.press) 
         mpl.rcParams['keymap.back']:['left'] 
         mpl.rcParams['keymap.pan']:[] 
         mpl.rcParams['keymap.pan']:[] 
+        
+        # create figure
+        init_plot = getattr(self, plot_type)
         self.axes = {}
+        init_plot()
+        self.set_plot_titles()
 
-        self.axes[0] = plt.subplot(self.gs[0:2, 0])
-        self.axes[1] = plt.subplot(self.gs[0, 1])
-        self.axes[2] = plt.subplot(self.gs[1, 1])
-
-        self.show_original()
         plt.ion()
         plt.show()
 
+    def plot_complete_tag_diff(self):
+        self.display_whole_img = True
+        self.origx = (0, self.image.img.shape[1])
+        self.origy = (self.image.img.shape[0],0)
+        self.gs = plt.GridSpec(nrows=2, ncols=2)
+
+        self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0])
+        self.axes[1] = self.figure.add_subplot(self.gs[0, 1])
+        self.axes[2] = self.figure.add_subplot(self.gs[1, 1])
+        self.show_original()
+
+    def plot_tag(self):
+        self.axes = {
+            1: self.figure.add_subplot(111)
+        }
+
+    def plot_tag_diff(self):
+        self.axes = {
+            1: self.figure.add_subplot(121),
+            2: self.figure.add_subplot(122),
+        }
+
+    def set_plot_titles(self):
+        titles = {
+            0: "original image",
+            1: "tag original",
+            2: "tag diff"
+        }
+
+        for key, ax in self.axes.items():
+            ax.set_title(titles[key])
+        
     def load_processed_tags(self):
         try:
             self.tags = pd.read_csv(self.path)
@@ -211,11 +257,11 @@ class Annotations(Tag):
         db.sort_values(by=["img_date","img_id", "img_time","id"], ascending=True)
         # print(db.loc[:,("id","img_id", "img_time","img_date")])
 
-        # save updated database
-        db.to_csv(self.tag_db_path, index=False)
-        
         # save tagged image to folder according to a unique identifier
         self.copy_tag_image(tag)
+        
+        # save updated database
+        db.to_csv(self.tag_db_path, index=False)
 
     def copy_tag_image(self, tag):
         from_path = os.path.join(
@@ -228,7 +274,12 @@ class Annotations(Tag):
         to_path = os.path.join(
             os.path.dirname(self.tag_db_path), 
             "annotated_images", 
-             "_".join([tag.img_date, tag.img_id, tag.img_time, str(int(tag.id))])+".tiff"
+             "_".join([
+                 str(int(tag.img_date)).zfill(8), 
+                 str(int(tag.img_id)).zfill(2), 
+                 str(int(tag.img_time)).zfill(6), 
+                 str(int(tag.id))
+                 ])+".tiff"
         )
 
         os.makedirs(os.path.dirname(to_path), exist_ok=True)
@@ -275,8 +326,9 @@ class Annotations(Tag):
         self.save_new_tags(new_tags)
 
     def reset_lims(self):
-        self.axes[0].set_xlim(self.origx)
-        self.axes[0].set_ylim(self.origy)
+        if self.display_whole_img:
+            self.axes[0].set_xlim(self.origx)
+            self.axes[0].set_ylim(self.origy)
 
     def show_original(self, resize=.1):
         img = cv.resize(self.image.img.copy(), (0,0), fx=resize, fy=resize)
@@ -287,15 +339,26 @@ class Annotations(Tag):
         self.axes[0].imshow(tagged)
 
     def show_label(self):
-        self.axes[1].annotate(self.ctag.label, (0.05,0.05), xycoords="axes fraction",
-                        bbox={'color':'white','ec':'black', 'lw':2})
+        try:
+            self.axes[1].annotate(self.ctag.label, (0.05,0.05), xycoords="axes fraction",
+                                  bbox={'color':'white','ec':'black', 'lw':2})
+        except KeyError:
+            pass
 
     def show_tag(self):
-        self.axes[1].cla()
-        self.axes[1].imshow(self.ctag.tag_image_orig)
-        self.axes[2].cla()
-        self.axes[2].imshow(self.ctag.tag_image_diff)
+        try:
+            self.axes[1].cla()
+            self.axes[1].imshow(self.ctag.tag_image_orig)
+        except KeyError:
+            pass
+        try:
+            self.axes[2].cla()
+            self.axes[2].imshow(self.ctag.tag_image_diff)
+        except KeyError:
+            pass
+
         self.show_label()
+        self.set_plot_titles()
 
     def save_new_tags(self, new_tags):
         for i in range(len(new_tags)):
@@ -329,7 +392,8 @@ class Annotations(Tag):
         t = self.read_tag(self.tags, i)
         self.ctag = t
         self.ctag.load_special()
-        self.draw_tag_box()
+        if self.display_whole_img:
+            self.draw_tag_box()
         self.show_tag()
 
     def show_next_tag(self):

@@ -92,8 +92,8 @@ print(skm.classification_report(y_train, y_pred))
 #     random forests will have problems -> no features are generated
 # [ ] read: https://benanne.github.io/2015/03/17/plankton.html
 # [ ] artificially increase dataset size (see blog post)
-# [ ] write different annotation implementations
-#     + [ ] quick and dirty (only tag img of original)
+# [-] write different annotation implementations
+#     + [x] quick and dirty (only tag img of original)
 #     + [ ] click tagging with suggestion of contours --> finds also positions
 #           of tags. Good if segmentation is run with ML itself
 #     + [ ] show whole image with annotated tags
