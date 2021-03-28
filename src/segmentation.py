@@ -3,45 +3,49 @@ import pandas as pd
 import argparse
 
 from utils.manage import Files
-from image.process import Series
+from image.process import Image
 from image.analysis import Annotations
-from image.detectors.movement_edge import MovementEdgeDetector
+from image.detectors.region_growing import RegionGrowingDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
-parser.add_argument('path' , type=str, help='path to images')
-parser.add_argument('-c', '--config', type=str, help='path to config file used for analysis', default='masking_20210225.json')
-parser.add_argument('-i1', '--image1', type=int, nargs='?', help='list of images to process', default=0)
-parser.add_argument('-i2', '--image2', type=int, nargs='?', help='list of images to process', default=-1)
+parser.add_argument('input' , type=str, help='path to image')
+parser.add_argument('-c', '--config', type=str, help='path to config file used for analysis', default='segmentation_default.json')
 parser.add_argument('-b', '--backup', type=str, nargs='?', help='path to backup folder', default='')
-parser.add_argument('-s', '--search_radius', type=int, nargs='?', help='radius of search box', default=50)
-parser.add_argument('-r', '--blur', type=int, nargs='?', help='detector setting blur', default=5)
-parser.add_argument('-t', '--threshold', type=int, nargs='?', help='detector setting threshold', default=10)
+parser.add_argument('-p', '--progress', type=bool, help='show progress bar', default=False)
+parser.add_argument('-v', '--visualize', type=bool, help='should plots be visualized', default=False)
 args = parser.parse_args()
 
 
 sdir = Files.load_settings_dir()
-parfile = os.path.join(sdir, args.config)
-print("reading settings from:", parfile)
+config = Files.read_settings(os.path.join(sdir, args.config))
+print("using settings:", config)
 
 # load images
-s = Series(args.path)
-img1 = s.images[args.image1]
-img2 = s.images[args.image2]
-nano = os.path.basename(args.path)
+img = Image(args.input)
+# ifelse statement 
+# check if second img was imported, if no proceed with detector.tag_image
+# if yes, use tag_images, or pass both images to list and 
+# make checks in tag_image
 
 # initialize detector
-detector = MovementEdgeDetector()
+detector = RegionGrowingDetector()
 
 # tag image
 tags = detector.tag_image(
-    img1.img, img2.img, 
-    dect_args={'blur':args.blur, 'thresh':args.threshold}, 
-    parfile=parfile,
-    search_radius=args.search_radius)
+    img = img.img, 
+    search_radius=config["search_radius"],
+    detector_config=config["detector"], 
+    filter_config=config["contour_filter"],
+    mask_config=config["masking_config"],
+    preprocess_config=config["preprocess"],
+    progress_bar=args.progress,
+    show_plots=args.visualize)
 
 print('tagging complete')
+
 # export tags
-a = Annotations(img1, 'moving_edge', tag_db_path="")
+nano = os.path.basename(args.input)
+a = Annotations(img, 'moving_edge', tag_db_path="")
 a.read_new_tags(pd.DataFrame(tags.__dict__))
 if args.backup != '':
     Files.copy_files(args.path, args.backup, ex1='.tiff', ex2="PNAN")

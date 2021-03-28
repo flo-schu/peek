@@ -1,0 +1,21 @@
+{
+    "masking_config": "masking_20210225.json",
+    "search_radius": 50,
+    "detector": {
+        "blur": 5,
+        "thresh": 10
+    },
+    "contour_filter": {
+        "ratio_gt": 100,
+        "area_gt": 10000
+    },
+    "preprocess": {
+        "algorithm":"canny_edge_detection",
+        "parameters":{
+            "resize":0.5,
+            "blur":5, 
+            "max_filter_kernel_width":10,
+            "canny_thresholds":[20,90]
+        }   
+    }
+}
