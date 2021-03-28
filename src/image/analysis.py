@@ -682,6 +682,25 @@ class Spectral:
         return masktop
 
     @staticmethod
+    def substract_median(img, ignore_value=None):
+        im = img.copy().astype('int')
+        assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
+
+        if len(img.shape) == 2:
+            im[:,:] = im[:,:] - np.median(im[:,:].flatten())
+            
+        elif len(img.shape) == 3:
+            y, x, colors = img.shape
+
+            for c in range(colors):
+                data = im[:,:,c].flatten()
+                if ignore_value is not None:
+                    data = np.ma.masked_where(data == ignore_value, data).compressed()
+                im[:,:,c] = im[:,:,c] - np.median(data)
+
+        return np.where(im > 0, im, 0).astype('uint8')
+
+    @staticmethod
     def mask_from_bottom(mask):
         d = np.flipud(np.flipud(mask).cumsum(axis=0))
         masktop = np.where(d > 0, 0, 255).astype('uint8')
@@ -844,3 +863,34 @@ class Spectral:
 
         return img.astype('uint8')
 
+class Preprocessing:
+    @classmethod
+    def preprocess(cls, img, poi, search_width, detector_fun, detector_args={}, plot=False ):
+        # extract region of interest
+        roi = cls.get_roi(img, poi, search_width)
+
+        steps = detector_fun(roi, **detector_args)    
+        
+        return steps
+    
+    @staticmethod
+    def canny_edge_detection(
+        img, blur=None, max_filter_kernel_width=None,
+        min_filter_kernel_width=None, resize=None, canny_thresholds=None,
+        show_plots=False):
+        steps = [img]
+        steps.append(cv.resize(steps[-1], (0, 0), fx=resize, fy=resize))
+        steps.append(cv.medianBlur(steps[-1], blur))
+        steps.append(Spectral.max_filter(max_filter_kernel_width, steps[-1]))
+        steps.append(cv.Canny(steps[-1], canny_thresholds[0], canny_thresholds[1]))
+        # kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(9,9))
+        # steps.append(cv.dilate(steps[-1], kernel))
+        return steps
+
+    @staticmethod
+    def median_threshold(roi, blur, thresh):
+        median = cv.medianBlur(roi, blur)
+        background = Spectral.substract_median(median, ignore_value=0)
+        gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
+        T, thresh = cv.threshold(gray, thresh, 255, 0)
+        return [roi, thresh]
