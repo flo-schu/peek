@@ -1,3 +1,4 @@
+import os
 import cv2 as cv
 import numpy as np
 import imutils
@@ -5,7 +6,7 @@ import itertools as it
 from matplotlib import pyplot as plt
 from utils.manage import Files
 from image.process import Series, Image
-from image.analysis import Spectral
+from image.analysis import Spectral, Preprocessing
 
 class Mask(Spectral):
     def __init__(self, img):
@@ -61,6 +62,9 @@ class Mask(Spectral):
         """
 
         if isinstance(pars, str):
+            if not os.path.exists(pars):
+                pars = os.path.join(Files.load_settings_dir(), pars)
+                
             self.pars = Files.read_settings(pars)
 
         assert isinstance(self.pars, dict), "input parameters must be of type dict"
@@ -183,6 +187,20 @@ class Mask(Spectral):
 class Detector():
 
     @staticmethod
+    def mask_image(img, masker, parfile, mask=None):
+        # mask images
+        m = masker(img)
+        
+        if mask is None:
+            m.create_masks(pars=parfile)
+
+        if mask is not None:
+            m.img = mask.trim(img, **mask.pars['trim'])
+            m.apply_multi(masks=mask.masks)
+
+        return m
+
+    @staticmethod
     def difference(images, lag=1, smooth=1):
         """
         calculates the RGB differences between every two consecutive images.
@@ -264,23 +282,95 @@ class Detector():
         return points
 
     @staticmethod
-    def substract_median(img, ignore_value=None):
-        im = img.copy().astype('int')
-        assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
+    def contours_list_to_dict(contours, hierarchy):
+        contour_dict = {}
+        for c, h in zip(contours, range(len(contours))):
+            contour_dict.update(
+                {h: {"contour": c, "hierarchy": hierarchy[0][h, :]}}
+            )
 
-        if len(img.shape) == 2:
-            im[:,:] = im[:,:] - np.median(im[:,:].flatten())
+        return contour_dict
+    
+    @staticmethod
+    def contours_dict_to_list(contours):
+        contour_list = []
+        for key, c in contours.items():
+            contour_list.append(c["contour"])
+        
+        return contour_list
+    
+    @staticmethod
+    def draw_contours_on_white(img, contours, show_plots=False):
+        img = np.zeros(shape=img.shape, dtype="uint8")
+
+        for c in contours:
+            img = cv.drawContours(img, [c], 0, 255, cv.FILLED)
+        
+        if show_plots:
+            plt.imshow(img)
+            plt.show()
+
+        return img
+
+    @staticmethod
+    def group_bounding_boxes(contours, group_threshold=1, eps=2):
+        rects = []
+        for c in contours:
+            # fit a bounding box to the contour
+            rects.append(cv.boundingRect(c))
             
-        elif len(img.shape) == 3:
-            y, x, colors = img.shape
+        grouped_rects = cv.groupRectangles(rects, groupThreshold=group_threshold, eps=eps)
 
-            for c in range(colors):
-                data = im[:,:,c].flatten()
-                if ignore_value is not None:
-                    data = np.ma.masked_where(data == ignore_value, data).compressed()
-                im[:,:,c] = im[:,:,c] - np.median(data)
+        return grouped_rects
 
-        return np.where(im > 0, im, 0).astype('uint8')
+    @staticmethod
+    def close_contours(contours):
+        hull_list = []
+        for i in range(len(contours)):
+            hull = cv.convexHull(contours[i])
+            hull_list.append(hull)
+
+        return hull_list
+
+    @classmethod
+    def generate_pois(cls, img, filter_fun=None, filter_args={}, show_plots=False):
+
+        contours, hierarchy = cv.findContours(img, cv.RETR_TREE, 
+                                              cv.CHAIN_APPROX_SIMPLE)
+
+        contours = cls.close_contours(contours)
+        contours = cls.contours_list_to_dict(contours, hierarchy)
+
+        if filter_fun is not None:
+            contours = filter_fun(contours, **filter_args)
+
+        # contours = cls.unite_fam(contours)
+        contours = cls.contours_dict_to_list(contours)
+        points = cls.get_contour_centers(contours)
+
+        return points, contours
+
+    @staticmethod
+    def preprocess(img, algorithm, algorithm_kwargs):
+        
+        if not callable(algorithm):
+            algorithm = getattr(Preprocessing, algorithm)
+        steps = algorithm(img, **algorithm_kwargs)
+
+        return steps
+
+    @staticmethod
+    def plot_grid(plot_list):
+        nrow = int(np.ceil(np.sqrt(len(plot_list))))
+        ncol = int(np.ceil(len(plot_list) / nrow))
+        fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True)
+        for i, ax in enumerate(it.product(range(nrow), range(ncol))):
+            try:
+                axes[ax[0], ax[1]].imshow(plot_list[i])
+                axes[ax[0], ax[1]].set_title("step {}".format(i))
+            except IndexError:
+                pass
+        plt.show()
 
     @staticmethod
     def get_roi(img, poi, search_width):
@@ -298,17 +388,29 @@ class Detector():
         steps = detector_fun(roi, **detector_args)    
         
         if plot:
-            nrow = int(np.ceil(np.sqrt(len(steps))))
-            ncol = int(np.ceil(len(steps) / nrow))
-            fig, axes = plt.subplots(nrow, ncol, sharex=True, sharey=True)
-            for i, ax in enumerate(it.product(range(nrow), range(ncol))):
-                try:
-                    axes[ax[0], ax[1]].imshow(steps[i])
-                except IndexError:
-                    pass
-                # axes[0,0].set_title("step 1: roi")
+            cls.plot_grid(steps)
 
         return steps
+
+    @staticmethod
+    def unite_fam(contours):
+        delete = []
+        for key, c in contours.items():
+            parent = c['hierarchy'][3]
+            # test if contour has parent (-1: no parent)
+            if parent > -1:
+                try:
+                    contours[parent]["contour"] = np.row_stack((
+                        contours[parent]["contour"], c["contour"]))
+                    delete.append(key)
+                except KeyError:
+                    # key was already deleted before (during filtering)
+                    pass
+
+        for c in delete:
+            del contours[c]
+
+        return contours
 
     @staticmethod
     def unite_family(hierarchy, contours):
@@ -405,11 +507,13 @@ class Tagger():
         for i, (p, cont, prop) in enumerate(zip(self.pois, self.tag_contour, self.properties)):
             if cont is not None and prop is not None:
                 self.tag_contour[i] = cont - search_width + p + manual
-                try:
-                    self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0] + manual[0]
-                    self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1] + manual[1]
-                except KeyError:
-                    pass
+                if len(self.properties) > 0:
+                    try:
+                        self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0] + manual[0]
+                        self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1] + manual[1]
+                    except KeyError:
+                        pass
+
 
     def show(self, img):
         cs = [c for c in self.tag_contour if c is not None]
