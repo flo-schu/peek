@@ -18,6 +18,7 @@ import imutils
 import json
 import shutil
 from datetime import datetime as dt
+from datetime import timedelta
 from exifread import process_file
 from utils.manage import Files
 
@@ -236,10 +237,13 @@ class Image(Files):
         return message
 
     def image_at_night(self, start_night_h=21, end_night_h=5):
+        img_time = dt.strptime(self.time, "%H%M%S")
+        midnight = 0
         night = [dt.strptime(str(start_night_h),'%H'), 
+                 dt.strptime(str(midnight), '%H'),
                  dt.strptime(str(end_night_h),'%H')]
-
-        if night[0] < dt.strptime(self.time, "%H%M%S") < night[1]:
+    	
+        if night[0] < img_time < night[1] or night[1] < img_time < night[2]:
             atnight = True
         else:
             atnight = False

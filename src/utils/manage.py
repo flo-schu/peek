@@ -29,6 +29,10 @@ class Files:
         os.makedirs(path, exist_ok=True)
         return path
 
+    @staticmethod
+    def file_exist(path):
+        return os.path.exists(path)
+
     @classmethod
     def check_if_exist(cls, path, dirlist):
         return [os.path.exists(os.path.join(path, d)) for d in dirlist]
