@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+from image.analysis import Preprocessing
 from image.detectors.base import Detector, Mask, Tagger
 # from progress.bar import IncrementalBar
 # import gc
@@ -49,7 +50,7 @@ class MovementEdgeDetector(Detector):
     @staticmethod
     def median_threshold(roi, blur, thresh):
         median = cv.medianBlur(roi, blur)
-        background = Detector.substract_median(median, ignore_value=0)
+        background = Preprocessing.substract_median(median, ignore_value=0)
         gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
         T, thresh = cv.threshold(gray, thresh, 255, 0)
         return [roi, thresh]
