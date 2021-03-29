@@ -15,9 +15,9 @@ echo "created file list /tmp/nano-$SLIM.txt"
 echo "processing /tmp/nano-$SLIM.txt ..."
 tar -cf "$WORK"/analyses/"$SLIM".tar -T /tmp/nano-$SLIM.txt
 
-# # create complete tar archive with tiff and npy files (BIG!!!)
-COMPLETE="$ANALYSIS"-"$DATE"-complete
-find "$WORK"/pics -name *"$ANALYSIS"* > /tmp/nano-"$COMPLETE"
-echo "created file list /tmp/nano-$COMPLETE.txt"
-echo "processing /tmp/nano-$COMPLETE.txt ..."
-tar -cf "$WORK"/analyses/"$COMPLETE".tar -T /tmp/nano-$COMPLETE.txt
+# # # create complete tar archive with tiff and npy files (BIG!!!)
+# COMPLETE="$ANALYSIS"-"$DATE"-complete
+# find "$WORK"/pics -name *"$ANALYSIS"* > /tmp/nano-"$COMPLETE"
+# echo "created file list /tmp/nano-$COMPLETE.txt"
+# echo "processing /tmp/nano-$COMPLETE.txt ..."
+# tar -cf "$WORK"/analyses/"$COMPLETE".tar -T /tmp/nano-$COMPLETE.txt

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# TODOS:
+# 1. pass moving edge as argument to routine ()
+
+# set environmental variables
 PROJ_LOCAL="/cygdrive/c/Users/schunckf/Documents/Florian/papers/nanocosm/"
 PROJ_REMOTE="/home/schunckf/projects/nanocosm/"
 DATA_LOCAL="${PROJ_LOCAL}data/"
@@ -28,6 +33,8 @@ rsync -avh --progress "${DATA_LOCAL}image_analysis/qr" "schunckf@frontend1.eve.u
 
 # SCRIPT B)
 
+DATE=`date +%Y%m%d`
+
 # 1. determine new sessions and the number of series for sbatch
 
 # 2. Extract new sessions (not needed any longer. This happens locally)
@@ -36,26 +43,61 @@ rsync -avh --progress "${DATA_LOCAL}image_analysis/qr" "schunckf@frontend1.eve.u
 #    (if I run the same script twice - just after correcting QR codes, this 
 #    should not be triggered again)
 #    DETERMINE NUMBER OF FILES (use WC)
-sbatch -a 1-9352 "${PROJ_REMOTE}src/shell/read_image_better.sh" "${DATA_REMOTE}pics/"
+
+LUPL=16 # process .RW2 files modified last n days (0: today, 1: yesterday, inf: all days)
+NJOBS=$(find "${DATA_REMOTE}pics/" -name "*.RW2" -mtime -${LUPL}| 
+        sort -n |
+        wc -l)
+sbatch -a 1- "${PROJ_REMOTE}src/shell/read_image_better.sh" "${DATA_REMOTE}pics/"
+
+# copy 
+find "${DATA_REMOTE}pics/" -name "*.RW2" -mtime -${LUPL} > "${DATA_REMOTE}eve_logs/read_images_${DATE}.txt"
+LAST_JOB=$(sacct -u schunckf | awk 'END {print $1}' | cut -d _ -f 1)
+sacct -j ${LAST_JOB} -o JobID,AveRSS,MaxRSS,CPUTime,TotalCPU,State,Timelimit,Elapsed --units=G > ${DATA_REMOTE}eve_logs/jobs_read.txt
 
 # 4. Wait until job is done (something with while and sleep)
 
-# 4a. get job id and copy output of sacct, *.err and *.out and download
-
-# 5. archive broken QR codes (omit those which were also marked as 999)
-source "${PROJ_REMOTE}src/shell/archive_qrerrors.sh"
-# 6. Run QR correction
+# 5. Run QR correction
 source "${PROJ_REMOTE}src/shell/apply_qr_corrections.sh" > "${DATA_REMOTE}qr/log.txt"
 
-# 7. run detection and wait until job is done
+# 6. archive broken QR codes (omit those which were also marked as 999)
+source "${PROJ_REMOTE}src/shell/archive_qrerrors.sh"
 
-# 8. archive detection
+# 7. run detection and wait until job is done ----------------------------------
+# getting directories 
+PLD=1 # process directories modified last n days (0: today, 1: yesterday, inf: all days)
+NJOBS=$(find "${DATA_REMOTE}pics/" -maxdepth 1 -type d -mtime -${PLD} | 
+        sort -n | 
+        wc -l)
+
+sbatch -a 1-${NJOBS} "${PROJ_REMOTE}src/shell/detection_session.sh" -i="${DATA_REMOTE}pics/" -d=${PLD}
+
+
+# 8. check for errors ----------------------------------------------------------
+LAST_JOB=$(sacct -u schunckf | awk 'END {print $1}' | cut -d _ -f 1)
+
+# detection output and errors
+cat /work/schunckf/logs/moving_edge-${LAST_JOB}-*.out > "${DATA_REMOTE}eve_logs/moving_edge.out"
+cat /work/schunckf/logs/moving_edge-${LAST_JOB}-*.err > "${DATA_REMOTE}eve_logs/moving_edge.err"
+
+# check cluster info
+sacct -j ${LAST_JOB} -o JobID,AveRSS,MaxRSS,CPUTime,TotalCPU,State,Timelimit,Elapsed --units=G > ${DATA_REMOTE}eve_logs/jobs_moving_edge.txt
+
+# print file tree
+tree "${DATA_REMOTE}pics/" > "${DATA_REMOTE}eve_logs/file_tree.txt"
+
+# 9. archive detection ---------------------------------------------------------
+source "${PROJ_REMOTE}src/shell/archive_analysis.sh" moving_edge
 
 # SCRIPT C)
 
 # 0. test if jobs are still running.
 
+# 0. download logs
+rsync -avh --progress "schunckf@frontend1.eve.ufz.de:${DATA_REMOTE}eve_logs" "${DATA_LOCAL}image_analysis"
+
 # 1. download detection
+
 
 # 2. download QR Problems (here i can comfortably check log and unresolved errors)
 rsync -avh --progress "schunckf@frontend1.eve.ufz.de:${DATA_REMOTE}qr" "${DATA_LOCAL}image_analysis"
