@@ -73,6 +73,26 @@ determine the number of files with `tree /work/schunckf/nanocosm/data/pics/`
 this function works also in any other directory because of usage of `find`.
 `sbatch -a 1-9352 /home/schunckf/projects/nanocosm/src/shell/read_image_better.sh /work/schunckf/nanocosm/data/pics/`
 
+check how well QR Code reading worked
+`cat /work/schunckf/logs/nanocosm_read-1665277-*.err > /home/schunckf/projects/data/detection_err.txt`
+`cat /work/schunckf/logs/nanocosm_read-1665277-*.out > /home/schunckf/projects/data/detection_err.out`
+
+### check QR detection
+
+create an archive of problem qr codes
+`source /home/schunckf/projects/nanocosm/src/shell/archive_qrerrors.sh`
+
+get QR errors (works like a wonder of the world)
+`source copy_to_local.sh` 
+
+then the image thumbnails have to be checked and the correct id has to be added in a second column next to
+the error list (qr_errors.txt). Don't add column names
+upload the list again to `/work/schunckf/nanocosm/data/qr/$DATE/qr_corrections.csv` and execute
+`source src/shell/apply_qr_corrections.sh > /work/schunckf/nanocosm/data/qr/log.txt`
+
+check if any errors are still present. There should be none after 20201207
+`cat /work/schunckf/data/qr/qr_errors_unresolved.txt`
+
 ### detection of organisms
 
 read e.g. first 5 series of a specific session. As an array job. This is fast.
@@ -84,25 +104,6 @@ This will perform detection for a whole session (with a loop. Probably not
 super efficient, but the algorithm is quite fast. Takes only a few minutes
 per session. Can be upscaled for all sessions at once)
 `sbatch -a 1-1 /home/schunckf/projects/nanocosm/src/shell/detection_session.sh /work/schunckf/nanocosm/data/pics/ /home/schunckf/projects/nanocosm/settings/masking_20210225.json`
-
-### check QR detection
-
-create an archive of problem qr codes
-`source /home/schunckf/projects/nanocosm/src/shell/archive_qrerrors.sh`
-
-get error list
-`scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.txt .\data\image_analysis\QR\qr_errors.txt`
-
-get error image thumbnails
-`scp schunckf@frontend1.eve.ufz.de:/work/schunckf/nanocosm/data/qr_errors.tar .\data\image_analysis\QR\qr_errors.tar`
-
-then the image thumbnails have to be checked and the correct id has to be added in a second column next to
-the error list (qr_errors.txt). Don't add column names
-upload the list again to `/work/schunckf/nanocosm/data/qr/$DATE/qr_corrections.csv` and execute
-`source src/shell/apply_qr_corrections.sh > /work/schunckf/nanocosm/data/qr/log.txt`
-
-check if any errors are still present. There should be none after 20201207
-`cat /work/schunckf/data/qr/qr_errors_unresolved.txt`
 
 ### check if jobs were successful
 
