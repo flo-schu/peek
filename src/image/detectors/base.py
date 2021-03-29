@@ -201,7 +201,7 @@ class Detector():
         return m
 
     @staticmethod
-    def difference(images, lag=1, smooth=1):
+    def difference(images, lag_between_images=1, smooth=1):
         """
         calculates the RGB differences between every two consecutive images.
         The last difference is the diff between last and first image
@@ -211,7 +211,7 @@ class Detector():
         kernel = np.ones((smooth,smooth),np.float32)/smooth**2
         images = np.array([cv.filter2D(i, -1, kernel) for i in images], dtype=int)
         # ims = np.array([i.img for i in imlist], dtype=int)
-        diff = np.diff(images, n=lag, axis=0)
+        diff = np.diff(images, n=lag_between_images, axis=0)
         diffs = np.where(diff >= 0, diff, 0)
 
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
@@ -244,29 +244,11 @@ class Detector():
         
         return points
 
-    @staticmethod
-    def intersection(img, maxval=255):
-        intersec = ( img[:,:,0] * img[:,:,1] 
-                   + img[:,:,0] * img[:,:,2] 
-                   + img[:,:,2] * img[:,:,1] )
-        return np.where(intersec >= maxval, 255, 0).astype('uint8')
 
     @classmethod
-    def find_pois(cls, im1, im2, filter_fun=None, filter_args={}, threshold=20, sw=20, 
-                  erode_n=1, smooth=1, plot=False):
-        diff = cls.difference([im1, im2], lag=1, smooth=3)[0]
-        ret, thresh = cv.threshold(diff, threshold, 255,0)
+    def find_pois(cls, img, filter_fun=None, filter_args={}):
 
-        # get intersection of thresholded values
-        intersec = cls.intersection(thresh, 1)
-
-        # combine elements
-        k = cv.getStructuringElement(cv.MORPH_ELLIPSE, ksize=(sw, sw))
-        morph = cv.morphologyEx(intersec, op=cv.MORPH_CLOSE, kernel=k)
-
-        # remove intersections of just 1 pixel (could maybe removed later)
-        morph = Spectral.min_filter(erode_n, morph)
-        contours, hierarchy = cv.findContours(morph, cv.RETR_TREE, 
+        contours, hierarchy = cv.findContours(img, cv.RETR_TREE, 
                                               cv.CHAIN_APPROX_SIMPLE)
 
         if filter_fun is not None:
@@ -274,12 +256,7 @@ class Detector():
 
         points = cls.get_contour_centers(contours)
 
-        if plot:
-            fig, (ax1, ax2) = plt.subplots(1,2, sharey=True, sharex=True)
-            ax1.imshow(im2)
-            ax2.imshow(diff)
-
-        return points
+        return points, contours
 
     @staticmethod
     def contours_list_to_dict(contours, hierarchy):
@@ -333,7 +310,7 @@ class Detector():
         return hull_list
 
     @classmethod
-    def generate_pois(cls, img, filter_fun=None, filter_args={}, show_plots=False):
+    def generate_pois(cls, img, filter_fun=None, filter_args={}):
 
         contours, hierarchy = cv.findContours(img, cv.RETR_TREE, 
                                               cv.CHAIN_APPROX_SIMPLE)
@@ -350,6 +327,14 @@ class Detector():
 
         return points, contours
 
+    # @classmethod
+    # def preprocess(cls, img, poi, search_width, detector_fun, detector_args={}):
+    #     # extract region of interest
+    #     roi = cls.get_roi(img, poi, search_width)
+
+    #     steps = detector_fun(roi, **detector_args)    
+        
+    #     return steps
     @staticmethod
     def preprocess(img, algorithm, algorithm_kwargs):
         

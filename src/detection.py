@@ -9,19 +9,18 @@ from image.detectors.movement_edge import MovementEdgeDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('path' , type=str, help='path to images')
-parser.add_argument('-c', '--config', type=str, help='path to config file used for analysis', default='masking_20210225.json')
+parser.add_argument('-c', '--config', type=str, help='path to config file used for analysis', default='dynamic_segmentation_default.json')
 parser.add_argument('-i1', '--image1', type=int, nargs='?', help='list of images to process', default=0)
 parser.add_argument('-i2', '--image2', type=int, nargs='?', help='list of images to process', default=-1)
 parser.add_argument('-b', '--backup', type=str, nargs='?', help='path to backup folder', default='')
-parser.add_argument('-s', '--search_radius', type=int, nargs='?', help='radius of search box', default=50)
-parser.add_argument('-r', '--blur', type=int, nargs='?', help='detector setting blur', default=5)
-parser.add_argument('-t', '--threshold', type=int, nargs='?', help='detector setting threshold', default=10)
+parser.add_argument('-p', '--progress', type=bool, help='show progress bar', default=False)
+parser.add_argument('-v', '--visualize', type=bool, help='should plots be visualized', default=False)
 args = parser.parse_args()
 
 
 sdir = Files.load_settings_dir()
-parfile = os.path.join(sdir, args.config)
-print("reading settings from:", parfile)
+config = Files.read_settings(os.path.join(sdir, args.config))
+print("using the following settings:", config)
 
 # load images
 s = Series(args.path)
@@ -35,9 +34,13 @@ detector = MovementEdgeDetector()
 # tag image
 tags = detector.tag_image(
     img1.img, img2.img, 
-    dect_args={'blur':args.blur, 'thresh':args.threshold}, 
-    parfile=parfile,
-    search_radius=args.search_radius)
+    mask_config=config["masking_config"],
+    diff_config=config["diff_image"],
+    detector_config=config["detector"], 
+    filter_config=config["contour_filter"],
+    preprocess_config=config["preprocess"],
+    progress_bar=args.progress,
+    show_plots=args.visualize)
 
 print('tagging complete')
 # export tags

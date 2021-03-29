@@ -682,25 +682,6 @@ class Spectral:
         return masktop
 
     @staticmethod
-    def substract_median(img, ignore_value=None):
-        im = img.copy().astype('int')
-        assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
-
-        if len(img.shape) == 2:
-            im[:,:] = im[:,:] - np.median(im[:,:].flatten())
-            
-        elif len(img.shape) == 3:
-            y, x, colors = img.shape
-
-            for c in range(colors):
-                data = im[:,:,c].flatten()
-                if ignore_value is not None:
-                    data = np.ma.masked_where(data == ignore_value, data).compressed()
-                im[:,:,c] = im[:,:,c] - np.median(data)
-
-        return np.where(im > 0, im, 0).astype('uint8')
-
-    @staticmethod
     def mask_from_bottom(mask):
         d = np.flipud(np.flipud(mask).cumsum(axis=0))
         masktop = np.where(d > 0, 0, 255).astype('uint8')
@@ -863,21 +844,42 @@ class Spectral:
 
         return img.astype('uint8')
 
-class Preprocessing:
-    @classmethod
-    def preprocess(cls, img, poi, search_width, detector_fun, detector_args={}, plot=False ):
-        # extract region of interest
-        roi = cls.get_roi(img, poi, search_width)
-
-        steps = detector_fun(roi, **detector_args)    
         
-        return steps
-    
+class Preprocessing:
+    """
+    contains method which perform single or sequential proceedures on images
+    either returning the image itself, or a list of images
+    """
+    @staticmethod
+    def intersection(img, maxval=255):
+        intersec = ( img[:,:,0] * img[:,:,1] 
+                   + img[:,:,0] * img[:,:,2] 
+                   + img[:,:,2] * img[:,:,1] )
+        return np.where(intersec >= maxval, 255, 0).astype('uint8')
+
+    @staticmethod
+    def substract_median(img, ignore_value=None):
+        im = img.copy().astype('int')
+        assert len(img.shape) >= 2, "img must be 2D and have at least one color channel"
+
+        if len(img.shape) == 2:
+            im[:,:] = im[:,:] - np.median(im[:,:].flatten())
+            
+        elif len(img.shape) == 3:
+            y, x, colors = img.shape
+
+            for c in range(colors):
+                data = im[:,:,c].flatten()
+                if ignore_value is not None:
+                    data = np.ma.masked_where(data == ignore_value, data).compressed()
+                im[:,:,c] = im[:,:,c] - np.median(data)
+
+        return np.where(im > 0, im, 0).astype('uint8')
+
     @staticmethod
     def canny_edge_detection(
         img, blur=None, max_filter_kernel_width=None,
-        min_filter_kernel_width=None, resize=None, canny_thresholds=None,
-        show_plots=False):
+        min_filter_kernel_width=None, resize=None, canny_thresholds=None):
         steps = [img]
         steps.append(cv.resize(steps[-1], (0, 0), fx=resize, fy=resize))
         steps.append(cv.medianBlur(steps[-1], blur))
@@ -887,10 +889,30 @@ class Preprocessing:
         # steps.append(cv.dilate(steps[-1], kernel))
         return steps
 
-    @staticmethod
-    def median_threshold(roi, blur, thresh):
+    @classmethod
+    def median_threshold(cls, roi, blur, threshold, ignore_value):
         median = cv.medianBlur(roi, blur)
-        background = Spectral.substract_median(median, ignore_value=0)
+        background = cls.substract_median(median, ignore_value)
         gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
-        T, thresh = cv.threshold(gray, thresh, 255, 0)
+        T, thresh = cv.threshold(gray, threshold, 255, 0)
         return [roi, thresh]
+
+    @classmethod
+    def threshold_and_morphology(cls, img,
+        smooth_input=1, lag_between_images=1, color_threshold=20, 
+        morphology_kernel=20, min_filter_size=1):
+
+        ret, thresh = cv.threshold(img, color_threshold, 255,0)
+
+        # get intersection of thresholded values
+        intersec = cls.intersection(thresh, 1)
+
+        # combine elements
+        k = cv.getStructuringElement(
+            cv.MORPH_ELLIPSE, ksize=(morphology_kernel, morphology_kernel))
+        morph = cv.morphologyEx(intersec, op=cv.MORPH_CLOSE, kernel=k)
+
+        # remove intersections of just 1 pixel (could maybe removed later)
+        mini = Spectral.min_filter(min_filter_size, morph)
+
+        return [img, thresh, intersec, morph, mini]

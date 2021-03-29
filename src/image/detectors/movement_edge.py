@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
+from image.process import Image
 from image.analysis import Preprocessing
 from image.detectors.base import Detector, Mask, Tagger
-# from progress.bar import IncrementalBar
+from progress.bar import IncrementalBar
 # import gc
 
 # here I can create my own individual program of functions, that I want to execute
@@ -48,14 +49,6 @@ class MovementEdgeDetector(Detector):
         return cnts
 
     @staticmethod
-    def median_threshold(roi, blur, thresh):
-        median = cv.medianBlur(roi, blur)
-        background = Preprocessing.substract_median(median, ignore_value=0)
-        gray = cv.cvtColor(background, cv.COLOR_RGB2GRAY)
-        T, thresh = cv.threshold(gray, thresh, 255, 0)
-        return [roi, thresh]
-
-    @staticmethod
     def pass_tests(d):
         d['select'] = True
         d['select'] = d['select'] and not d['len_major'] > 500
@@ -67,42 +60,57 @@ class MovementEdgeDetector(Detector):
         return d
 
 
-    def tag_image(self, im1, im2, dect_args, parfile,
-                  search_radius, crit_multiple='distance'):
+    def tag_image(self, im1, im2, 
+                  mask_config,
+                  diff_config,
+                  preprocess_config,
+                  filter_config,
+                  detector_config, 
+                  progress_bar=False,
+                  show_plots=False):
         
         # initialize Tagger
         tags = self.DetectSelectSortTagger()
 
         # mask images
         m1 = self.Slice(im1)
-        m1.create_masks(pars=parfile)
-
+        m1.create_masks(pars=mask_config)
         m2 = self.Slice(im1)
         m2.img = m2.trim(im2, **m1.pars['trim'])
         m2.apply_multi(masks=m1.masks)
 
-        # from matplotlib import pyplot as plt
+        # create diff image 
+        diff = self.difference(
+            [m2.img, m1.img], **diff_config)[0]        
 
-        # determin points of interest
-        pois = self.find_pois(
-            m2.img, m1.img, filter_fun=self.filter_contours, 
-            threshold=20, sw=20, erode_n=3)
+        impp = self.preprocess(diff, 
+            algorithm=preprocess_config["algorithm"], 
+            algorithm_kwargs=preprocess_config["parameters"])
 
-        # main loop
-        # bar = IncrementalBar('Processing', max=len(pois))
+        # determin points of interest from diff
+        pois, contours = self.find_pois(impp[-1], 
+            filter_fun=self.filter_contours, 
+            filter_args=filter_config)
+
+        if show_plots:
+            impp.append(Image.tag_image(impp[0], contours))
+            self.plot_grid(impp)
+
+        if progress_bar:
+            bar = IncrementalBar('Processing', max=len(pois))
+        
         for poi in pois:
-            steps = Detector.detect(
-                m1.img, poi, search_radius, 
-                self.median_threshold, dect_args, plot=False
-                )
+            roi = self.get_roi(m1.img, poi, search_width=detector_config["search_radius"])
+            steps = Detector.preprocess(roi,
+                algorithm=detector_config["algorithm"], 
+                algorithm_kwargs=detector_config["parameters"])
 
             contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
                                                   cv.CHAIN_APPROX_NONE)
             
             contours = self.unite_family(hierarchy, contours)
             roi, properties, contours = self.find_ellipses_in_contours(
-                steps[0], contours, draw=False
-                )
+                steps[0], contours, draw=False)
             
             for p in properties:
                 p = self.pass_tests(p)
@@ -121,14 +129,18 @@ class MovementEdgeDetector(Detector):
             tags.add("properties", properties)
             tags.add("tag_contour", contours)
             tags.add("tag_image_orig", steps[0])
-            tags.add("tag_image_diff", Detector.get_roi(m2.img, poi, search_radius))
+            roi_diff = Detector.get_roi(m2.img, poi, search_width=detector_config["search_radius"])
+            tags.add("tag_image_diff", roi_diff)
 
             # gc.collect()
-            # bar.next()
+            if progress_bar:
+                bar.next()
 
         # wrap up
-        tags.wrap_up(search_radius, trim_top=m1.pars['trim']['t'])
-        # bar.finish()
+        tags.wrap_up(search_radius=detector_config["search_radius"], 
+                     trim_top=m1.pars['trim']['t'])
+        if progress_bar:
+            bar.finish()
 
         return tags
 
