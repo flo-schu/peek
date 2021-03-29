@@ -85,9 +85,15 @@ print(skm.classification_report(y_train, y_pred))
 # plot_roc_curve(fpr, tpr, "Roc Curve")
 
 # How to implement for my data.
-# [ ] improve image segmentation. better selection of organisms. 
+# [/] improve image segmentation. better selection of organisms. 
 #     There must be a better way for this...
 #     https://www.upgrad.com/blog/image-segmentation-techniques/
+#     Maybe not the right approach
+# [~] go again for edge detection and thresholding. Because with the 
+#     classifier it is no problem to overselect (I believe). Approach
+#     radical smoothing and homogenizing (max/min stuff). Then adaptive thresholding
+#     by regions and then edge.
+#     -> after all not super promising. A lot of work and lots of errors
 # [ ] organisms must be centered in the image. Otherwise I'm pretty sure
 #     random forests will have problems -> no features are generated
 # [ ] read: https://benanne.github.io/2015/03/17/plankton.html
@@ -98,3 +104,22 @@ print(skm.classification_report(y_train, y_pred))
 #           of tags. Good if segmentation is run with ML itself
 #     + [ ] show whole image with annotated tags
 #     + [ ] create a dir with annotated images
+# [ ] train my own Haar Cascade classifier
+# read https://medium.com/swlh/object-detection-and-instance-segmentation-a-detailed-overview-94ca109274f2
+# for non-max surpression read:
+# https://www.analyticsvidhya.com/blog/2020/08/selecting-the-right-bounding-box-using-non-max-suppression-with-implementation/
+# https://github.com/matterport/Mask_RCNN --> swgmentation
+
+
+# Problems:
+# [ ] duplicates. When segmenting, duplicates are produced and this willthen be 
+#     tagged multiple times
+# [ ] contours overlap. This is super annoying. -> non max surpression
+# [ ] both should be solvable by merging contours
+# [ ] continue: 
+#     0. REMEMBER: Es ist nicht schlimm wenn haufenweise scheiß detektiert wird
+#        der Classifier sollte in der Lage sein das auszusortieren und non
+#        maximum surpression zum schluss müsste ausreichen
+#     1. finish current detection 
+#     2. run detector on cluster
+#     3. train and predict model

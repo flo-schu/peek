@@ -52,11 +52,9 @@ class RegionGrowingDetector(Detector):
         return contours
 
     def tag_image(self, img, 
-                  search_radius, 
                   mask_config,
                   preprocess_config,
                   filter_config,
-                  detector_config, 
                   progress_bar=False,
                   show_plots=False):
         
@@ -68,20 +66,22 @@ class RegionGrowingDetector(Detector):
         # m2 = self.mask_images(img2, parfile, mask=m)
 
         impp = self.preprocess(m.img, 
-                               algorithm=preprocess_config["algorithm"], 
-                               algorithm_kwargs=preprocess_config["parameters"])
+            algorithm=preprocess_config["algorithm"], 
+            algorithm_kwargs=preprocess_config["parameters"])
 
-        pois, contours = self.generate_pois(
-            impp[-1], filter_fun=self.filter_contours, filter_args=filter_config,
-            show_plots=show_plots)
+        pois, contours = self.generate_pois(impp[-1], 
+            filter_fun=self.filter_contours, 
+            filter_args=filter_config)
 
         if show_plots:
             impp.append(Image.tag_image(impp[1], contours))
             self.plot_grid(impp)
 
+        # here comes the detector [MAIN DIFFERENCE TO MOVEMENT_EDGE.py]
+
         tags.pois = pois
         tags.tag_contour = contours
-        tags.wrap_up(search_radius, trim_top=m.pars['trim']['t'])
+        tags.wrap_up(trim_top=m.pars['trim']['t'])
 
         return tags
 

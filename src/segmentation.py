@@ -33,11 +33,9 @@ detector = RegionGrowingDetector()
 # tag image
 tags = detector.tag_image(
     img = img.img, 
-    search_radius=config["search_radius"],
-    detector_config=config["detector"], 
-    filter_config=config["contour_filter"],
     mask_config=config["masking_config"],
     preprocess_config=config["preprocess"],
+    filter_config=config["contour_filter"],
     progress_bar=args.progress,
     show_plots=args.visualize)
 

@@ -36,9 +36,9 @@ tags = detector.tag_image(
     img1.img, img2.img, 
     mask_config=config["masking_config"],
     diff_config=config["diff_image"],
-    detector_config=config["detector"], 
-    filter_config=config["contour_filter"],
     preprocess_config=config["preprocess"],
+    filter_config=config["contour_filter"],
+    detector_config=config["detector"], 
     progress_bar=args.progress,
     show_plots=args.visualize)
 
