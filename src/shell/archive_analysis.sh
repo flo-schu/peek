@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATE=`date +%Y%m%d_%H%M`
+DATE=`date +%Y%m%d`
 
 WORK=/work/schunckf/nanocosm/data/
 ANALYSIS=$1

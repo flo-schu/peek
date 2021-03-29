@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+#############################################################################
+# This is a routine bash script to execute the varius steps of image analysis
+# on the eve cluster and down and upload files as needed.
+# On Windows Cygwin should be used as bash console, because git bash doesn't
+# do well on absolute paths
+#############################################################################
+
 # TODOS:
 # 1. pass moving edge as argument to routine ()
 
@@ -96,13 +103,15 @@ source "${PROJ_REMOTE}src/shell/archive_analysis.sh" moving_edge
 # 0. download logs
 rsync -avh --progress "schunckf@frontend1.eve.ufz.de:${DATA_REMOTE}eve_logs" "${DATA_LOCAL}image_analysis"
 
-# 1. download detection
-
+# 1. download detection (slim only csv files)
+scp "schunckf@frontend1.eve.ufz.de:${DATA_REMOTE}analyses/moving_edge-${DATE}-slim.tar" "${DATA_LOCAL}annotations/"
+tar -C "${DATA_LOCAL}annotations/" -xvf "${DATA_LOCAL}annotations/moving_edge-${DATE}-slim.tar"
+rsync -a ${DATA_LOCAL}annotations${DATA_REMOTE}pics/ ${DATA_LOCAL}annotations/
+rm -rf ${DATA_LOCAL}annotations/work
+rm "${DATA_LOCAL}annotations/moving_edge-${DATE}-slim.tar"
 
 # 2. download QR Problems (here i can comfortably check log and unresolved errors)
 rsync -avh --progress "schunckf@frontend1.eve.ufz.de:${DATA_REMOTE}qr" "${DATA_LOCAL}image_analysis"
-
-# 3. extract tarfile
 
 # 4. (?) generating plots
 
