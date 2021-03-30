@@ -14,7 +14,8 @@ PROJECT_DIR="/home/$USER/projects/nanocosm/"
 source "$PROJECT_DIR/env/bin/activate"
 INPUT_DIR=$1
 NEWER_THAN=$2
-
+# https://stackoverflow.com/questions/1668649/how-to-keep-quotes-in-bash-arguments 
+# there are better solutions. 
 IMG=`find $INPUT_DIR -name "*.RW2" -newermt "mar 12, 2021 18:50" | sort -n | head -n $SLURM_ARRAY_TASK_ID | tail -n 1`
 
 echo "working on $IMG ..."

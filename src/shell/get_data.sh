@@ -37,7 +37,7 @@ echo "extracting the archive"
 tar -C "$DATA_LOCAL"/pics/ -xf "$DATA_LOCAL"/pics/"$TARFILE"
 mv "$DATA_LOCAL"/pics/"$DATA_REMOTE"/pics/$DATE/ "$DATA_LOCAL"/pics/
 rm -rf "$DATA_LOCAL"/pics/work/
-rm "$DATA_LOCAL"/pics/"$TARFILE"
+# rm "$DATA_LOCAL"/pics/"$TARFILE"
 
 # remove variables from shell
 unset DATE
