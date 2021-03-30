@@ -251,7 +251,7 @@ class Image(Files):
         return atnight
 
     def process_image(self, file_name, delete_old=False, qr_thumb=False, 
-                      qr_params={}, **params):
+                      qr_params={}, output_format="tiff", **params):
         self.read_raw(**params)
         self.read_qr_code(**qr_params)
         if delete_old:
@@ -264,10 +264,10 @@ class Image(Files):
         self.change_path(os.path.join(image_dir, file_name)) # change path
         
         if qr_thumb:
-            self.save(attr="qr_thumb", file_ext=".jpeg", remove_from_instance=True ) # save as tiff to new path
+            self.save(attr="qr_thumb", file_ext="_qr.jpeg", remove_from_instance=True ) # save as tiff to new path
         else:
             del self.qr_thumb
-        self.save(attr="img", file_ext=".tiff", remove_from_instance=True ) # save as tiff to new path
+        self.save(attr="img", file_ext="."+output_format, remove_from_instance=True ) # save as tiff to new path
         self.dump_struct(self.__dict__)
 
         return self, series_dir, image_dir

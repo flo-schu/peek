@@ -11,6 +11,7 @@ parser.add_argument('-p', '--img_params' , type=str, help='path to settings for 
 parser.add_argument('-q', '--qr_params' , type=str, help='path to settings for image processing', default="qr_detect_default.json")
 parser.add_argument('-d', '--delete_original' , type=bool, help='should the original image be deleted', default=False)
 parser.add_argument('-t', '--thumbnail' , type=bool, help='create a thumbnail img of the region scanned for qr code', default=False)
+parser.add_argument('-o', '--output_format', type=str, help='output format after reading .RW2 file', default="tiff")
 args = parser.parse_args()
 
 print('reading parameters ...')
@@ -30,6 +31,7 @@ i.process_image(
     delete_old=args.delete_original,
     qr_thumb=args.thumbnail,
     qr_params=qr_params,
+    output_format=args.output_format,
     **im_params)
 
 print("read QR code: {}".format(i.id))

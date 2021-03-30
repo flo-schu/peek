@@ -33,6 +33,8 @@ for i, row in qr.iterrows():
     # read paths and edit paths
     p = os.path.normpath(os.path.dirname(row.path))
     f = os.path.basename(row.path).replace('.jpeg', '')
+    if "_qr" in f:
+        f = f.replace("_qr","")
     print('working in:', p, '-- on image:', f)
     
     ossep = os.path.sep
