@@ -20,7 +20,7 @@ print(settings)
 # import image data
 d = Data(args.input,
          search_keyword=settings["analysis"], 
-         correct_path=(True, 0, settings["annotations"]))
+         correct_path=settings["path_correction"])
 
 # analyse(data=d, algorithm="count_and_average_over_id", plot="show_ts", sample_id="10")
 analyse(data=d, 

@@ -169,6 +169,16 @@ class Files:
         return os.path.join(*pparts)
 
     @staticmethod
+    def change_root_of_path(path, new_root="", trim_path_until=""):
+        path = os.path.normpath(path)
+        new_root = os.path.normpath(new_root)
+
+        pattern = os.path.normpath(trim_path_until)+os.sep
+        top_dir = path[path.index(pattern)+len(pattern):]
+
+        return os.path.join(new_root, top_dir)
+
+    @staticmethod
     def read_settings(path=""):
         if os.path.basename(path) == "":
             return {}

@@ -1,5 +1,6 @@
 from evaluation.calc import Algorithms as algs
 from evaluation.plot import Viz as viz
+import matplotlib.pyplot as plt
 
 def save(
     data,
@@ -50,4 +51,6 @@ def analyse(
     plot = getattr(viz, plot)
     plot(data, **plotargs)
 
-
+    # save plot
+    plt.savefig("plots/timeseries/"+sample_id+".png")
+    plt.show()

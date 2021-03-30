@@ -1,6 +1,9 @@
 {
     "analysis": "moving_edge",
-    "annotations": "C:/Users/schunckf/Documents/Florian/papers/nanocosm/data/annotations/",
+    "path_correction": {
+        "new_root":"C:/Users/schunckf/Documents/Florian/papers/nanocosm/data/annotations/",
+        "trim_path_until": "/pics/"
+    },
     "algorithm": "filter_area_classify_lwratio",
     "algoargs": {
         "area_threshold":10,

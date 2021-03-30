@@ -136,11 +136,11 @@ class Annotations(Tag):
     def find_annotations(self, analysis):
         path = self.image.path
 
-        if os.path.isfile(path):
+        if path.endswith(".tiff") or os.path.isfile(path):
             fname = '_'+analysis+'_tags.csv'
             path = self.image.append_to_filename(path, fname)
         
-        if os.path.isdir(path):
+        elif os.path.isdir(path):
             tag_file = [f for f in Files.find_files(path, 'tags.csv') if analysis in f]
             print(tag_file)
             assert len(tag_file) == 1, "more than one tag file. something is not right"
@@ -658,13 +658,12 @@ class Data:
     @staticmethod
     def collect_files(paths, search_keyword, 
                       import_images=False, 
-                      correct_path=(False, 0, '')):
+                      correct_path={}):
         images = []
         for p in paths:
             i = Image(p)
             i.read_struct(import_image=import_images, ignore_struct_path=False)
-            if correct_path[0]:
-                i.path = Files.change_top_dirs(i.path, strip_levels=correct_path[1], add_path=correct_path[2])
+            i.path = Files.change_root_of_path(i.path, **correct_path)
             i.tags = Annotations(image=i, analysis=search_keyword, tag_db_path="")
             i.tags.load_processed_tags()
 

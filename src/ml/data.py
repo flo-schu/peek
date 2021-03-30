@@ -51,8 +51,10 @@ def load_annotated_data(path_annotations, path_imgs, label_column="label", id_co
 
     assert len(data["labels"]) == len(data["data"]), print("somefiles wer not found")
 
-    data["data"] = np.array(data["data"])
-    data["labels"] = np.array(data["labels"])
+    indices = [True if d.shape == data["data"][0].shape else False for d in data["data"]]
+
+    data["data"] = np.array([d for d, i in zip(data["data"], indices) if i])
+    data["labels"] = np.array([l for l, i in zip(data["labels"], indices) if i])
 
     return data
     
