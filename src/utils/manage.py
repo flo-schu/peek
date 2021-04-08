@@ -12,13 +12,17 @@ class Files:
     def append_to_filename(path, app):
         return os.path.join(os.path.dirname(path),os.path.basename(path).split(".")[0]+app)
 
-    def change_file_ext(self, new_ext=""):
+    def change_file_ext(self, new_ext="", inplace=True):
         fname, old_ext = os.path.splitext(self.path)
         if new_ext == "":
             new_ext = old_ext
 
-        self.path = fname+new_ext
-        return self.path
+        path = fname+new_ext
+
+        if inplace:
+            self.path = path
+
+        return path
 
     def change_dir(self, subdir):
         return os.path.join(os.path.dirname(self.path), subdir,"")
@@ -119,13 +123,13 @@ class Files:
         else:
             print("error. Most likely unknown filetype for read function")
 
-    def save(self, attr="img", file_ext="", remove_from_instance=False):
+    def save(self, attr="img", file_ext="", remove_from_instance=False, modify_path=True):
         if remove_from_instance:
             obj = self.__dict__.pop(attr)
         else:
             obj = getattr(self, attr)
 
-        imageio.imwrite(self.change_file_ext(file_ext), obj)
+        imageio.imwrite(self.change_file_ext(file_ext, inplace=modify_path), obj)
 
     @staticmethod
     def is_date(string, fuzzy=False):

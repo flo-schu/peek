@@ -264,7 +264,9 @@ class Image(Files):
         self.change_path(os.path.join(image_dir, file_name)) # change path
         
         if qr_thumb:
-            self.save(attr="qr_thumb", file_ext="_qr.jpeg", remove_from_instance=True ) # save as tiff to new path
+            # save as tiff to new path
+            self.save(attr="qr_thumb", file_ext="_qr.jpeg", 
+                      remove_from_instance=True, modify_path=False) 
         else:
             del self.qr_thumb
         self.save(attr="img", file_ext="."+output_format, remove_from_instance=True ) # save as tiff to new path
