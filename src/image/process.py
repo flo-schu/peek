@@ -77,17 +77,20 @@ class Image(Files):
         return tags
 
     def read_struct(self, import_image, ignore_struct_path):
-        if not os.path.exists(self.path):
-            print("Path does not exist. Check spelling.")
-            return
-
-        if os.path.isdir(self.path):
-            try:
-               sname = self.find_single_file(directory=self.path, file_type="json")
-            except AssertionError:
-                print("Did not import {} correctly. more than one structure in image folder".format(self.path))
+        if os.path.isfile(self.path) and os.path.basename(self.path).split(".")[1] == "json":
+            sname = self.path
         else:
-            sname = self.append_to_filename(self.path, "_struct.json")
+            if not os.path.exists(self.path):
+                print("Path does not exist. Check spelling.")
+                return
+
+            if os.path.isdir(self.path):
+                try:
+                    sname = self.find_single_file(directory=self.path, file_type="json")
+                except AssertionError:
+                    print("Did not import {} correctly. more than one structure in image folder".format(self.path))
+            else:
+                sname = self.append_to_filename(self.path, "_struct.json")
             
         try:
             with open(sname, "r") as f:

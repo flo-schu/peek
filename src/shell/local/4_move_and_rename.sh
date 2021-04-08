@@ -3,6 +3,7 @@ for DATE in "$@"
 do
     echo "processing Session ${DATE} ..."
     mkdir "data/pics_classic/#$DATE/"
+    mkdir "data/pics_classic/meta/"
     NANOS=$(find "data/pics/${DATE}/" -mindepth 1 -maxdepth 1 -type d | sort -n)
 
     NEWNAME=0
@@ -25,7 +26,10 @@ do
         done
 
     done
+    echo "reading meta data ..."
+    python "src/read_meta.py" "data/pics" -d "${DATE}" -o "data/pics_classic/meta"
     echo "finished session."
+    echo "====================================================================="
 
 done
 

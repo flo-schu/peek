@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import itertools as it
 import matplotlib as mpl
+from glob import glob
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from scipy.ndimage import gaussian_filter1d
@@ -417,9 +418,9 @@ class Data:
     to.
     """
     def __init__(
-        self, path, search_keyword, import_images=False,
+        self, path, search_keyword="", import_images=False,
         date="all", sample_id="all", img_num="all",
-        correct_path=(False,0,"")
+        correct_path={}
         ):
         self.data=None
         self.path = path
@@ -434,6 +435,37 @@ class Data:
         self.img_num = img_num
         self.images = []
 
+    @staticmethod
+    def combine_data_classic():
+        data = Data.read_csv_list(glob("../data/pics_classic/results/*.csv"))
+        meta = Data.read_csv_list(glob("../data/pics_classic/meta/*meta.csv"), 
+                kwargs={"dtype":{"time":str,"id":int}})
+        meta['picture'] = meta.groupby(["date","id"]).cumcount()
+        df = data.merge(meta, how="left", on=["date","id", "picture"])
+
+
+        # if there is an error it is because 
+        m = pd.read_csv("../data/measurements.csv")
+        m.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
+        m['id'].fillna(0, inplace=True)
+        m = m.astype({"id":int})
+        df = df.merge(m, how="left", on=["date","id"])
+
+        df["time"] = pd.to_datetime(df.date+df.time, format="%Y-%m-%d%H%M%S")
+        df.set_index(["time","id", "picture"], inplace=True)
+        df.drop(columns="date", inplace=True)
+        df.to_csv("../data/pics_classic/data.csv", index=True)
+
+        return df
+
+    @staticmethod
+    def read_csv_list(filenames, kwargs={}):
+        df = pd.DataFrame()
+        for filename in filenames:
+            df = df.append(pd.read_csv(filename, **kwargs))
+
+        return df
+    
     @staticmethod
     def import_manual_measurements(path):
         """
@@ -573,6 +605,28 @@ class Data:
         self.data.index = idx
         self.data = self.data.drop(columns=['img_date','img_time','tag_id','img_id'])
 
+    # @staticmethod
+    # def multi_dt_index(df, dtcols, idxcols, names=[]):
+    #     """
+    #     creates a mult datetime index from date columns and other id columns
+    #     for datetime objects the respective format can be added
+
+    #     df          pandas DataFrame object
+    #     dtcols      dict, {"colname": "format"} (format e.g. "%Y-%m-%d")
+    #     idxcols     list
+    #     """
+    #     for column, dt_fmt in dtcols.items():
+    #         df[column] = pd.to_datetime(df[column], format=dt_fmt)
+
+    #     # create a flat list of index columns
+    #     idx = list(dtcols.keys()) + idxcols
+    #     df.rename(columns = )
+    #     df.set_index(idx, inplace=True)
+    #     df = df.drop
+
+    #     return 
+
+    #     # create datetime
 
     def order(self):
         self.data = self.data.sort_values(by = self.index_names)
@@ -654,6 +708,25 @@ class Data:
             image_paths.extend([os.path.join(id_, img) for img in id_imgs])
             
         return image_paths
+
+    @staticmethod
+    def collect_meta(paths):
+        meta = []
+        for p in paths:
+            i = Image(p, import_image=False)
+            del i.path
+            del i.tags
+            del i.img
+            del i.analyses
+            meta.append(i)
+
+        # create multiindex
+        meta = pd.DataFrame([m.__dict__ for m in meta])
+        imts = pd.to_datetime(meta.date, format='%Y%m%d').to_numpy()
+        imid = meta.id.to_numpy(dtype=int)
+        meta.index = pd.MultiIndex.from_arrays([imts, imid], names=["date", "id"])
+        meta = meta.drop(columns=["date","id"])
+        return meta
 
     @staticmethod
     def collect_files(paths, search_keyword, 
