@@ -10,7 +10,11 @@ step 1 and 3
 
 ## step 1
 
-`source src/shell/1_read_sessions.sh 20210326 20210330`
+`source src/shell/local/1_move_files.sh`
+
+## step 2
+
+`source src/shell/local/2_read_sessions.sh 20210326 20210330`
 process images with normal script to read image files (read_eve.py)
 
 after "read_sessions.sh" __list as many date sessions__ as you want. The program
@@ -20,22 +24,29 @@ is the same as the input date
 
 This will take a while (~ 20 minutes per date)
 
-## step 2
+## step 3
 
 manually correct QR codes: Go to <data/image_analysis/qr> and add the correct
 ids in the column behind the path in <qr_corrections.csv>, when you are done
 execute
 
-`source src/shell/2_apply_qr_corrections.sh`
+`source src/shell/local/3_apply_qr_corrections.sh`
 
 a long list of corrections will be printed and mostly nothing is done (these)
 are already applied corrections you can ignore them. If unapplied corrections
 are worked on the output states so. What happens is that the images are moved
 in the correct folders.
 
-## step 3
+## step 3b
 
-`source src/shell/3_move_and_rename.sh 20210326 20210330`
+choose series where images were taken twice. In <data/pics/${DATE}> replace
+${DATE} with the date you want to look for duplicates. Alternatively
+you can look at the folders by yourself
+`find data/pics/20210402 -mindepth 1 -maxdepth 1 -type d -exec bash -c "echo -ne '{} '; find '{}' -type f -name '*.jpeg' | wc -l" \; | awk '$NF>3'`
+
+## step 4
+
+`source src/shell/local/4_move_and_rename.sh 20210326 20210330`
 
 This script loops over the folder structure and renames and copies the files
 to the directory <data/pics_classic/$DATE>

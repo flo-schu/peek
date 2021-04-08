@@ -15,14 +15,14 @@ do
     for image in $SESSION
         do 
             echo "processing $image ..."
-            python "src/read_eve.py" "$image" -o jpeg
+            python "src/read_eve.py" "$image" -o jpeg -t TRUE
     done
 
     echo "forwarding QR errors."
     # copy qr errors:
     mkdir -p data/image_analysis/qr/${DATE}/qr_errors
     find "data/pics/${DATE}/999/" -type f -name "*_qr.jpeg" -print > "data/image_analysis/qr/${DATE}/qr_corrections.csv"
-    cat "data/image_analysis/qr/${DATE}/qr_errors.csv" | xargs cp -t "data/image_analysis/qr/${DATE}/qr_errors/"
+    cat "data/image_analysis/qr/${DATE}/qr_corrections.csv" | xargs cp -t "data/image_analysis/qr/${DATE}/qr_errors/"
 
 done
 
