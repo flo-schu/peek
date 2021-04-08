@@ -1,14 +1,25 @@
 import numpy as np
 import pandas as pd
 
-def count_organisms(df, groups=['time','id']):
+def count_organisms(df, freq="D", groups=['time','id']):
     """
     counts detected objects in each picture (grouping by time and id)
 
     returns a series object
     """
-    df = df.groupby(groups).size().to_frame()
+    tg = pd.Grouper(freq=freq, level='time')
+    df = df.groupby([tg] + groups).size().to_frame()
     df = df.rename(columns={0:'count'})
+    return df
+
+def aggregate(df, aggregations, names=[], freq="S", groups=['id']):
+    """
+    aggregates depending on aggregations (specified in dict)
+    """
+    tg = pd.Grouper(freq=freq, level='time')
+    df = df.groupby([tg] + groups).agg(aggregations)
+    if len(names) > 0:
+        df.rename(columns=dict(zip(list(aggregations.keys()), names)), inplace=True)
     return df
 
 def length_width_ratio(df):

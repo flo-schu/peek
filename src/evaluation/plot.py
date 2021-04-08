@@ -11,30 +11,27 @@ def show_ts(ts_data):
     ax.set_ylabel("n organisms")
     plt.show()
 
-def show_ts_classes(ts_data):
-    idi = np.where(np.array(list(ts_data.index.names)) == "id")[0][0]
-    ids = ts_data.index.levels[idi]
-
-    idl = np.where(np.array(list(ts_data.index.names)) == "label_auto")[0][0]
-    labels = ts_data.index.levels[idl]
+def show_ts_classes(ts_data, classcol="label_auto", value="count"):
+    ts_data.reset_index(inplace=True)
+    ids = list(ts_data.id.unique())
+    labels = list(ts_data[classcol].unique())
 
     fig, ax = plt.subplots(ncols=1, nrows=1)
     fig.set_figwidth(12)
     fig.set_figheight(4)
-    # ax2 = ax1.twinx()
-    # axes = (ax1, ax2)
     colors = ("tab:blue", "tab:orange")
 
     for i in ids:
-        sub = ts_data.xs(i, level="id")
+        sub = ts_data.query("id == @i")
         for l, c in zip(labels, colors):
+            pdat = sub.query("{} == @l".format(classcol))
             # ax.plot(sub.xs(l, level="label_auto"), color=c, label=l, linestyle="--")
-            ax.plot(sub.xs(l, level="label_auto"), color=c, label=l, marker="o")
+            ax.plot(pdat.time, pdat[value], color=c, label=l, marker="o")
     ax.set_xlabel("time")
-    ax.set_ylim(0, np.max(ts_data['count']))
+    ax.set_ylim(0, np.max(ts_data[value]))
     ax.set_ylabel("Abundance")
     ax.legend()
-    # plt.show()
+    plt.show()
     
 
 def color_analysis(img, channel="r"):
