@@ -14,6 +14,7 @@ import_nano(
     fname = "#AbundImmo.txt",
     n = 80,
     species = "Culex",
+    analysis = "edge",
     out = "data/pics_classic/results/c_immo_size.csv")
 
 # import mobile Culex
