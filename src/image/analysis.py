@@ -443,13 +443,18 @@ class Data:
         meta['picture'] = meta.groupby(["date","id"]).cumcount()
         df = data.merge(meta, how="left", on=["date","id", "picture"])
 
-
         # if there is an error it is because 
         m = pd.read_csv("../data/measurements.csv")
         m.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
         m['id'].fillna(0, inplace=True)
         m = m.astype({"id":int})
         df = df.merge(m, how="left", on=["date","id"])
+
+        # manual observations --------------------------------------------------
+        obs = Data.read_csv_list(glob("../data/raw_measurements/organisms/*.csv"), 
+                kwargs={"dtype":{"time":str,"id":int}})
+        obs.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
+        df = df.merge(obs, "left", on=["date","id"])
 
         df["time"] = pd.to_datetime(df.date+df.time, format="%Y-%m-%d%H%M%S")
         df.set_index(["time","id", "picture"], inplace=True)

@@ -5,6 +5,7 @@ from datetime import datetime as dt
 from glob import glob
 
 # before importing take steps named in raw_measurements/readme.txt
+# this should only be used for measurements where order of the samples is essential
 
 # create empty data frame with dates and measurement ids -----------------------
 dti = pd.date_range("2020-10-23", dt.today(), freq="D")
@@ -12,12 +13,15 @@ mid = range(1,81)
 index = pd.MultiIndex.from_product([dti, mid], names = ["time", "msr_id"])
 
 m = pd.DataFrame(index = index)
+
+# basically here I can construct an empty frame with all the columns and their
+# correpsonding data types. I like this approach as it worked well in the past
+# data of photometer (estimated concentrations below threshold)
 m["EST__NITRAT"] = np.nan
 m["EST__AMMONIUM 3"] = np.nan
 m["EST__AMMONIUM 15"] = np.nan
 m["EST__NITRIT"] = np.nan
 m["EST__o-PHOSPHAT"] = np.nan
-
 
 # photometer measurements (nutrients) ------------------------------------------
 path = "data/raw_measurements/nutrients_photometer_mn/"
@@ -41,10 +45,8 @@ manual.drop(columns="mntr_date", inplace=True)
 
 path = 'data/raw_measurements/physicochemical_knick/'
 grp = [pd.Grouper(freq='D', level='time'),"msr_id"]
-
 o2 = Data.import_knick_logger(path, 'o2', "NANO2")
 o2 = o2.groupby(grp).nth(1)
-
 cond = Data.import_knick_logger(path, 'conductivity', "NANO2")
 cond = cond.groupby(grp).last()
 
