@@ -1,33 +1,45 @@
 from image.analysis import Data
 import pandas as pd
-
+import numpy as np
+from datetime import datetime as dt
+from glob import glob
 
 # before importing take steps named in raw_measurements/readme.txt
 
 # create empty data frame with dates and measurement ids -----------------------
-dti = pd.date_range("2020-10-23", pd.datetime.today(), freq="D")
+dti = pd.date_range("2020-10-23", dt.today(), freq="D")
 mid = range(1,81)
 index = pd.MultiIndex.from_product([dti, mid], names = ["time", "msr_id"])
 
 m = pd.DataFrame(index = index)
+m["EST__NITRAT"] = np.nan
+m["EST__AMMONIUM 3"] = np.nan
+m["EST__AMMONIUM 15"] = np.nan
+m["EST__NITRIT"] = np.nan
+m["EST__o-PHOSPHAT"] = np.nan
 
 
 # photometer measurements (nutrients) ------------------------------------------
-path = "../data/raw_measurements/nutrients_photometer_mn/"
+path = "data/raw_measurements/nutrients_photometer_mn/"
 photom = Data.import_photometer(path)
 test = photom.reset_index()
 
-# manual measurements ----------------------------------------------------------
-path = "../data/raw_measurements/manual_measurements/raw_data.csv"
-manual = Data.import_manual_measurements(path)
+# at the moment only the actual measured values are imported. If other columns
+# should be imported they can be specified in the m.assign() block in line 15
 
+# manual measurements ----------------------------------------------------------
+manual = Data.read_csv_list(glob("data/raw_measurements/manual_measurements/dates/*.csv"))
+manual["time"] = pd.to_datetime(manual.mntr_date, format="%Y%m%d")
+manual.rename(columns={"ID_measure":"msr_id"}, inplace=True)
+manual.set_index(["time","msr_id"], inplace=True)
+manual.drop(columns="mntr_date", inplace=True)
 # knick ------------------------------------------------------------------------
 
 # if tags need to be corrected this should be done in the data files. Why?
 # Because if a 3rd person looks at this no one will understand. Also
 # This would be way to tedius to implement here
 
-path = '../data/raw_measurements/physicochemical_knick/'
+path = 'data/raw_measurements/physicochemical_knick/'
 grp = [pd.Grouper(freq='D', level='time'),"msr_id"]
 
 o2 = Data.import_knick_logger(path, 'o2', "NANO2")
@@ -42,7 +54,7 @@ m.update(o2    , join='left', overwrite=True, errors='raise')
 m.update(cond  , join='left', overwrite=True, errors='raise')
 m.update(photom, join='left', overwrite=True, errors='raise')
 m = m.dropna(how="all")
-m.to_csv("../data/measurements.csv")
+m.to_csv("data/measurements.csv")
 
 
 

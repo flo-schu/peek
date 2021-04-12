@@ -467,14 +467,14 @@ class Data:
         return df
     
     @staticmethod
-    def import_manual_measurements(path):
+    def import_manual_measurements_one_file(path):
         """
         this method needs to be adapted to accomodate other sorts of 
         logged data.
         The most important point, is that the frame has a multiindex,
         consisting of 'time' and 'id'
         """
-        df = pd.read_csv(path)
+        df = pd.read_csv(path)  
         df = df.astype({'mntr_date': str, 'ID_nano': int, 
                         'conductivity': float, 'ID_measure': int})
         df['mntr_date'] = pd.to_datetime(df['mntr_date'])
@@ -497,10 +497,11 @@ class Data:
             data.append(pd.read_csv(os.path.join(path,f), sep=","))
 
         df = pd.concat(data)
+        df.dropna(how="all", inplace=True) # drop rows if all values are NA
 
         df['Timestamp'] = pd.to_datetime(df['SampleDate'], format="%d.%m.%Y")
         df = df.drop(columns=[
-            "EST","Verduennung","STAT","TYPE","Computer", "Anwender",  
+            "Verduennung","STAT","TYPE","Computer", "Anwender",  
             "send", "Dezimalen", "Bemerkung", "Einheit", "Datum", "Zeit", 
             "Probenort", "Methodennummer"
             ])
@@ -512,7 +513,7 @@ class Data:
         df = df.pivot(
             index=["time","msr_id"], 
             columns=["Methodenname"], 
-            values=["Messwert","A","NTU"]
+            values=["Messwert","A","NTU","EST"]
             )
         
         # transofrm column multiindex to normal index
@@ -525,6 +526,53 @@ class Data:
             "Messwert__NITRIT" :"Nitrite",
             "Messwert__o-PHOSPHAT" :"Phosphate",
         })
+
+        return df
+
+    @staticmethod
+    def import_manual_measurements(path):
+        """
+        transferrable method, which returns a dataframe of KNICK MUltioxy 907
+        data. Data must be in CSV format with unicode encoding.
+
+        param   indicates the measured paramter (O2, conductivity, ...)
+                this string must be present in the filenames
+        tag     is the TAG (Messstelle) set in the device
+        """
+        files = glob(path)
+
+        pd.DataFrame
+        data = []
+        for f in files:
+            data.append(pd.read_table(os.path.join(path,f), sep=","))
+
+        df = pd.concat(data).sort_values('Timestamp')
+        
+        df['AnnotationText'] = df['AnnotationText'].fillna(999)
+        df = df.astype({'AnnotationText': int})
+        
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        df = df.drop(columns=["SensoFace", "SensorOrderCode", "DeviceErrorFlag", 
+                              "SensorSerialCode"])
+
+        # some edits to columns
+        df = df.rename(columns={'OxyConcentration':'oxygen', 
+                                'CondConductance': 'conductivity',
+                                'TemperatureCelsius':'temperature_device',
+                                'OxyPartialPressure': 'partial_pressure'})
+
+        try:
+            df['oxygen'] = df['oxygen'] / 1000 # to mg/L
+        except KeyError:
+            pass
+        # df['oxygen_unit'] = "mg_L"
+
+        if tag is not None:
+            df = df[df['LoggerTagName'] == tag]
+            df = df.drop(columns=['LoggerTagName'])
+
+        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'AnnotationText']], names=['time','msr_id'])
+        df = df.drop(columns=["Timestamp", "AnnotationText"])
 
         return df
 
