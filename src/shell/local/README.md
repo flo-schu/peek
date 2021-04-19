@@ -10,7 +10,7 @@ step 1 and 3
 
 ## step 1
 
-`source src/shell/local/1_move_files.sh`
+`source src/shell/local/1_move_files.sh data/pics`
 
 ## step 2
 
@@ -42,12 +42,27 @@ in the correct folders.
 choose series where images were taken twice. In <data/pics/${DATE}> replace
 ${DATE} with the date you want to look for duplicates. Alternatively
 you can look at the folders by yourself
-`find data/pics/20210402 -mindepth 1 -maxdepth 1 -type d -exec bash -c "echo -ne '{} '; find '{}' -type f -name '*.jpeg' | wc -l" \; | awk '$NF>3'`
+`find data/pics/20210413 -mindepth 1 -maxdepth 1 -type d -exec bash -c "echo -ne '{} '; find '{}' -type f -name '*.jpeg' | wc -l" \; | awk '$NF>3'`
 
 ## step 4
 
-`source src/shell/local/4_move_and_rename.sh 20210326 20210330`
+`source src/shell/local/4_move_and_rename.sh 20210413 20210416`
 
 This script loops over the folder structure and renames and copies the files
 to the directory <data/pics_classic/$DATE>
 After this happend Kaarina's analysis can be applied to the images.
+
+## step 5
+
+launch __ImageJ__ and execute from the Plugins "Preparation" and "Detection"
+Detection needs to be run twice for Daphnia and Culex
+
+## step 6
+
+remove the hashtags in front of the analyzed date session directories
+execute `read_kaananoij.R` to read all measurement files.
+
+## step 7
+
+execute read_measurements.py
+with evaluate classic, create analyses of the data.
