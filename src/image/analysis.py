@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import itertools as it
 import matplotlib as mpl
+from datetime import datetime as dt
 from glob import glob
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
@@ -435,42 +436,87 @@ class Data:
         self.img_num = img_num
         self.images = []
 
-    @staticmethod
-    def combine_data_classic():
-        data = Data.read_csv_list(glob("../data/pics_classic/results/*.csv"))
-        meta = Data.read_csv_list(glob("../data/pics_classic/meta/*meta.csv"), 
-                kwargs={"dtype":{"time":str,"id":int}})
-        meta['picture'] = meta.groupby(["date","id"]).cumcount()
+    @classmethod
+    def combine_data_classic(cls, datapath, interpolation_cfg={"method":"pad"}):
+        data = Data.read_csv_list(glob(os.path.join(datapath, "pics_classic/results/*.csv")))
+
+        meta = cls.read_meta(os.path.join(datapath, "pics_classic/meta/*meta.csv"))
         df = data.merge(meta, how="left", on=["date","id", "picture"])
 
-        # if there is an error it is because 
-        m = pd.read_csv("../data/measurements.csv")
-        m.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
-        m['id'].fillna(0, inplace=True)
-        m = m.astype({"id":int})
+        m = cls.read_measurements(os.path.join(datapath, "measurements.csv"))
         df = df.merge(m, how="left", on=["date","id"])
 
-        # manual observations --------------------------------------------------
-        obs = Data.read_csv_list(glob("../data/raw_measurements/organisms/*.csv"), 
+        # manual observations ==================================================
+        obs = Data.read_csv_list(glob(os.path.join(datapath, "raw_measurements/organisms/*.csv")), 
                 kwargs={"dtype":{"time":str,"id":int}})
         obs.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
+        # interpolate missing values -------------------------------------------
+        # get first observation of manual observations
+        firstobs = dt.strftime(pd.to_datetime(obs.date, format="%Y-%m-%d").min(), 
+                               format="%Y-%m-%d")
+        # construct data frame from dates and ids
+        obscomp = cls.expand_grid({
+            "date": df.date.unique()[np.where(df.date.unique() >= firstobs)[0]],
+            "id": range(1,81)
+        })
+        obs = obs.merge(obscomp, "right", on=["date","id"])
+        # apply lambda function to each group. I like this approach a lot
+        # there are many constraints on the function so not much can go wrong
+        # only one NA value is at most replaced and can only go forward.
+        obs = obs.groupby(["id"]).apply(
+            lambda group: group.interpolate(**interpolation_cfg)
+        )
         df = df.merge(obs, "left", on=["date","id"])
 
         df["time"] = pd.to_datetime(df.date+df.time, format="%Y-%m-%d%H%M%S")
         df.set_index(["time","id", "picture"], inplace=True)
         df.drop(columns="date", inplace=True)
-        df.to_csv("../data/pics_classic/data.csv", index=True)
+        df.to_csv(os.path.join(datapath, "pics_classic/data.csv"), index=True)
 
         return df
+
+    @staticmethod
+    def read_meta(globpath):
+        """
+        convenience function for reading all metafiles from a directory created
+        by read_meta.py
+
+        globpath    should be constructed in order to select all csv files 
+                    e.g. "data/pics_classic/meta/*meta.csv".
+                    See documentation of glob()
+        """
+        meta = Data.read_csv_list(glob(globpath), 
+        kwargs={"dtype":{"time":str,"id":int}})
+        meta['picture'] = meta.groupby(["date","id"]).cumcount()
+        
+        return meta
+
+    @staticmethod
+    def read_measurements(path):
+        """
+        convenience function for gathering the output of read_measurements.py
+        """
+        # if there is an error it is because 
+        m = pd.read_csv(path)
+        m.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
+        m['id'].fillna(0, inplace=True)
+        m = m.astype({"id":int})
+
+        return m
 
     @staticmethod
     def read_csv_list(filenames, kwargs={}):
         df = pd.DataFrame()
         for filename in filenames:
             df = df.append(pd.read_csv(filename, **kwargs))
-
         return df
     
+    @staticmethod
+    def expand_grid(data_dict):
+        """Create a dataframe from every combination of given values."""
+        rows = it.product(*data_dict.values())
+        return pd.DataFrame.from_records(rows, columns=data_dict.keys())
+
     @staticmethod
     def import_manual_measurements_one_file(path):
         """
