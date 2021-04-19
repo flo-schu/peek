@@ -8,7 +8,8 @@ import itertools as it
 import numpy as np
 
 # join all files for analysis
-data = Data.combine_data_classic()
+data = Data.combine_data_classic(datapath="../data",
+    interpolation_cfg={"method":"pad", "limit":1, "limit_direction":"forward"})
 data.fillna(0, inplace=True)
 
 # count organisms per 
@@ -34,14 +35,14 @@ d = calc.aggregate(
     d, {"count":"max", "mean_size": "mean"}, names=["count"],
     freq="D", groups=groups )
 
+d.query("id==1")
+
 # plt correlation between image analysis count and manual count
 pdat = d.query("species=='Culex'").query("time >= '2021-04-09'").reset_index()
 plt.plot(range(-1,26), range(-1,26), color="black")
 plt.scatter(pdat["culex_larvae"], pdat["count"])
 plt.xlabel("manual count")
 plt.ylabel("algorithm count")
-plt.xlim(-1,22)
-plt.ylim(-1,22)
 
 # plot.show_ts_classes(d.query("id==1"), classcol="species", value="mean_size")
 
@@ -114,6 +115,7 @@ plt.show()
 
 pdat = d.reset_index().query("species == 'Culex'")
 pdat["larvae"] = np.where(pdat["time"] == "2021-04-09", pdat["culex_larvae"], pdat["count"])
+pdat["larvae"] = np.where(pdat["time"] == "2021-04-16", pdat["culex_larvae"], pdat["count"])
 pdat["culex"] = pdat["larvae"] + pdat["culex_adults"] + pdat["culex_pupae"]
 # pdat["culex"] = np.where(pdat["id"] == 34, 10, pdat["culex"])
 pdat.rename(columns={"culex_adults":"adults", "culex_pupae":"pupae"}, inplace=True)
