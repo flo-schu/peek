@@ -56,13 +56,14 @@ After this happend Kaarina's analysis can be applied to the images.
 
 launch __ImageJ__ and execute from the Plugins "Preparation" and "Detection"
 Detection needs to be run twice for Daphnia and Culex
+after everything is done. Delete the "#" symbols in fron to the date folders
 
 ## step 6
 
 remove the hashtags in front of the analyzed date session directories
 execute `read_kaananoij.R` to read all measurement files.
+execute `python src/read_measurements.py` to import manual measurements
 
 ## step 7
 
-execute read_measurements.py
 with evaluate classic, create analyses of the data.
