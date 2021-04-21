@@ -76,18 +76,21 @@ class Tag(Files):
 
         # save_tag_slice
         img_orig = tag.pop('tag_image_orig')
-        p = self.create_dir(os.path.join(self.analysis, 'tag_image_orig'))
-        imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_orig)
+        if img_orig.size > 0:
+            p = self.create_dir(os.path.join(self.analysis, 'tag_image_orig'))
+            imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_orig)
 
         # save tag slice from diff pic (maybe not necessary)
         img_diff = tag.pop('tag_image_diff')
-        p = self.create_dir(os.path.join(self.analysis, 'tag_image_diff'))
-        imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_diff)
+        if img_diff.size > 0:
+            p = self.create_dir(os.path.join(self.analysis, 'tag_image_diff'))
+            imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_diff)
 
         # save contour
         contour = tag.pop('tag_contour')
-        p = self.create_dir(os.path.join(self.analysis, 'tag_contour'))
-        np.save(os.path.join(p, str(int(self.id))+'.npy'), contour)
+        if contour.size > 0:
+            p = self.create_dir(os.path.join(self.analysis, 'tag_contour'))
+            np.save(os.path.join(p, str(int(self.id))+'.npy'), contour)
 
         p = tag.pop("path")
         return pd.Series(tag), p

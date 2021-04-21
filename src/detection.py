@@ -23,7 +23,7 @@ config = Files.read_settings(os.path.join(sdir, args.config))
 print("using the following settings:", config)
 
 # load images
-s = Series(args.path)
+s = Series(args.path, image_file_type=config["image_file_type"])
 img1 = s.images[args.image1]
 img2 = s.images[args.image2]
 nano = os.path.basename(args.path)

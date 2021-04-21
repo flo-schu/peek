@@ -4,7 +4,7 @@ from image.process import Image
 from image.analysis import Preprocessing
 from image.detectors.base import Detector, Mask, Tagger
 from progress.bar import IncrementalBar
-# import gc
+import gc
 
 # here I can create my own individual program of functions, that I want to execute
 # This is very nice, because here it makes it explicit what is to be done,
@@ -129,10 +129,11 @@ class MovementEdgeDetector(Detector):
             tags.add("properties", properties)
             tags.add("tag_contour", contours)
             tags.add("tag_image_orig", steps[0])
+            gc.collect()
             roi_diff = Detector.get_roi(m2.img, poi, search_width=detector_config["search_radius"])
             tags.add("tag_image_diff", roi_diff)
 
-            # gc.collect()
+            gc.collect()
             if progress_bar:
                 bar.next()
 

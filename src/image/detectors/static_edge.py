@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 # but leaves the overhead out of the way
 
 
-class RegionGrowingDetector(Detector):
+class StaticEdgeDetector(Detector):
     class Slice(Mask):
         def create_masks(self, pars):
             super().create_masks(pars)
@@ -30,9 +30,9 @@ class RegionGrowingDetector(Detector):
         def wrap_up(self, trim_top):
             self.update_props("xpoi", [px+0 for px, py in self.pois])
             self.update_props("ypoi", [py+trim_top for px, py in self.pois])
-            self.drop('id')
-            self.drop('select')
             del self.pois
+            del self._nitems
+            del self.tag_image_diff
 
 
     @staticmethod
@@ -77,12 +77,19 @@ class RegionGrowingDetector(Detector):
             impp.append(Image.tag_image(impp[1], contours))
             self.plot_grid(impp)
 
-        # here comes the detector [MAIN DIFFERENCE TO MOVEMENT_EDGE.py]
 
-        tags.pois = pois
-        tags.tag_contour = contours
+        for poi, cnt in zip(pois, contours):
+            # rescale and slice
+            cnt = tags.rescale(cnt, impp[0], impp[1])
+            poi = tags.rescale(poi, impp[0], impp[1])
+            slc = Image.slice_image(impp[0], *cv.boundingRect(cnt))
+
+            tags.add("pois", poi)
+            tags.add("tag_contour", cnt)
+            tags.add("tag_image_orig", slc)
+            tags.tick()
+
         tags.wrap_up(trim_top=m.pars['trim']['t'])
-
         return tags
 
 

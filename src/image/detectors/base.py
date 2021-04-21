@@ -359,11 +359,11 @@ class Detector():
 
     @staticmethod
     def get_roi(img, poi, search_width):
-        im = img.copy()
+        # im = img.copy()
         y, x, c = img.shape
         pt1 = tuple([max(p - search_width, 0) for p in poi])
         pt2 = tuple([min(poi[0] + search_width, x), min(poi[1] + search_width, y)])
-        return im[pt1[1]:pt2[1], pt1[0]:pt2[0], :]
+        return img[pt1[1]:pt2[1], pt1[0]:pt2[0], :]
 
     @classmethod
     def detect(cls, img, poi, search_width, detector_fun, detector_args={}, plot=False ):
@@ -474,13 +474,17 @@ class Detector():
         return [(p, c) for by, p, c in sorted(select)]
     
 class Tagger():
+    _nitems = 0
     def __init__(self):
         self.tag_contour = []
         self.tag_image_orig = []
         self.tag_image_diff = []
         self.properties = []
         self.pois = []
-    
+
+    def tick(self):
+        self._nitems += 1
+
     def add(self, tag, value):
         getattr(self, tag).append(value)
 
@@ -499,6 +503,17 @@ class Tagger():
                     except KeyError:
                         pass
 
+    @staticmethod
+    def rescale(a, img_orig, img_scaled):
+        """
+        returns a scaled version of an input array 
+        a numpy array of x and y scaling factors [x-scale, y-scale].
+        To restore original scalings. 
+        return array is backtransformed to int
+        """
+        xy = np.array(img_scaled.shape[:2]) / np.array(img_orig.shape[:2])
+        scld = a / xy
+        return scld.astype(int)
 
     def show(self, img):
         cs = [c for c in self.tag_contour if c is not None]
@@ -512,6 +527,9 @@ class Tagger():
         plt.imshow(im)
 
     def update_props(self, key, val):
+        if len(self.properties) == 0:
+            self.properties = [{} for i in range(self._nitems)]
+
         if isinstance(val, list):
             assert len(val) == len(self.properties), "val should have the same length as properties"
         

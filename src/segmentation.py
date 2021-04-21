@@ -5,7 +5,7 @@ import argparse
 from utils.manage import Files
 from image.process import Image
 from image.analysis import Annotations
-from image.detectors.region_growing import RegionGrowingDetector
+from image.detectors.static_edge import StaticEdgeDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='path to image')
@@ -28,7 +28,7 @@ img = Image(args.input)
 # make checks in tag_image
 
 # initialize detector
-detector = RegionGrowingDetector()
+detector = StaticEdgeDetector()
 
 # tag image
 tags = detector.tag_image(
@@ -43,7 +43,7 @@ print('tagging complete')
 
 # export tags
 nano = os.path.basename(args.input)
-a = Annotations(img, 'moving_edge', tag_db_path="")
+a = Annotations(img, 'static_edge', tag_db_path="")
 a.read_new_tags(pd.DataFrame(tags.__dict__))
 if args.backup != '':
     Files.copy_files(args.path, args.backup, ex1='.tiff', ex2="PNAN")

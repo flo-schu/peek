@@ -280,20 +280,22 @@ class Image(Files):
     def read_tags(self):
         self.tags = pd.csv
 
-    @staticmethod
-    def cut_slices(image, contours, mar=0):
+    @classmethod
+    def cut_slices(cls, image, contours, mar=0):
         """
         mar:            margin to be drawn around the tag boxes
         """
-        img = image.copy()
         slices = []
-
         for c in contours:
             (x, y, w, h) = cv2.boundingRect(c)
-            slc = img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
+            slc = cls.slice_image(image, x, y, w, h, mar)
             slices.append(slc)
         
         return slices
+
+    @staticmethod
+    def slice_image(img, x, y, w, h, mar=0):
+        return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
 
     @staticmethod
     def tag_image(image, contours, mar=0):
@@ -364,11 +366,12 @@ class Series(Image):
         directory="", 
         image_list=[], 
         struct_name="series_struct",
-        import_image=True
+        import_image=True,
+        image_file_type="tiff"
         ):
         self.path = directory
         self.id = os.path.basename(self.path)
-        self.struct = self.browse_subdirs_for_files(directory, "tiff")
+        self.struct = self.browse_subdirs_for_files(directory, image_file_type)
         self.images = self.read_files_from_struct(import_image)
 
     def read_files_from_struct(self, import_image):
