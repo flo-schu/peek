@@ -12,3 +12,4 @@
 *.docx
 *.jpeg
 *checkpoint.ipynb
+.virtual_documents
