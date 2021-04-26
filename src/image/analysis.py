@@ -515,6 +515,13 @@ class Data:
         return df
     
     @staticmethod
+    def flatten_columns_and_replace(df, search=None, replace=None):
+        collist = [a+b for a, b in list(df.columns.to_flat_index())]
+        collist = [colname.replace(search, replace) for colname in collist]
+        df.columns = collist
+        return df
+
+    @staticmethod
     def expand_grid(data_dict):
         """Create a dataframe from every combination of given values."""
         rows = it.product(*data_dict.values())
@@ -537,51 +544,6 @@ class Data:
         df = df.drop(columns=['mntr_date','ID_measure'])
         return df
 
-    @staticmethod
-    def import_photometer(path):
-        """
-        in preparation only the first row (column names) of the files need to be 
-        modified: Change Verdünnung to Verduennung. Then no key errors will occurr.
-        """
-        files = Files.search_files(path, 'nutrients')
-        corrections = Files.search_files(path, 'corrections')
-
-        data = []
-        for f in files:
-            data.append(pd.read_csv(os.path.join(path,f), sep=","))
-
-        df = pd.concat(data)
-        df.dropna(how="all", inplace=True) # drop rows if all values are NA
-
-        df['Timestamp'] = pd.to_datetime(df['SampleDate'], format="%d.%m.%Y")
-        df = df.drop(columns=[
-            "Verduennung","STAT","TYPE","Computer", "Anwender",  
-            "send", "Dezimalen", "Bemerkung", "Einheit", "Datum", "Zeit", 
-            "Probenort", "Methodennummer"
-            ])
-
-        df = df.rename(columns={"Timestamp":"time"})
-        df = df.sort_values(["time","Zaehler"])
-        df['msr_id'] = df.groupby(["time","Methodenname"]).cumcount()+1
-
-        df = df.pivot(
-            index=["time","msr_id"], 
-            columns=["Methodenname"], 
-            values=["Messwert","A","NTU","EST"]
-            )
-        
-        # transofrm column multiindex to normal index
-        df.columns = df.columns.to_series().apply('__'.join)
-
-        df = df.rename(columns={
-            "Messwert__AMMONIUM 15":"Ammonium",
-            "Messwert__AMMONIUM 3" :"Ammonium_3",
-            "Messwert__NITRAT" :"Nitrate",
-            "Messwert__NITRIT" :"Nitrite",
-            "Messwert__o-PHOSPHAT" :"Phosphate",
-        })
-
-        return df
 
     @staticmethod
     def import_manual_measurements(path):
@@ -627,60 +589,6 @@ class Data:
 
         df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'AnnotationText']], names=['time','msr_id'])
         df = df.drop(columns=["Timestamp", "AnnotationText"])
-
-        return df
-
-
-    @staticmethod
-    def import_knick_logger(path, param=None):
-        """
-        transferrable method, which returns a dataframe of KNICK MUltioxy 907
-        data. Data must be in CSV format with unicode encoding.
-
-        param   indicates the measured paramter (O2, conductivity, ...)
-                this string must be present in the filenames
-        tag     is the TAG (Messstelle) set in the device
-        """
-        if param is not None:
-            files = Files.search_files(path, param)
-        else:
-            files = Files.find_files(path, 'csv')
-
-        data = []
-        for f in files:
-            data.append(pd.read_table(os.path.join(path,f), sep=","))
-
-        df = pd.concat(data).sort_values('Timestamp')
-        
-        # replace values
-        df['LoggerTagName'] = df['LoggerTagName'].fillna(999)
-        df["LoggerTagName"] = np.where(df["LoggerTagName"] == "PERMACOSM", "888", df["LoggerTagName"])
-        df["LoggerTagName"] = np.where(df["LoggerTagName"] == "TEMPCOSM", "777", df["LoggerTagName"])
-
-        df = df.astype({'LoggerTagName': int})
-        
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%d.%m.%Y %H:%M")
-        df = df.drop(columns=["SensoFace", "SensorOrderCode", "DeviceErrorFlag", 
-                              "SensorSerialCode", "AnnotationText"])
-
-        # some edits to columns
-        df = df.rename(columns={'OxyConcentration':'oxygen', 
-                                'CondConductance': 'conductivity',
-                                'TemperatureCelsius':'temperature_device',
-                                'OxyPartialPressure': 'partial_pressure'})
-
-        try:
-            df['oxygen'] = df['oxygen'] / 1000 # to mg/L
-        except KeyError:
-            pass
-        # df['oxygen_unit'] = "mg_L"
-
-        # if tag is not None:
-        #     df = df[df['LoggerTagName'] == tag]
-        #     df = df.drop(columns=['LoggerTagName'])
-
-        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'LoggerTagName']], names=['time','msr_id'])
-        df = df.drop(columns=["Timestamp", "LoggerTagName"])
 
         return df
 
