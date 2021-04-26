@@ -43,11 +43,11 @@ manual.drop(columns="mntr_date", inplace=True)
 # Because if a 3rd person looks at this no one will understand. Also
 # This would be way to tedius to implement here
 
-path = 'data/raw_measurements/physicochemical_knick/'
-grp = [pd.Grouper(freq='D', level='time'),"msr_id"]
-o2 = Data.import_knick_logger(path, 'o2', "NANO2")
+path = "data/raw_measurements/physicochemical_knick/"
+grp = [pd.Grouper(freq="D", level="time"),"msr_id"]
+o2 = Data.import_knick_logger(path, "o2")
 o2 = o2.groupby(grp).nth(1)
-cond = Data.import_knick_logger(path, 'conductivity', "NANO2")
+cond = Data.import_knick_logger(path, "conductivity")
 cond = cond.groupby(grp).last()
 
 # merging happens here =) and it works like a charm ----------------------------

@@ -632,7 +632,7 @@ class Data:
 
 
     @staticmethod
-    def import_knick_logger(path, param=None, tag=None):
+    def import_knick_logger(path, param=None):
         """
         transferrable method, which returns a dataframe of KNICK MUltioxy 907
         data. Data must be in CSV format with unicode encoding.
@@ -652,12 +652,16 @@ class Data:
 
         df = pd.concat(data).sort_values('Timestamp')
         
-        df['AnnotationText'] = df['AnnotationText'].fillna(999)
-        df = df.astype({'AnnotationText': int})
+        # replace values
+        df['LoggerTagName'] = df['LoggerTagName'].fillna(999)
+        df["LoggerTagName"] = np.where(df["LoggerTagName"] == "PERMACOSM", "888", df["LoggerTagName"])
+        df["LoggerTagName"] = np.where(df["LoggerTagName"] == "TEMPCOSM", "777", df["LoggerTagName"])
+
+        df = df.astype({'LoggerTagName': int})
         
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%d.%m.%Y %H:%M")
         df = df.drop(columns=["SensoFace", "SensorOrderCode", "DeviceErrorFlag", 
-                              "SensorSerialCode"])
+                              "SensorSerialCode", "AnnotationText"])
 
         # some edits to columns
         df = df.rename(columns={'OxyConcentration':'oxygen', 
@@ -671,12 +675,12 @@ class Data:
             pass
         # df['oxygen_unit'] = "mg_L"
 
-        if tag is not None:
-            df = df[df['LoggerTagName'] == tag]
-            df = df.drop(columns=['LoggerTagName'])
+        # if tag is not None:
+        #     df = df[df['LoggerTagName'] == tag]
+        #     df = df.drop(columns=['LoggerTagName'])
 
-        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'AnnotationText']], names=['time','msr_id'])
-        df = df.drop(columns=["Timestamp", "AnnotationText"])
+        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'LoggerTagName']], names=['time','msr_id'])
+        df = df.drop(columns=["Timestamp", "LoggerTagName"])
 
         return df
 
