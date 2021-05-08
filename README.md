@@ -10,6 +10,11 @@ Nanocosm experiment with Daphnia Magna and Culex Pipiens
 + upgrade pip:   python -m pip install --upgrade pip
 + install requirements: pip install -r requirements.txt
 
+## building a distributable
+
+this makes a distributable bundle for the nutrient app
+`pyinstaller --noconfirm --onefile --clean --name="nutrispeech" --workpath="binaries" --distpath="binaries/dist" --paths src --collect-submodules nutrients .\nutrispeech.spec`
+
 ## working on eve cluster
 
 it is recommended to use full paths, because than the scripts can be submitted

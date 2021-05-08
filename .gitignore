@@ -1,5 +1,6 @@
 /env/
 /env_minimal/
+/envs/
 /data/
 /.vscode/
 *.pyc
@@ -13,3 +14,4 @@
 *.jpeg
 *checkpoint.ipynb
 .virtual_documents
+binaries
