@@ -42,7 +42,6 @@ df = df.astype({"msr_id": int})
 
 df["oxygen"] = df["oxygen"] / 1000 # to mg/L
 
-
 # analyse daily variation
 
 
@@ -88,7 +87,16 @@ ax.plot(x, y, c="tab:orange", linestyle="--")
 
 # then also the other values can be used to validate the model
 
-df.to_csv("data/measurements/oxygen.txt", index=False)
 
 
-df.query("date == '2021-04-09'")
+
+df = df.drop(columns=["time", "daytime", "ts", "temperature_device", "partial_pressure"])
+df = df.rename(columns={"date":"time"})
+df = df.set_index(["time","msr_id"])
+
+nanos = df.query("msr_id <= 100")
+
+# save nth value (no computation involved)
+grp = [pd.Grouper(freq="D", level="time"),"msr_id"]
+nanos.groupby(grp).nth(1).to_csv("data/measurements/oxygen.txt")
+
