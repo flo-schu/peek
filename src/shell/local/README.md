@@ -17,7 +17,7 @@ step 1 and 3
 `source src/shell/local/2_read_sessions.sh 20210326 20210330`
 process images with normal script to read image files (read_eve.py)
 
-after "read_sessions.sh" __list as many date sessions__ as you want. The program
+after "read_sessions.sh" __list as many date sessions__ as you want. The program.
 will iterate over all of them and read QR codes and copy thumbnails of
 errors while reading the qr codes into <data/image_analysis/qr/$DATE> where $DATE
 is the same as the input date
@@ -60,9 +60,9 @@ after everything is done. Delete the "#" symbols in fron to the date folders
 
 ## step 6
 
-remove the hashtags in front of the analyzed date session directories
-execute `read_kaananoij.R` to read all measurement files.
-execute `python src/read_measurements.py` to import manual measurements
+import image data and all measurements. To improve data quality
+work on individual measurement scripts
+`source src/shell/local/5_import.sh`
 
 ## step 7
 
