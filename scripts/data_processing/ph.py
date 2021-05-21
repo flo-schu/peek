@@ -43,7 +43,7 @@ df = df.astype({"msr_id": int})
 
 df["ts"] = df.time.apply(lambda x: x.strftime("%d.%m.%Y %H:%M:%S"))
 df["daytime"] = pd.to_datetime([t.split(" ")[1] for t in list(df["ts"])], format="%H:%M:%S")
-df["date"] = pd.to_datetime([t.split(" ")[0] for t in list(df["ts"])], format="%d.%m.%Y")
+df["date"] = pd.to_datetime(df.SampleDate, format="%d.%m.%Y")
 
 # ph daily variation
 
@@ -72,7 +72,7 @@ plt.plot(d.time, d.pH, "o", alpha=.5)
 
 
 # save pH measurements
-df = df.drop(columns=["time", "daytime", "ts", "temperature_device"])
+df = df.drop(columns=["time", "daytime", "ts", "temperature_device", "SampleDate"])
 df = df.rename(columns={"date":"time"})
 df = df.set_index(["time","msr_id"])
 
