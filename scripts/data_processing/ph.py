@@ -14,7 +14,9 @@ manual["time"] = pd.to_datetime(manual.mntr_date, format="%Y%m%d")
 manual.rename(columns={"ID_measure":"msr_id", "ID_nano":"nano_id"}, inplace=True)
 manual.drop(columns="mntr_date", inplace=True)
 
-ph_man = manual[["time","msr_id","pH"]].set_index(["time","msr_id"])
+ph_man = manual[["time","msr_id","pH"]] \
+    .set_index(["time","msr_id"]) \
+    .dropna(how="all")
 
 # read data
 df = Data.read_csv_list(
@@ -80,7 +82,7 @@ nanos = df.query("msr_id <= 100")
 grp = [pd.Grouper(freq="D", level="time"),"msr_id"]
 df1 = nanos.groupby(grp).last()
 
-ph = pd.concat([ph_man,df1])
-
+# ph = pd.concat([ph_man,df1])
+ph = df1
 ph.to_csv("data/measurements/ph.txt")
 

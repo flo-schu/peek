@@ -38,10 +38,10 @@ df['msr_id'] = df.groupby(["time","Methodenname"]).cumcount()+1
 # extract nutrient
 df['nutrient'] = ["".join(s.split("mg/L ")[1].split(" ")) for s in list(df["Einheit"])]
 
-# df export turbidity data
+# df export turbidity data (take mean from all measurements)
 df.rename(columns={"NTU":"turbidity", "A": "absorption"}, inplace=True)
 turbidity = df[["time","msr_id","turbidity"]]
-
+turbidity = turbidity.groupby(["time","msr_id"]).mean().reset_index()
 
 # join measured and estimated concentration columns
 df["concentration"] = np.where(pd.isna(df.Bemerkung), df["Messwert"], df["EST"])
