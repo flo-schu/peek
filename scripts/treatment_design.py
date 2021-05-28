@@ -4,11 +4,11 @@ import numpy as np
 from progress.bar import Bar
 from matplotlib import pyplot as plt
 
-rawdata = pd.read_csv("data/grouping.csv")
-
-optimize_columns = ["culex", "radiation", "mdTemp", "conductivity", "oxygen", "pH", "position", "sediment_class"]
+rawdata = pd.read_csv("data/groups/input_data.csv")
+rawdata["culex"] = rawdata["culex_small"] + rawdata["culex_larvae"]
+optimize_columns = ["culex", "radiation", "midday_temperature", "conductivity", "oxygen", "pH", "position", "sediment_class", "status", "daphnia_count"]
 n_groups = 5
-groups = rawdata["Gruppe"].values
+groups = rawdata["group_0"].values
 
 # scale the data
 dataoptim = rawdata[optimize_columns].values
@@ -74,15 +74,17 @@ def plot(df, columns, groups="groups"):
         gdf.boxplot(column=c, layout=(1,5))
         plt.savefig("plots/groups/" + c + ".jpg")
 
-optimized_groups = optimize(data, groups)
+# run optimization
+optimized_groups = optimize(data, groups, iterations=50000)
 
+# plot data
 rawdata["groups"] = optimized_groups
 plot(rawdata, optimize_columns)
 
-plot(rawdata, ["NO2","NO3","NH4","PO4","culex_larvae","culex_add","D_add","headspace","sed_h","turbidity"])
+plot(rawdata, ["NO2","NO3","NH4","PO4","culex_larvae","culex_add","daphnia_add","headspace","sediment_height","turbidity"])
 
 # show mean values
 rawdata.groupby("groups").gdata.mean()
 
-
+# save output and new groups
 rawdata.to_csv("data/groups_optimized.csv", index=False)

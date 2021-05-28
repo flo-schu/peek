@@ -7,6 +7,9 @@ echo "importing measurement data:"
 echo "matching..."
 python "scripts/data_processing/matching.py"
 
+echo "assessment..."
+python "scripts/data_processing/assessment.py"
+
 echo "temperature..."
 python "scripts/data_processing/temperature.py"
 
@@ -22,8 +25,17 @@ python "scripts/data_processing/pH.py"
 echo "nutrients..."
 python "scripts/data_processing/nutrients.py"
 
-echo "organisms..."
+echo "manual organism count..."
 python "scripts/data_processing/organisms.py"
+
+echo "daphnia..."
+python "scripts/data_processing/daphnia.py"
+
+echo "culex..."
+python "scripts/data_processing/culex.py"
+
+echo "additional parameters..."
+python "scripts/data_processing/other.py"
 
 echo "------------------------------"
 
