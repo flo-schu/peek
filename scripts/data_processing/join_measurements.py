@@ -12,6 +12,7 @@ nutrients =  pd.read_csv("data/measurements/nutrients.txt")
 turbidity =  pd.read_csv("data/measurements/turbidity.txt")
 conductivity =  pd.read_csv("data/measurements/conductivity.txt")
 pH =  pd.read_csv("data/measurements/pH.txt")
+algae =  pd.read_csv("data/measurements/algae.txt")
 
 # load data matched directly by nano id
 organisms = pd.read_csv("data/measurements/organisms.txt", dtype={"nano_id":int})
@@ -42,6 +43,7 @@ data = data.merge(oxygen,        how="left", left_on=["time","msr_id"], right_on
 data = data.merge(nutrients,     how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
 data = data.merge(turbidity,     how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
 data = data.merge(pH,            how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
+data = data.merge(algae,         how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
 
 # finalize data
 data = data.rename(columns={"nano_id":"id"}) \

@@ -6,12 +6,18 @@ from datetime import datetime as dt
 sys.path.append("src")
 from image.analysis import Data
 
-
-obs = Data.read_csv_list(glob("data/raw_measurements/organisms/*.csv"), 
-                         kwargs={"dtype":{"time":str,"id":int}})
+# read all csv files and parse dates. Can deal with multiple date formats
+obs = Data.read_csv_list(
+    glob("data/raw_measurements/organisms/*.csv"), 
+    kwargs={
+        "dtype":{"time":str,"id":int},
+        "parse_dates": ["time"], 
+        "infer_datetime_format":True
+    }
+)
 obs = obs.rename(columns={"ID_nano":"nano_id"}) \
          .dropna(how="all") 
 # interpolate missing values -------------------------------------------
-
+obs["time"] = pd.to_datetime(obs.time, format)
 
 obs.to_csv("data/measurements/organisms.txt", index=False)

@@ -7,9 +7,6 @@ echo "importing measurement data:"
 echo "matching..."
 python "scripts/data_processing/matching.py"
 
-echo "assessment..."
-python "scripts/data_processing/assessment.py"
-
 echo "temperature..."
 python "scripts/data_processing/temperature.py"
 

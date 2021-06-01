@@ -24,7 +24,7 @@ class CasyFile:
         comment = getattr(self, "comment 1").split("_")
         
         try:
-            self.id = comment[1]
+            self.id = comment[1].replace("^", "")
         except IndexError:
             self.id = "None"
 
