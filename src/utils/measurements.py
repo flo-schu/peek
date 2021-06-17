@@ -10,6 +10,9 @@ class CasyFile:
         self.meta(data=raw, split=splitfile)
         self.measurements(data=raw, split=splitfile)
         self.calculations(data=raw, split=splitfile)
+        self.correct_dilution()
+        self.count_ml = self.dilution_to_ml(self.data[:, 1])
+        self.recalculate()
 
         print("ID:", self.id, "---", "error:", self.error)
 
@@ -19,7 +22,11 @@ class CasyFile:
         for m in meta:
             setattr(self, m[0].lower(), m[1])
 
+        self.dilution = float(self.dilution.replace(" ",""))
+        self.sample_volume = float(self.__dict__.pop("sample volume (µl)"))
+        self.cycles = int(self.__dict__.pop("cycles"))
         self.date = datetime.strptime(self.date, "%d.%m.%y")
+        self.volume_correction = float(self.__dict__.pop("volume correction").replace(" ",""))
 
         comment = getattr(self, "comment 1").split("_")
         
@@ -45,11 +52,46 @@ class CasyFile:
         for c in calculations:
             setattr(self, c[0], c[1])
 
+        self.volume_ml_casy = float(self.__dict__.pop("Volume/ml"))
+        self.counts_ml_casy = float(self.__dict__.pop("Counts/ml"))
+
     def measurements(self, data, split):
         measurements = [i.split("\t") for i in data[split[0]:split[1]]]
         
         self.data = np.array(measurements, dtype=float)
+        self.size = self.data[:, 0]
 
     def plot(self):
         plt.plot(self.data[:, 0], self.data[:, 1])
 
+    def correct_dilution(self):
+        self.counts_ml_casy /= self.dilution
+        self.volume_ml_casy /= self.dilution
+
+        if self.dilution == 110:
+            self.dilution = 11 / 1
+        if self.dilution == 103:
+            self.dilution = 5.15 / 0.15
+        if self.dilution == 101:
+            self.dilution = 10.1 / 0.1
+
+        self.counts_ml_casy *= self.dilution
+        self.volume_ml_casy *= self.dilution
+
+    def dilution_to_ml(self, a):
+        """
+        a:          list or array like structure
+        
+        sample_vol: sampled volume in µL
+
+        returns:    a rescaled to per mL values
+        """
+        a = np.array(a)
+        sampled_medium = self.sample_volume * self.cycles
+        return a / sampled_medium * 1000 * self.dilution / self.volume_correction
+
+
+    def recalculate(self):
+        self.x_volume = 4/3 * np.pi * (self.data[:, 0] / 2) ** 3 
+        self.volume_ml_calc = (self.x_volume * self.count_ml).sum()
+        self.counts_ml_calc = self.count_ml.sum()
