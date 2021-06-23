@@ -43,18 +43,16 @@ for i in np.arange(len(casy_data)):
     # peaks = find_peaks(count_convolved, height=10, distance=10)
     volume = dat.x_volume * count_convolved
     
-    debris = np.where(size < 2, volume, 0).sum()*10e-12*1000 # ml/L
-    cells = np.where(size >= 2, volume, 0)
-    small = np.where(size < 3.5, cells, 0).sum()*10e-12*1000 # ml/L
-    large = np.where(size >= 3.5, cells, 0).sum()*10e-12*1000 # ml/L
+    debris = np.where(size < 2.5, volume, 0).sum()*10e-12*1000 # ml/L
+    large = np.where(size >= 2.5, volume, 0).sum()*10e-12*1000 # ml/L
     ratio = large/debris
     # store data
 
-    algae_data.append([dat.id, dat.date, count_convolved.sum()*1000, volume.sum()*10e-12*1000, debris, small, large, ratio])
+    algae_data.append([dat.id, dat.date, count_convolved.sum()*1000, volume.sum()*10e-12*1000, debris, large, ratio])
     
 
 
-colnames = ["msr_id", "time", "cell_count", "cell_volume", "cell_vol_debris", "cell_vol_small", "cell_vol_large", "cell_dl_ratio"]
+colnames = ["msr_id", "time", "cell_count", "cell_volume", "cell_vol_debris", "cell_vol_large", "cell_dl_ratio"]
 proc = pd.DataFrame.from_records(algae_data, columns=colnames) 
 proc["isid"] = proc["msr_id"].str.isdigit()
 data = proc.query("isid") \

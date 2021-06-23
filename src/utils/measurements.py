@@ -67,6 +67,7 @@ class CasyFile:
         count_convolved = np.convolve(self.data[:, 1], kernel, mode='same')
 
         plt.plot(self.data[:, 0], count_convolved)
+        plt.vlines(x=2.5,ymin=0,ymax=max(count_convolved), linestyles="--")
 
     def correct_dilution(self):
         self.counts_ml_casy /= self.dilution
