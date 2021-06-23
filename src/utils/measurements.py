@@ -3,14 +3,15 @@ import numpy as np
 from datetime import datetime
 
 class CasyFile:
-    def __init__(self, path, splitfile=[28,1052]):
+    def __init__(self, path, splitfile=[28,1052], correct_dilution=False):
         with open(path, "r") as f:
             raw = f.read().splitlines()
              
         self.meta(data=raw, split=splitfile)
         self.measurements(data=raw, split=splitfile)
         self.calculations(data=raw, split=splitfile)
-        self.correct_dilution()
+        if correct_dilution:
+            self.correct_dilution()
         self.count_ml = self.dilution_to_ml(self.data[:, 1])
         self.recalculate()
 
@@ -61,8 +62,11 @@ class CasyFile:
         self.data = np.array(measurements, dtype=float)
         self.size = self.data[:, 0]
 
-    def plot(self):
-        plt.plot(self.data[:, 0], self.data[:, 1])
+    def plot(self, smoothing_kernel=1):
+        kernel = np.ones(smoothing_kernel) / smoothing_kernel
+        count_convolved = np.convolve(self.data[:, 1], kernel, mode='same')
+
+        plt.plot(self.data[:, 0], count_convolved)
 
     def correct_dilution(self):
         self.counts_ml_casy /= self.dilution
