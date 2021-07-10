@@ -22,6 +22,9 @@ python "scripts/data_processing/pH.py"
 echo "nutrients..."
 python "scripts/data_processing/nutrients.py"
 
+echo "algae..."
+python "scripts/data_processing/algae.py"
+
 echo "manual organism count..."
 python "scripts/data_processing/organisms.py"
 
