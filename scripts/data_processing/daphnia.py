@@ -9,7 +9,11 @@ data = pd.read_csv("data/pics_classic/results/d_size.csv")
 data = data.query(
         "~ (picture_number == 86 & date == '2021-05-20') |" +
         "~ (id == 55 & date == '2021-05-20') |" +
-        "~ (id == 29 & date == '2021-05-20')"
+        "~ (id == 7 & date == '2021-06-22') |" +
+        "~ (id == 24 & date == '2021-06-22') |" +
+        "~ (id == 53 & date == '2021-07-02') |" +
+        "~ (id == 29 & date == '2021-05-20')" 
+
     ) 
 
 individuals = data.assign(pic_count = lambda x: x.groupby(["id", "date", "picture"]).value.transform(np.count_nonzero)) \
