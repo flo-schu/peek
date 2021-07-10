@@ -60,7 +60,15 @@ data = proc.query("isid") \
     .sort_values(by=["time","msr_id"]) \
     .drop(columns=["isid"])
 
-data.to_csv("data/measurements/algae.txt", index=False)
+m2s = pd.read_csv("data/raw_measurements/casy_cell_counter/measurement_to_sampling.csv")
+m2s["measurement_date"] = pd.to_datetime(m2s.measurement_date, format="%Y%m%d")
+m2s["sample_date"] = pd.to_datetime(m2s.sample_date, format="%Y%m%d")
+data = data.merge(m2s, how="left", left_on="time", right_on="measurement_date") \
+    .drop(columns=["time","measurement_date"]) \
+    .rename(columns={"sample_date":"time"}) \
+    .set_index(["time","msr_id"])
+
+data.to_csv("data/measurements/algae.txt")
 
 
 # data.query("msr_id == 4")
