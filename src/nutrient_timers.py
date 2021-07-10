@@ -35,6 +35,17 @@ programs = {
         120: ""
     },
 
+    'phosphate2' : {
+        0:"start, 6 Tropfen Lösung 1",
+        30: "schütteln, dann 6 Tropfen Lösung 2",
+        60: "schütteln, dann Warteschlange.",
+        70: "messen",
+        90: "30",
+        110: "10",
+        120: ""
+    },
+
+
     # 3 gleichzeitig für stressfreies messen
     # nach schütteln 5 minuten warten
     'nitrate' : {

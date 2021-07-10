@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 
 class CasyFile:
-    def __init__(self, path, splitfile=[28,1052], correct_dilution=False):
+    def __init__(self, path, splitfile=[28,1052], correct_dilution=False, verbose=False):
         with open(path, "r") as f:
             raw = f.read().splitlines()
              
@@ -15,7 +15,8 @@ class CasyFile:
         self.count_ml = self.dilution_to_ml(self.data[:, 1])
         self.recalculate()
 
-        print("ID:", self.id, "---", "error:", self.error)
+        if verbose:
+            print("ID:", self.id, "---", "error:", self.error)
 
     def meta(self, data, split):
         meta = [i.split("\t") for i in data[:split[0]]]
