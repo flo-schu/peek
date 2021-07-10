@@ -125,6 +125,10 @@ rawdata.to_csv("data/groups/groups_optimized.csv", index=False)
 # groups=pd.read_clipboard()
 # rawdata=pd.concat([rawdata, groups], axis=1)
 # plot data
+
+# rawdata = pd.read_csv("data/groups/groups_optimized.csv")
+
 plot(rawdata, optimize_columns, groups="groups_1_0.09")
 plot(rawdata, ["NO2","NO3","NH4","PO4","culex_larvae","culex_add","daphnia_add","headspace","sediment_height","turbidity", "algae_signal", "culex_adults"], groups="groups_1_0.09")
 # show mean values
+
