@@ -7,12 +7,12 @@ data = pd.read_csv("data/pics_classic/results/d_size.csv")
 
 # exclude problem images
 data = data.query(
-        "~ (picture_number == 86 & date == '2021-05-20') |" +
-        "~ (id == 55 & date == '2021-05-20') |" +
-        "~ (id == 7 & date == '2021-06-22') |" +
-        "~ (id == 24 & date == '2021-06-22') |" +
-        "~ (id == 53 & date == '2021-07-02') |" +
-        "~ (id == 29 & date == '2021-05-20')" 
+        "~ ( (picture_number == 86 & date == '2021-05-20') |" +
+        "    (id == 55 & date == '2021-05-20') |" +
+        "    (id == 7 & date == '2021-06-22') |" +
+        "    (id == 24 & date == '2021-06-22') |" +
+        "    (id == 53 & date == '2021-07-02') |" +
+        "    (id == 29 & date == '2021-05-20') )" 
 
     ) 
 
@@ -27,7 +27,7 @@ individuals = data.assign(pic_count = lambda x: x.groupby(["id", "date", "pictur
     .assign(first_pic = lambda x: x.groupby(["id", "date"]).picture.transform(np.min)) \
     .assign(isfirst = lambda x: x.picture == x.first_pic) \
     .query("isfirst") \
-    .assign(length = lambda x: np.sqrt( x.value / 35.5)) \
+    .assign(length = lambda x: np.sqrt( x.value / 25.5)) \
     .assign(sizeclass = "None") \
     .assign(sizeclass = lambda x: np.where(x.length > 2.28, "D_adult", x.sizeclass)) \
     .assign(sizeclass = lambda x: np.where(x.length <= 2.28, "D_juvenile", x.sizeclass)) \
