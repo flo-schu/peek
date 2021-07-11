@@ -28,27 +28,34 @@ algae_data = []
 
 for i in np.arange(len(casy_data)):
     dat = casy_data[i]
-    size = dat.size
-    # count = dat.data[:, 1]
-    count_ml = dat.count_ml
-    # difference between data and baseline
-    # diffcount = casy_data[i].data[:, 1] - baseline[:, 1]
+    if dat.error == "None":
+        size = dat.size
+        # count = dat.data[:, 1]
+        count_ml = dat.count_ml
+        # difference between data and baseline
+        # diffcount = casy_data[i].data[:, 1] - baseline[:, 1]
 
-    # smooth 
-    count_convolved = np.convolve(count_ml, kernel, mode='same')
-    # exclude first peak
-    # data_convolved = np.where(size > 1.8, data_convolved, 0)
-    count_convolved = np.where(count_convolved < 0, 0, count_convolved)
-    
-    # peaks = find_peaks(count_convolved, height=10, distance=10)
-    volume = dat.x_volume * count_convolved
-    
-    debris = np.where(size < 2.5, volume, 0).sum()*10e-12*1000 # ml/L
-    large = np.where(size >= 2.5, volume, 0).sum()*10e-12*1000 # ml/L
-    ratio = large/debris
-    # store data
-
-    algae_data.append([dat.id, dat.date, count_convolved.sum()*1000, volume.sum()*10e-12*1000, debris, large, ratio])
+        # smooth 
+        count_convolved = np.convolve(count_ml, kernel, mode='same')
+        # exclude first peak
+        # data_convolved = np.where(size > 1.8, data_convolved, 0)
+        count_convolved = np.where(count_convolved < 0, 0, count_convolved)
+        
+        # peaks = find_peaks(count_convolved, height=10, distance=10)
+        volume = dat.x_volume * count_convolved
+        
+        debris = np.where(size < 2.5, volume, 0).sum()*10e-12*1000 # ml/L
+        large = np.where(size >= 2.5, volume, 0).sum()*10e-12*1000 # ml/L
+        ratio = large/debris
+        # store data
+        algae_data.append([
+            dat.id, dat.date, 
+            count_convolved.sum()*1000, 
+            volume.sum()*10e-12*1000, 
+            debris, 
+            large, 
+            ratio
+        ])
     
 
 

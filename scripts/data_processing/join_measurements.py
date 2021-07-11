@@ -21,6 +21,7 @@ sediment = pd.read_csv("data/measurements/sediment.txt", dtype={"nano_id":int})
 assessment = pd.read_csv("data/measurements/assessment.txt", dtype={"nano_id":int})
 daphnia = pd.read_csv("data/measurements/daphnia.txt", dtype={"nano_id":int})
 culex = pd.read_csv("data/measurements/culex.txt", dtype={"nano_id":int})
+contamination = pd.read_csv("data/contamination/contaminations.csv", dtype={"nano_id":int})
 
 # construct complete data frame from start of the experiment to today
 begin = "2020-11-10"
@@ -36,6 +37,7 @@ data = data.merge(culex,         how="left", left_on=["time", "nano_id"], right_
 data = data.merge(positional,    how="left", left_on=["time", "nano_id"], right_on=["time","nano_id"])
 data = data.merge(sediment,      how="left", left_on=["time", "nano_id"], right_on=["time","nano_id"])
 data = data.merge(assessment,    how="left", left_on=["time", "nano_id"], right_on=["time","nano_id"])
+data = data.merge(contamination, how="left", left_on=["time", "nano_id"], right_on=["time","nano_id"])
 data = data.merge(match,         how="left", left_on=["time", "nano_id"], right_on=["time","nano_id"])
 data = data.merge(conductivity,  how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
 data = data.merge(temperature,   how="left", left_on=["time","msr_id"], right_on=["time", "msr_id"])
@@ -49,5 +51,6 @@ data = data.merge(algae,         how="left", left_on=["time","msr_id"], right_on
 data = data.rename(columns={"nano_id":"id"}) \
     .drop(columns="msr_id") \
     .set_index(["time","id"]) \
-    .dropna(how="all") \
-    .to_csv("data/measurements.csv")
+    .dropna(how="all") 
+    
+data.to_csv("data/measurements.csv")
