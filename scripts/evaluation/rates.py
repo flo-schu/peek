@@ -14,7 +14,7 @@ def interpolate(df, cols="all"):
     df = df.loc[:, cols] \
         .reset_index().set_index("time") \
         .groupby("id") \
-        .apply(lambda g: g.interpolate("time", limit_direction="forward")) \
+        .apply(lambda g: g.interpolate("time", limit_direction="forward", limit=2)) \
         .reset_index().set_index(["id", "time"]) \
         .fillna(0) 
 

@@ -47,7 +47,7 @@ fig = plt.figure()
 nano["culex_small"] = nano["culex_small"]
 sdata = nano.dropna(how="all") \
     .loc[:, ["culex_small", "culex_larvae", "culex_pupae", "culex_adults"]] \
-    .interpolate("time",limit_direction="forward") \
+    .interpolate("time",limit_direction="forward", limit=2) \
     .fillna(0) \
     .rolling("14d").mean() 
 
@@ -67,7 +67,7 @@ ax1.legend(ncol=2, labels=["hatched", "larvae", "pupae", "adults"])
 # Ax 2: Daphnia timeseries
 sdata = nano.dropna(how="all") \
     .loc[:, ["count_D_adult", "count_D_juvenile", "count_D_neo"]] \
-    .interpolate("time",limit_direction="forward") \
+    .interpolate("time",limit_direction="forward", limit=2) \
     .rolling("7d").mean() 
 
 ax2 = fig.add_subplot(312, sharex=ax1, label="Dc")
@@ -93,7 +93,7 @@ ax2.legend(ncol=3, labels=["adults", "juveniles", "neos"])
 # ax2r.set_ylim(0,100)
 
 algae = nano[["cell_vol_large", "cell_vol_debris"]] \
-    .interpolate("time",limit_direction="forward") \
+    .interpolate("time",limit_direction="forward", limit=2) \
     .rolling("7d").mean()
 ymax = np.nan_to_num(algae.values,0).max() * 1.1
 ax3 = fig.add_subplot(313, sharex=ax1, label="oxy")
