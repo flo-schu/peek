@@ -1,6 +1,5 @@
-import sys, os
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, myPath + '/../')
+import sys
+sys.path.append("src")
 
 import shutil
 
