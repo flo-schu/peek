@@ -4,6 +4,9 @@ __IMPORTANT__: The following steps only work from the main folder of the project
 navigate into project folder terminal prompt should look something like this:
 <path/to/project/nanocosm>
 
+always start the virtual environment beforehand
+<https://docs.python.org/3/tutorial/venv.html>
+
 Example for the dates 26.03.2021 (20210326) and 30.03.2021 (20210330). The
 numbers in parentheses can be exchanged or more can be added in the commands in
 step 1 and 3
@@ -42,7 +45,7 @@ in the correct folders.
 choose series where images were taken twice. In <data/pics/${DATE}> replace
 ${DATE} with the date you want to look for duplicates. Alternatively
 you can look at the folders by yourself
-`find data/pics/20210413 -mindepth 1 -maxdepth 1 -type d -exec bash -c "echo -ne '{} '; find '{}' -type f -name '*.jpeg' | wc -l" \; | awk '$NF>3'`
+`find data/pics/20210413 -mindepth 1 -maxdepth 1 -type d -exec bash -c "echo -ne '{} '; find '{}' -type f -name '*.jpeg' | wc -l" \; | awk '$NF!=3'`
 
 ## step 4
 
