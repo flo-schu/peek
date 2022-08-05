@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-#SBATCH -D /work/%u
-#SBATCH -J nanocosm_read
-#SBATCH -t 0-00:01:00
-#SBATCH -c 1
-#SBATCH --mem-per-cpu 10G 
-#SBATCH -o /work/%u/logs/%x-%A-%a.out
-#SBATCH -e /work/%u/logs/%x-%A-%a.err
+#SBATCH --job-name=readqr
+#SBATCH --time=0-00:05:00
+#SBATCH --nodes=1
+#SBATCH --mem-per-cpu=10G 
+#SBATCH --output=/work/%u/nanocosm/logs/%x-%A-%a.out
+#SBATCH --error=/work/%u/nanocosm/logs/%x-%A-%a.err
+#SBATCH --mail-type=begin                              # send mail when job begins
+#SBATCH --mail-type=end                                # send mail when job ends
+#SBATCH --mail-type=fail                               # send mail if job fails
+#SBATCH --mail-user=florian.schunck@ufz.de             # email of user
 
 echo "processing chunk $SLURM_ARRAY_TASK_ID ..."
 
