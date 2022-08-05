@@ -32,7 +32,7 @@ for i, row in qr.iterrows():
     # add correct filename ending to old corrections
     if "_qr.jpeg" not in path:
         path = path.replace(".jpeg", "_qr.jpeg")
-        
+
     # prepend to data dir to path if the path is not absolute and the data_dir
     # prefix is  not in path
     if args.data_dir not in path and not os.path.isabs(path):
@@ -61,7 +61,7 @@ for i, row in qr.iterrows():
     with open(pj, 'r') as file:
         meta = json.load(file)
 
-    meta['id'] = str(row.id_correct).zfill(2)
+    meta['id'] = str(int(row.id_correct)).zfill(2)
     meta['path'] = os.path.join(pnew, f + '.tiff')
     with open(pj, 'w') as file:
         json.dump(meta, file)

@@ -79,8 +79,8 @@ this function works also in any other directory because of usage of `find`.
 `sbatch -a 1-9352 /home/schunckf/projects/nanocosm/src/shell/read_image_better.sh /work/schunckf/nanocosm/data/pics/`
 
 check how well QR Code reading worked
-`cat /work/schunckf/logs/nanocosm_read-1665277-*.err > /home/schunckf/projects/data/detection_err.txt`
-`cat /work/schunckf/logs/nanocosm_read-1665277-*.out > /home/schunckf/projects/data/detection_err.out`
+`cat /work/schunckf/nanocosm/logs/readqr-<jobid>-*.err > /home/schunckf/projects/data/detection_err.txt`
+`cat /work/schunckf/nanocosm/logs/readqr-<jobid>-*.out > /home/schunckf/projects/data/detection_err.out`
 
 ### check QR detection
 
