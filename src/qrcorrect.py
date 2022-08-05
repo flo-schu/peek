@@ -17,7 +17,7 @@ import re
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='csv or txt file with original path and the corrected id')
-parser.add_argument('-r', '--data_dir' , type=str, help='remote root of the image project data', default='/work/schunckf/nanocom')
+parser.add_argument('-r', '--data_dir' , type=str, help='remote root of the image project data', default='/work/schunckf/nanocosm')
 parser.add_argument('-n', '--nrows' , type=int, help='number of rows to be read', default=None)
 parser.add_argument('-s', '--separator' , type=str, help='separator for rows', default=',')
 parser.add_argument('-e', '--error_id' , type=str, help='id of images where qr code could not be read (name of folder)', default='999')
