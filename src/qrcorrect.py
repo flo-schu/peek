@@ -17,6 +17,7 @@ import re
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='csv or txt file with original path and the corrected id')
+parser.add_argument('-r', '--data_dir' , type=str, help='remote root of the image project data', default='/work/schunckf/nanocom')
 parser.add_argument('-n', '--nrows' , type=int, help='number of rows to be read', default=None)
 parser.add_argument('-s', '--separator' , type=str, help='separator for rows', default=',')
 parser.add_argument('-e', '--error_id' , type=str, help='id of images where qr code could not be read (name of folder)', default='999')
@@ -26,13 +27,20 @@ args = parser.parse_args()
 
 qr = pd.read_table(args.input, sep=args.separator, names=['path','id_correct'], nrows=args.nrows)
 for i, row in qr.iterrows():
+    path = row.path
 
-    if not os.path.exists(row.path):
-        print("no QR problem with", row.path)
+    # prepend to data dir to path if the path is not absolute and the data_dir
+    # prefix is  not in path
+    if args.data_dir not in path and not os.path.isabs(path):
+        path = os.path.join([args.data_dir, path])
+        print(path)
+
+    if not os.path.exists(path):
+        print("no QR problem with", path)
         continue
     # read paths and edit paths
-    p = os.path.normpath(os.path.dirname(row.path))
-    f = os.path.basename(row.path).replace('.jpeg', '')
+    p = os.path.normpath(os.path.dirname(path))
+    f = os.path.basename(path).replace('.jpeg', '')
     if "_qr" in f:
         f = f.replace("_qr","")
     print('working in:', p, '-- on image:', f)
