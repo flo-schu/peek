@@ -32,7 +32,7 @@ for i, row in qr.iterrows():
     # prepend to data dir to path if the path is not absolute and the data_dir
     # prefix is  not in path
     if args.data_dir not in path and not os.path.isabs(path):
-        path = os.path.join([args.data_dir, path])
+        path = os.path.join(args.data_dir, path)
         print(path)
 
     if not os.path.exists(path):
