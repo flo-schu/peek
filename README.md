@@ -88,7 +88,7 @@ create an archive of problem qr codes
 `source /home/schunckf/projects/nanocosm/src/shell/archive_qrerrors.sh`
 
 get QR errors (works like a wonder of the world)
-`source copy_to_local.sh` 
+`source copy_to_local.sh`
 
 then the image thumbnails have to be checked and the correct id has to be added in a second column next to
 the error list (qr_errors.txt). Don't add column names
@@ -99,6 +99,9 @@ check if any errors are still present. There should be none after 20201207
 `cat /work/schunckf/data/qr/qr_errors_unresolved.txt`
 
 ### detection of organisms
+
+find the nnumber of sessions
+`find /work/schunckf/nanocosm/data/pics/ -mindepth 2 -maxdepth 2 -type d | wc -l`
 
 read e.g. first 5 series of a specific session. As an array job. This is fast.
 The whole session will be finished in less than a minute

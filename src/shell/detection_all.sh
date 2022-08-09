@@ -31,4 +31,4 @@ PROJECT_DIR="/home/$USER/projects/nanocosm/"
 source "$PROJECT_DIR/env/bin/activate"
 python "$PROJECT_DIR/src/detection.py" \
     "$SERIES" \
-    --config=CONFIG
+    --config=$CONFIG
