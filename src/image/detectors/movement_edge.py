@@ -108,7 +108,7 @@ class MovementEdgeDetector(Detector):
             contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
                                                   cv.CHAIN_APPROX_NONE)
             
-            contours = self.unite_family(hierarchy, contours)
+            contours = self.unite_family(hierarchy, list(contours))
             roi, properties, contours = self.find_ellipses_in_contours(
                 steps[0], contours, draw=False)
             
