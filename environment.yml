@@ -84,4 +84,4 @@ dependencies:
   - zlib=1.2.11=h8ffe710_1014
   - zstd=1.5.2=h6255e5f_1
   - pip:
-    - rawpy==0.17.2
+    - rawpy==0.17.2 [--no-dependencies]
