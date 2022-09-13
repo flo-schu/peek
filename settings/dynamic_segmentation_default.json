@@ -1,5 +1,5 @@
 {
-    "image_file_type":"jpeg",
+    "image_file_type":"tiff",
     "masking_config": "masking_20210225.json",
     "diff_image": {
         "smooth": 3,

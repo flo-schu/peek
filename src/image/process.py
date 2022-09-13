@@ -364,21 +364,23 @@ class Series(Image):
     def __init__(
         self, 
         directory="", 
-        image_list=[], 
-        struct_name="series_struct",
         import_image=True,
+        ignore_struct_path=False,
         image_file_type="tiff"
         ):
         self.path = directory
         self.id = os.path.basename(self.path)
         self.struct = self.browse_subdirs_for_files(directory, image_file_type)
-        self.images = self.read_files_from_struct(import_image)
+        self.images = self.read_files_from_struct(import_image, ignore_struct_path)
 
-    def read_files_from_struct(self, import_image):
+    def read_files_from_struct(self, import_image=True, ignore_struct_path=False):
         images = []
-        for i, path in self.struct.items():
-            img = Image(path)
-            # img.read_struct(import_image)
+        for _, path in self.struct.items():
+            img = Image(
+                path, 
+                import_image=import_image,
+                ignore_struct_path=ignore_struct_path
+            )
             images.append(img)
            
         return images   
