@@ -332,6 +332,8 @@ Two environmental settings (green shelf + normal shelf)
 ### Evaluation
 
 + avg. life expectancy of individuals
++ lyapunov exponent --> dynamical systems analysis
++ dynamical systems analysis MLE, transition matrix ...
 
 ## Results and Observations
 
