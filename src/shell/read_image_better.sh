@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=readqr
-#SBATCH --time=0-00:01:00
+#SBATCH --time=0-00:05:00
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=10G 
 #SBATCH --output=/work/%u/nanocosm/logs/%x-%A-%a.out
