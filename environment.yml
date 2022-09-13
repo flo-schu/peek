@@ -85,4 +85,3 @@ dependencies:
   - zstd=1.5.2=h6255e5f_1
   - pip:
     - rawpy==0.17.2
-prefix: C:\Users\schunckf\Miniconda3\envs\nanocosm_image
