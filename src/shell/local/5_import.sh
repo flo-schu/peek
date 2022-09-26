@@ -34,12 +34,22 @@ python "scripts/data_processing/daphnia.py"
 echo "culex..."
 python "scripts/data_processing/culex.py"
 
+echo "daphnia raw... (takes some minutes)"
+python "scripts/data_processing/daphnia_raw.py"
+
+echo "culex raw... (takes some minutes)"
+python "scripts/data_processing/culex_raw.py"
+
 echo "additional parameters..."
 python "scripts/data_processing/other.py"
+
 
 echo "------------------------------"
 
 echo "combining data..."
 python "scripts/data_processing/join_measurements.py"
+
+echo "final dataset..."
+python "scripts/data_processing/final_data.py"
 
 echo "saved output to 'data/measurements.csv'"

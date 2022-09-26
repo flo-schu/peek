@@ -18,10 +18,10 @@ xrdata = data.drop(columns=["picture", "picture_number", "analysis"])
 xrdata["organism_id"] = xrdata.groupby(["time", "nano_id", "species"]).cumcount()
 
 n_max = xrdata.organism_id.max() + 1
-zeros = np.zeros(n_max, dtype=int)
+nans = np.repeat(np.nan, n_max)
 master_array = xr.DataArray()
 for (t, nid, spec), group in xrdata.groupby(["time", "nano_id", "species"]):
-    values = zeros.copy()
+    values = nans.copy()
     pixels = np.nan_to_num(group.pixels.values, nan=0).astype(int)
     pixels = pixels[pixels != 0]
     values[0:len(pixels)] = pixels

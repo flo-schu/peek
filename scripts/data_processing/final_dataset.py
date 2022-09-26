@@ -25,4 +25,11 @@ esfenvalerate["time"] = esfenvalerate["time"].astype("datetime64")
 data = raw.merge(ds)
 data = data.merge(esfenvalerate)
 
+treatment = np.unique(np.nan_to_num(data.esfenvalerate, nan=999), axis=0)[0]
+data["treatment"] = ("nano_id", treatment)
+
+# metadata
+data.attrs["esfenvalerate_treatments"] = np.unique(data.treatment)
+# data.attrs["range_method_kaarina"] = ["2021-04-02", "2021-08-19"]
+
 data.to_netcdf("data/final_dataset.nc")
