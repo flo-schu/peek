@@ -1,9 +1,10 @@
-from image.process import Image
-from evaluation.plot import Viz
-import numpy as np
-import cv2
-from matplotlib import pyplot as plt
 import argparse
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+
+from peek.image.process import Image
+from peek.evaluation.plot import Viz
 
 parser = argparse.ArgumentParser(description='Get meta data of image')
 parser.add_argument('input' , type=str, help='path to image')

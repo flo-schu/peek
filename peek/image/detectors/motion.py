@@ -1,6 +1,7 @@
 import cv2 as cv
-from image.process import Image
-from image.detectors.base import Detector, Mask, Tagger
+
+from peek.image.process import Image
+from peek.image.detectors.base import Detector, Mask, Tagger
 
 class MotionDetector(Detector):
     class Trimmer(Mask):

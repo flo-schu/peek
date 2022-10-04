@@ -1,7 +1,8 @@
 from exifread import process_file
-from image.process import Image
 import datetime as dt
 import argparse
+
+from peek.image.process import Image
 
 parser = argparse.ArgumentParser(description='Get meta data of image')
 parser.add_argument('input' , type=str, help='path to image')

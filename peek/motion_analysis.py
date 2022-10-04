@@ -1,12 +1,13 @@
 # ======= motion analysis to build a database for object detection ============
 # this would be a task for a hyperparameter optimization ()
 
-import pandas as pd
-from image.process import Series
-from image.analysis import Annotations
-from image.detectors.motion import MotionDetector
-from utils.manage import Files
 import os
+import pandas as pd
+
+from peek.image.process import Series
+from peek.image.analysis import Annotations
+from peek.image.detectors.motion import MotionDetector
+from peek.utils.manage import Files
  
 path = "../data/pics/"
 date = "20210204"

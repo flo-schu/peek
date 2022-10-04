@@ -1,8 +1,8 @@
 import os
 import argparse
-from utils.manage import Files
-from image.analysis import Data
-from evaluation.main import analyse, save
+from peek.utils.manage import Files
+from peek.image.analysis import Data
+from peek.evaluation.main import analyse, save
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='path to images')

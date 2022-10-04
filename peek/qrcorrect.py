@@ -6,14 +6,13 @@
 # 6. [x] create CSV file with labels friom (5) in the same order (should be automatic due to date and time format YYYYMMDD_HHMM_NAME.tiff)
 #    [ ] this should be kept and only updated with new unclear nanos, so that not everything has to be ran twice
 # 7. [ ] read the file and move images from 999 to appropriate locations
-from image.process import Image
-from utils.manage import Files
-import pandas as pd
+import os
 import shutil
 import json
 import argparse
-import os
-import re
+import pandas as pd
+from peek.image.process import Image
+from peek.utils.manage import Files
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='csv or txt file with original path and the corrected id')

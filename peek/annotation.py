@@ -2,9 +2,9 @@ import os
 import argparse
 from matplotlib import pyplot as plt
 
-from utils.manage import Files
-from image.process import Image
-from image.analysis import Annotations
+from peek.utils.manage import Files
+from peek.image.process import Image
+from peek.image.analysis import Annotations
 
 parser = argparse.ArgumentParser(description="Annotate images execute with python -i ...")
 parser.add_argument("image" , type=str, help="path to image")

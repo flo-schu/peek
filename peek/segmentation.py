@@ -2,10 +2,10 @@ import os
 import pandas as pd
 import argparse
 
-from utils.manage import Files
-from image.process import Image
-from image.analysis import Annotations
-from image.detectors.static_edge import StaticEdgeDetector
+from peek.utils.manage import Files
+from peek.image.process import Image
+from peek.image.analysis import Annotations
+from peek.image.detectors.static_edge import StaticEdgeDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('input' , type=str, help='path to image')

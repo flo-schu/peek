@@ -1,8 +1,7 @@
 import argparse
 import os
 from glob import glob
-import pandas as pd
-from image.analysis import Data
+from peek.image.analysis import Data
 
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')

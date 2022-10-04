@@ -3,10 +3,10 @@
 
 #TODO: put workhorse inside class in image.prep
 
-import numpy as np
-import qrcode
 import os
 import cv2
+import numpy as np
+import qrcode
 import matplotlib.pyplot as plt
 
 # generate QR codes

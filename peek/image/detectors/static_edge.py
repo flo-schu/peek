@@ -1,10 +1,10 @@
 import cv2 as cv
 import numpy as np
-from image.process import Image 
-from image.detectors.base import Detector, Mask, Tagger
 from progress.bar import IncrementalBar
 from matplotlib import pyplot as plt
-# import gc
+
+from peek.image.process import Image 
+from peek.image.detectors.base import Detector, Mask, Tagger
 
 # here I can create my own individual program of functions, that I want to execute
 # This is very nice, because here it makes it explicit what is to be done,

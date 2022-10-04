@@ -10,17 +10,14 @@ import rawpy
 import imageio
 import cv2
 import gc
-# from pyzbar import pyzbar
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import imutils
 import json
-import shutil
 from datetime import datetime as dt
-from datetime import timedelta
 from exifread import process_file
-from utils.manage import Files
+
+from peek.utils.manage import Files
 
 class Image(Files):
     def __init__(self, path="", import_image=True, ignore_struct_path=False):

@@ -15,8 +15,8 @@ from matplotlib.patches import Rectangle
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
-from utils.manage import Files
-from image.process import Image, Series
+from peek.utils.manage import Files
+from peek.image.process import Image, Series
 
 class Tag(Files):
     def __init__(self):

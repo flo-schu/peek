@@ -4,9 +4,10 @@ import numpy as np
 import imutils
 import itertools as it
 from matplotlib import pyplot as plt
-from utils.manage import Files
-from image.process import Series, Image
-from image.analysis import Spectral, Preprocessing
+
+from peek.utils.manage import Files
+from peek.image.process import Series, Image
+from peek.image.analysis import Spectral, Preprocessing
 
 class Mask(Spectral):
     def __init__(self, img):

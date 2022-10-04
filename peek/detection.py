@@ -2,10 +2,10 @@ import os
 import pandas as pd
 import argparse
 
-from utils.manage import Files
-from image.process import Series
-from image.analysis import Annotations
-from image.detectors.movement_edge import MovementEdgeDetector
+from peek.utils.manage import Files
+from peek.image.process import Series
+from peek.image.analysis import Annotations
+from peek.image.detectors.movement_edge import MovementEdgeDetector
 
 parser = argparse.ArgumentParser(description='Carry out object detection on two images of a Series')
 parser.add_argument('path' , type=str, help='path to images')
