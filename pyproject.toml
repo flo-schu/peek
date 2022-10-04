@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "peek"
+version = "0.1.0"
+authors = [
+  { name="Florian Schunck", email="fluncki@protonmail.com" },
+]
+description = "Peek is short for photography enhanced environmental knowledge. It contains algorithms for detecting organisms on photographs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Natural Language :: English",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/flo-schu/peek"
+"Issue Tracker" = "https://github.com/flo-schu/peek/issues"
+
+[project.scripts]
+peek-read-image = "peek:read_eve"
+peek-read-metadata = "peek:read_meta"
+peek-get-metadata = "peek:get_meta"
+peek-detection = "peek:detection"
+peek-qr-correct = "peek:qrcorrect"
+peek-segmentation = "peek:segmentation"
+peek-annotate = "peek:annotation"
+peek-evaluate = "peek:evaluate"
+
+[tool.setuptools.packages.find]
+# All the following settings are optional:
+where = ["."]  # ["."] by default
+include = ["peek", "tests", "settings"]  # ["."] by default
+exclude = []  # empty by default
+namespaces = true  # true by default

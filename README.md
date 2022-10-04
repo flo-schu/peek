@@ -5,15 +5,11 @@ Peek is short for photography enhanced environmental knowledge. It contains algo
 ## installation procedure
 
 + install python
-+ create virtual environment named 'env':  python -m venv env
-+ activate environment ./env/Scripts/activate (on Linux: source ./env/bin/activate)
-+ upgrade pip:   python -m pip install --upgrade pip
-+ install requirements: pip install -r requirements.txt
-
-## building a distributable
-
-this makes a distributable bundle for the nutrient app
-`pyinstaller --noconfirm --onefile --clean --name="nutrispeech" --workpath="binaries" --distpath="binaries/dist" --paths src --collect-submodules nutrients .\nutrispeech.spec`
++ create virtual environment named 'env':  `python -m venv env`
++ activate environment `./env/Scripts/activate` (on Linux: `source ./env/bin/activate`)
++ upgrade pip:   `python -m pip install --upgrade pip`
++ install requirements: `pip install -r requirements.txt`
++ install package as development package `pip install --editable .`
 
 ## working on eve cluster
 
