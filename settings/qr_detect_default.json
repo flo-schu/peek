@@ -1,0 +1,17 @@
+{
+    "rqr": {
+        "t": 400,
+        "b": 1600,
+        "l": 1000,
+        "r": 2700
+    },
+    "threshold": {
+        "r": 70,
+        "g": 40,
+        "b": 40
+    },
+    "error_id":"999",
+    "night_id":"34",
+    "extract_fun":"extract_id",
+    "extract_kwds": {}
+}

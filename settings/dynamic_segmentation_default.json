@@ -1,0 +1,26 @@
+{
+    "image_file_type":"tiff",
+    "masking_config": "masking_20210225.json",
+    "diff_image": {
+        "smooth": 3,
+        "lag_between_images": 1
+    },
+    "preprocess": {
+        "algorithm": "threshold_and_morphology",
+        "parameters": {
+            "color_threshold": 20,
+            "morphology_kernel": 20,
+            "min_filter_size": 3
+        }
+    },
+    "contour_filter": {},
+    "detector": {
+        "search_radius": 50,
+        "algorithm": "median_threshold",
+        "parameters": {
+            "blur": 5,
+            "threshold": 10,
+            "ignore_value": 0
+        }
+    }
+}

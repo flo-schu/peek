@@ -1,0 +1,15 @@
+{
+    "analysis": "moving_edge",
+    "path_correction": {
+        "new_root":"C:/Users/schunckf/Documents/Florian/papers/nanocosm/data/annotations/",
+        "trim_path_until": "/pics/"
+    },
+    "algorithm": "filter_area_classify_lwratio",
+    "algoargs": {
+        "area_threshold":10,
+        "lw_threshold":2.5,
+        "groups":["id","time","label_auto"]
+    },
+    "plot":"show_ts_classes",
+    "plotargs":{}
+}
