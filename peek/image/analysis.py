@@ -15,8 +15,12 @@ from matplotlib.patches import Rectangle
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
+from toopy.pandas import read_csv_list
+
 from peek.utils.manage import Files
 from peek.image.process import Image, Series
+
+
 
 class Tag(Files):
     def __init__(self):
@@ -160,9 +164,9 @@ class Annotations(Tag):
         """
         self.figure = plt.figure()
         self.figure.canvas.mpl_connect('key_press_event', self.press) 
-        mpl.rcParams['keymap.back']:['left'] 
-        mpl.rcParams['keymap.pan']:[] 
-        mpl.rcParams['keymap.pan']:[] 
+        mpl.rcParams['keymap.back'] = ['left'] 
+        mpl.rcParams['keymap.pan'] = [] 
+        mpl.rcParams['keymap.pan'] = [] 
         
         # create figure
         init_plot = getattr(self, plot_type)
@@ -439,45 +443,6 @@ class Data:
         self.img_num = img_num
         self.images = []
 
-    @classmethod
-    def combine_data_classic(cls, datapath, interpolation_cfg={"method":"pad"}):
-        data = Data.read_csv_list(glob(os.path.join(datapath, "pics_classic/results/*.csv")))
-
-        meta = cls.read_meta(os.path.join(datapath, "pics_classic/meta/*meta.csv"))
-        df = data.merge(meta, how="left", on=["date","id", "picture"])
-
-        m = cls.read_measurements(os.path.join(datapath, "measurements.csv"))
-        df = df.merge(m, how="left", on=["date","id"])
-
-        # manual observations ==================================================
-        obs = Data.read_csv_list(glob(os.path.join(datapath, "raw_measurements/organisms/*.csv")), 
-                kwargs={"dtype":{"time":str,"id":int}})
-        obs.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
-        # interpolate missing values -------------------------------------------
-        # get first observation of manual observations
-        firstobs = dt.strftime(pd.to_datetime(obs.date, format="%Y-%m-%d").min(), 
-                               format="%Y-%m-%d")
-        # construct data frame from dates and ids
-        obscomp = cls.expand_grid({
-            "date": df.date.unique()[np.where(df.date.unique() >= firstobs)[0]],
-            "id": range(1,81)
-        })
-        obs = obs.merge(obscomp, "right", on=["date","id"])
-        # apply lambda function to each group. I like this approach a lot
-        # there are many constraints on the function so not much can go wrong
-        # only one NA value is at most replaced and can only go forward.
-        obs = obs.groupby(["id"]).apply(
-            lambda group: group.interpolate(**interpolation_cfg)
-        )
-        df = df.merge(obs, "left", on=["date","id"])
-
-        df["time"] = pd.to_datetime(df.date+df.time, format="%Y-%m-%d%H%M%S")
-        df.set_index(["time","id", "picture"], inplace=True)
-        df.drop(columns="date", inplace=True)
-        df.to_csv(os.path.join(datapath, "pics_classic/data.csv"), index=True)
-
-        return df
-
     @staticmethod
     def read_meta(globpath):
         """
@@ -488,109 +453,12 @@ class Data:
                     e.g. "data/pics_classic/meta/*meta.csv".
                     See documentation of glob()
         """
-        meta = Data.read_csv_list(glob(globpath), 
+        meta = read_csv_list(glob(globpath), 
         kwargs={"dtype":{"time":str,"id":int}})
         meta['picture'] = meta.groupby(["date","id"]).cumcount()
         
         return meta
 
-    @staticmethod
-    def read_measurements(path):
-        """
-        convenience function for gathering the output of read_measurements.py
-        """
-        # if there is an error it is because 
-        m = pd.read_csv(path)
-        m.rename(columns={"time":"date","ID_nano":"id"}, inplace=True)
-        m['id'].fillna(0, inplace=True)
-        m = m.astype({"id":int})
-
-        return m
-
-    @staticmethod
-    def read_csv_list(filenames, kwargs={}):
-        df = pd.DataFrame()
-        for filename in filenames:
-            df = df.append(pd.read_csv(filename, **kwargs))
-        return df
-    
-    @staticmethod
-    def flatten_columns_and_replace(df, search=None, replace=None):
-        collist = [a+b for a, b in list(df.columns.to_flat_index())]
-        collist = [colname.replace(search, replace) for colname in collist]
-        df.columns = collist
-        return df
-
-    @staticmethod
-    def expand_grid(data_dict):
-        """Create a dataframe from every combination of given values."""
-        rows = it.product(*data_dict.values())
-        return pd.DataFrame.from_records(rows, columns=data_dict.keys())
-
-    @staticmethod
-    def import_manual_measurements_one_file(path):
-        """
-        this method needs to be adapted to accomodate other sorts of 
-        logged data.
-        The most important point, is that the frame has a multiindex,
-        consisting of 'time' and 'id'
-        """
-        df = pd.read_csv(path)  
-        df = df.astype({'mntr_date': str, 'ID_nano': int, 
-                        'conductivity': float, 'ID_measure': int})
-        df['mntr_date'] = pd.to_datetime(df['mntr_date'])
-        df.index = pd.MultiIndex.from_frame(df[['mntr_date', 'ID_measure']], names=['time','msr_id'])
-        # mntr.index = pd.MultiIndex.from_frame(mntr[['mntr_date', 'ID_nano']], names=['time','id'])
-        df = df.drop(columns=['mntr_date','ID_measure'])
-        return df
-
-
-    @staticmethod
-    def import_manual_measurements(path):
-        """
-        transferrable method, which returns a dataframe of KNICK MUltioxy 907
-        data. Data must be in CSV format with unicode encoding.
-
-        param   indicates the measured paramter (O2, conductivity, ...)
-                this string must be present in the filenames
-        tag     is the TAG (Messstelle) set in the device
-        """
-        files = glob(path)
-
-        pd.DataFrame
-        data = []
-        for f in files:
-            data.append(pd.read_table(os.path.join(path,f), sep=","))
-
-        df = pd.concat(data).sort_values('Timestamp')
-        
-        df['AnnotationText'] = df['AnnotationText'].fillna(999)
-        df = df.astype({'AnnotationText': int})
-        
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-        df = df.drop(columns=["SensoFace", "SensorOrderCode", "DeviceErrorFlag", 
-                              "SensorSerialCode"])
-
-        # some edits to columns
-        df = df.rename(columns={'OxyConcentration':'oxygen', 
-                                'CondConductance': 'conductivity',
-                                'TemperatureCelsius':'temperature_device',
-                                'OxyPartialPressure': 'partial_pressure'})
-
-        try:
-            df['oxygen'] = df['oxygen'] / 1000 # to mg/L
-        except KeyError:
-            pass
-        # df['oxygen_unit'] = "mg_L"
-
-        if tag is not None:
-            df = df[df['LoggerTagName'] == tag]
-            df = df.drop(columns=['LoggerTagName'])
-
-        df.index = pd.MultiIndex.from_frame(df[['Timestamp', 'AnnotationText']], names=['time','msr_id'])
-        df = df.drop(columns=["Timestamp", "AnnotationText"])
-
-        return df
 
     def collect(self, sample_id=None, date=None, img_num=None):
         if sample_id is not None:
