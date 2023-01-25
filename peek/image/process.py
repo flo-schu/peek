@@ -6,30 +6,44 @@
 # containing methods for cropping, difference of continuous images, edge detection
 
 import os
-import rawpy
-import imageio
+from PIL import Image
 import cv2
 import gc
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import json
 from datetime import datetime as dt
 from exifread import process_file
 
 from peek.utils.manage import Files
 
-class Image(Files):
-    def __init__(self, path="", import_image=True, ignore_struct_path=False):
+class Snapshot(Files):
+    def __init__(self, path=""):
         self.path = path
-        self.img = None
         self.time = 0
         self.id = 0
-        self.hash = str(0)
         self.tags = {}
         self.analyses = {}
+        self.img = None
+        self.size = ()
+        self.meta = None
+        self.pixels = np.array([])
+        
+        self.read()
+        self.calculate_pixels()
 
-        self.read_struct(import_image, ignore_struct_path)
+    def __repr__(self):
+        return f"{str(self.img)} @ {self.path}"
+
+    def read(self):
+        self.img = Image.open(self.path)
+        self.size = (self.img.size[1], self.img.size[0], self.img.layers)
+        self.meta = self.img.getexif()
+        print(f"read {self.path}")
+
+    def calculate_pixels(self):
+        pix = np.array(self.img.getdata(), dtype="uint8")
+        self.pixels = pix.reshape((self.size))
 
     def read_raw(self, **params):
         """
@@ -73,48 +87,6 @@ class Image(Files):
 
         return tags
 
-    def read_struct(self, import_image, ignore_struct_path):
-        if os.path.isfile(self.path) and os.path.basename(self.path).split(".")[1] == "json":
-            sname = self.path
-        else:
-            if not os.path.exists(self.path):
-                print("Path does not exist. Check spelling.")
-                return
-
-            if os.path.isdir(self.path):
-                try:
-                    sname = self.find_single_file(directory=self.path, file_type="json")
-                except AssertionError:
-                    print("Did not import {} correctly. more than one structure in image folder".format(self.path))
-            else:
-                sname = self.append_to_filename(self.path, "_struct.json")
-            
-        try:
-            with open(sname, "r") as f:
-                struct = json.load(f)
-            self.read_processed(struct, import_image, ignore_struct_path)
-
-        except FileNotFoundError:
-            print("no struct json file found. Proceeding without")
-
-    def read_processed(self, struct, import_image, ignore_struct_path):
-        if ignore_struct_path:
-            del struct['path']
-        for item in struct.items():
-            setattr(self, item[0], item[1])
-
-        if import_image:
-            self.read_image(attr="img")  
-
-    def dump_struct(self, struct):
-        # dump struct
-        dirname = os.path.dirname(self.path)
-        filename = os.path.basename(self.path).split(".")[0] + "_struct"
-        extname = ".json"
-
-        print(dirname, filename, filename+extname)
-        with open(os.path.join(dirname, filename + extname), "w+") as file:
-            json.dump(struct, file)
 
     def crop_tb(self, reduce_top, reduce_bottom):
         self.img = self.img[reduce_top:reduce_bottom, :,:]
@@ -357,58 +329,13 @@ class Image(Files):
         return cv2.erode(img, kernel)
 
 
-class Series(Image):
+class Series(Snapshot):
     def __init__(
         self, 
-        directory="", 
-        import_image=True,
-        ignore_struct_path=False,
-        image_file_type="tiff"
-        ):
-        self.path = directory
-        self.id = os.path.basename(self.path)
-        self.struct = self.browse_subdirs_for_files(directory, image_file_type)
-        self.images = self.read_files_from_struct(import_image, ignore_struct_path)
+        images: list = []
+    ):
+        self.images = images
 
-    def read_files_from_struct(self, import_image=True, ignore_struct_path=False):
-        images = []
-        for _, path in self.struct.items():
-            img = Image(
-                path, 
-                import_image=import_image,
-                ignore_struct_path=ignore_struct_path
-            )
-            images.append(img)
-           
-        return images   
-
-    def read_images(self, **params):
-        # if len()
-        if len(self.images) == 0:
-            files = os.listdir(self.path)
-            files = [i  for i in files if i.split(".")[1] == "RW2"]
-            print(files)
-        else:
-            files = self.images
-
-        images = []
-        for f in files:
-            i = Image(path=os.path.join(self.path,f))
-            i.read_raw(**params)
-            print("processed file: {}".format(f))
-            i.read_qr_code()
-            print("read QR code: {}".format(i.id))
-            images.append(i)
-
-        self.images = images 
-
-    def save(self, attr):
-        for i in self.images:
-            i.save(attr)
-
-    def save_list(self, imlist, name='image', file_ext='tiff'):
-        for i in range(len(imlist)):
-            imageio.imwrite(os.path.join(self.path,name+"_"+str(i)+"."+file_ext), imlist[i])
 
 class Session(Series):
     def __init__(self, directory):

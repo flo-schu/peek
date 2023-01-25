@@ -1,6 +1,6 @@
 import cv2 as cv
 
-from peek.image.process import Image
+from peek.image.process import Snapshot
 from peek.image.detectors.base import Detector, Mask, Tagger
 
 class MotionDetector(Detector):
@@ -12,7 +12,7 @@ class MotionDetector(Detector):
             del self.properties
             del self.pois
 
-    def tag_images(self, im1, im2, thresh_binary=15, thresh_size=10, mar=10):
+    def tag_images(self, batch, thresh_binary=15, thresh_size=10, mar=10):
         """
         motion analysis algorithm. First computes the difference between images.
         
@@ -24,7 +24,8 @@ class MotionDetector(Detector):
                         with maximum extension (x or y) of 'thresh_size'
         """
         tags = self.MotionTagger()
-        diff = self.difference([im1, im2], lag=1)
+        pixel_imgs = [i.pixels for i in batch.images]
+        diff = self.difference(pixel_imgs, lag_between_images=1)
         gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
 
         #threshold the gray image to binarise it. Anything pixel that has
@@ -36,13 +37,15 @@ class MotionDetector(Detector):
         thresh = cv.threshold(gray, thresh_binary, 255, cv.THRESH_BINARY)
         cnts_select = self.get_contours(thresh[1], thresh_size)
 
-        imtag = Image.tag_image(im2, cnts_select, mar)
-        imslc1 = Image.cut_slices(im2, cnts_select, mar)
-        imslc2 = Image.cut_slices(im2, cnts_select, mar)
+        im0 = batch.images[0].pixels
+        im1 = batch.images[1].pixels
+        imtag1 = Snapshot.tag_image(im1, cnts_select, mar)
+        imslc1 = Snapshot.cut_slices(im1, cnts_select, mar)
+        imslc0 = Snapshot.cut_slices(im0, cnts_select, mar)
 
         tags.tag_contour = cnts_select
-        tags.tag_image_orig = imslc1
-        tags.tag_image_diff = imslc2
+        tags.tag_image_orig = imslc0
+        tags.tag_image_diff = imslc1
         tags.wrap_up()
 
-        return tags
+        return tags, imtag1
