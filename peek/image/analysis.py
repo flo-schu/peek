@@ -68,7 +68,7 @@ class Tag(Files):
             value = Files.read(os.path.join(path, attr, str(int(self.id))+'.'+ext))
             setattr(self, attr, value)
 
-    def save(self):
+    def save(self, store=True):
         """
         removes all attributes from tag which are not needed, or are unsuitable
         for dataframes (those are saved in arrays or tiffs).
@@ -76,25 +76,29 @@ class Tag(Files):
         """
         self.time = time.strftime('%Y-%m-%d %H:%M:%S')
         tag = self.__dict__.copy()
-        p = self.create_dir(self.analysis)
+        if store:
+            p = self.create_dir(self.analysis)
 
         # save_tag_slice
         img_orig = tag.pop('tag_image_orig')
-        if img_orig.size > 0:
-            p = self.create_dir(os.path.join(self.analysis, 'tag_image_orig'))
-            imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_orig)
+        if store:
+            if img_orig.size > 0:
+                p = self.create_dir(os.path.join(self.analysis, 'tag_image_orig'))
+                imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_orig)
 
         # save tag slice from diff pic (maybe not necessary)
         img_diff = tag.pop('tag_image_diff')
-        if img_diff.size > 0:
-            p = self.create_dir(os.path.join(self.analysis, 'tag_image_diff'))
-            imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_diff)
+        if store:
+            if img_diff.size > 0:
+                p = self.create_dir(os.path.join(self.analysis, 'tag_image_diff'))
+                imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_diff)
 
         # save contour
         contour = tag.pop('tag_contour')
-        if contour.size > 0:
-            p = self.create_dir(os.path.join(self.analysis, 'tag_contour'))
-            np.save(os.path.join(p, str(int(self.id))+'.npy'), contour)
+        if store:
+            if contour.size > 0:
+                p = self.create_dir(os.path.join(self.analysis, 'tag_contour'))
+                np.save(os.path.join(p, str(int(self.id))+'.npy'), contour)
 
         p = tag.pop("path")
         return pd.Series(tag), p
@@ -126,9 +130,11 @@ class Annotations(Tag):
             'c':"Culex Pipiens, larva",
             'p':"Culex Pipiens, pupa",
             'u':"unidentified"
-            }
+            },
+        store_extra_files = True
         ):
         self.image = image
+        self.store_extra_files = store_extra_files
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
         self.analysis = analysis
@@ -374,7 +380,7 @@ class Annotations(Tag):
             t = self.read_tag(new_tags, i)
             t.unpack_dictionaries()
             t.get_tag_box_coordinates()
-            t, p = t.save()
+            t, p = t.save(self.store_extra_files)
             self.tags = self.tags.append(t, ignore_index=True)
         
         self.save_progress()
