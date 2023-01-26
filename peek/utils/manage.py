@@ -113,7 +113,7 @@ class Files:
         if f_ext == "npy":
             return np.load(path)
 
-        if f_ext == "tiff":
+        if f_ext == "tiff" or f_ext == "jpg":
             return imageio.imread(path)
 
         if f_ext == "csv":

@@ -60,13 +60,15 @@ class Tag(Files):
                 setattr(self, key, value)
 
     def load_special(self):
-        path = self.change_dir(self.analysis)
-        specials = self.find_subdirs(path)
+        path, ext = os.path.splitext(self.path)
+        specials = os.listdir(path)
 
         for attr in specials:
-            ext = os.listdir(os.path.join(path, attr))[0].split('.')[1]
-            value = Files.read(os.path.join(path, attr, str(int(self.id))+'.'+ext))
-            setattr(self, attr, value)
+            subdir = os.path.join(path, attr)
+            if os.path.isdir(subdir):
+                ext = os.listdir(subdir)[0].split('.')[1]
+                value = Files.read(os.path.join(path, attr, str(int(self.id))+'.'+ext))
+                setattr(self, attr, value)
 
     def save(self, store=True):
         """
@@ -77,31 +79,35 @@ class Tag(Files):
         self.time = time.strftime('%Y-%m-%d %H:%M:%S')
         tag = self.__dict__.copy()
         if store:
-            p = self.create_dir(self.analysis)
+            path, ext = os.path.splitext(self.path)
+            if not os.path.exists(path):
+                os.mkdir(path)
 
         # save_tag_slice
         img_orig = tag.pop('tag_image_orig')
         if store:
             if img_orig.size > 0:
-                p = self.create_dir(os.path.join(self.analysis, 'tag_image_orig'))
-                imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_orig)
+                p_ = os.path.join(path, 'tag_image_orig')
+                os.makedirs(p_, exist_ok=True)
+                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_orig)
 
         # save tag slice from diff pic (maybe not necessary)
         img_diff = tag.pop('tag_image_diff')
         if store:
             if img_diff.size > 0:
-                p = self.create_dir(os.path.join(self.analysis, 'tag_image_diff'))
-                imageio.imwrite(os.path.join(p, str(int(self.id))+'.tiff'), img_diff)
+                p_ = os.path.join(path, 'tag_image_diff')
+                os.makedirs(p_, exist_ok=True)
+                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_diff)
 
         # save contour
         contour = tag.pop('tag_contour')
         if store:
             if contour.size > 0:
-                p = self.create_dir(os.path.join(self.analysis, 'tag_contour'))
-                np.save(os.path.join(p, str(int(self.id))+'.npy'), contour)
+                p_ = os.path.join(path, 'tag_contour')
+                os.makedirs(p_, exist_ok=True)
+                np.save(os.path.join(p_, str(int(self.id))+'.npy'), contour)
 
-        p = tag.pop("path")
-        return pd.Series(tag), p
+        return pd.Series(tag), path
 
     def get_tag_box_coordinates(self):
         x = self.x
@@ -124,6 +130,7 @@ class Annotations(Tag):
         self, 
         image, 
         analysis, 
+        storage_path,
         tag_db_path, 
         keymap={
             'd':"Daphnia Magna",
@@ -131,7 +138,8 @@ class Annotations(Tag):
             'p':"Culex Pipiens, pupa",
             'u':"unidentified"
             },
-        store_extra_files = True
+        store_extra_files = True,
+        zfill=0,
         ):
         self.image = image
         self.store_extra_files = store_extra_files
@@ -146,22 +154,17 @@ class Annotations(Tag):
         self.ctag = None
         self.error = (False, "no message")
         self.keymap = keymap
-        self.path = self.find_annotations(analysis)
+        self.zfill = zfill
+        self.path = self.annotations_path(storage_path, analysis)
 
-    def find_annotations(self, analysis):
-        path = self.image.path
+    def annotations_path(self, path, analysis):
+        assert os.path.isdir(path)
+        fname = f"{str(self.image.id).zfill(self.zfill)}_{analysis}_tags.csv"
+        
+        if not os.path.exists(path):
+            os.mkdir(path)
 
-        if path.endswith(".tiff") or os.path.isfile(path):
-            fname = '_'+analysis+'_tags.csv'
-            path = self.image.append_to_filename(path, fname)
-        
-        elif os.path.isdir(path):
-            tag_file = [f for f in Files.find_files(path, 'tags.csv') if analysis in f]
-            print(tag_file)
-            assert len(tag_file) == 1, "more than one tag file. something is not right"
-            path = os.path.join(path, tag_file[0])
-        
-        return path
+        return os.path.normpath(os.path.join(path, fname))
                 
 
     def start(self, plot_type="plot_complete_tag_diff"):
@@ -185,8 +188,8 @@ class Annotations(Tag):
 
     def plot_complete_tag_diff(self):
         self.display_whole_img = True
-        self.origx = (0, self.image.img.shape[1])
-        self.origy = (self.image.img.shape[0],0)
+        self.origx = (0, self.image.img.size[1])
+        self.origy = (self.image.img.size[0],0)
         self.gs = plt.GridSpec(nrows=2, ncols=2)
 
         self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0])
@@ -346,7 +349,7 @@ class Annotations(Tag):
             self.axes[0].set_ylim(self.origy)
 
     def show_original(self, resize=.1):
-        img = cv.resize(self.image.img.copy(), (0,0), fx=resize, fy=resize)
+        img = cv.resize(self.image.pixels.copy(), (0,0), fx=resize, fy=resize)
         self.axes[0].imshow(self.image.img)
 
     def show_tagged(self):
@@ -397,7 +400,7 @@ class Annotations(Tag):
 
     def read_tag(self, tags, i):
         t = Tag()
-        t.path = self.image.path
+        t.path = self.path
         t.__dict__.update(tags.iloc[self.get_id(tags, i)[0]])
         return t
         # self.new_tags = self.new_tags.drop(i)
