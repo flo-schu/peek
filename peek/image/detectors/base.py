@@ -202,7 +202,7 @@ class Detector():
         return m
 
     @staticmethod
-    def difference(images, lag_between_images=1, smooth=1):
+    def difference(images, smooth=1):
         """
         calculates the RGB differences between every two consecutive images.
         The last difference is the diff between last and first image
@@ -212,7 +212,7 @@ class Detector():
         kernel = np.ones((smooth,smooth),np.float32)/smooth**2
         images = np.array([cv.filter2D(i, -1, kernel) for i in images], dtype=int)
         # ims = np.array([i.img for i in imlist], dtype=int)
-        diff = np.diff(images, n=lag_between_images, axis=0)
+        diff = np.diff(images, n=1, axis=0)
         diffs = np.where(diff >= 0, diff, 0)
 
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
