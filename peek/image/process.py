@@ -18,32 +18,49 @@ from exifread import process_file
 from peek.utils.manage import Files
 
 class Snapshot(Files):
-    def __init__(self, path=""):
+    def __init__(self, path: str = "", meta: dict = {}):
         self.path = path
-        self.time = 0
-        self.id = 0
+        self.img = None
+        self.pixels = np.array([])
+        self.size = ()
+        self._meta = None
         self.tags = {}
         self.analyses = {}
-        self.img = None
-        self.size = ()
-        self.meta = None
-        self.pixels = np.array([])
         
         self.read()
         self.calculate_pixels()
+        self.set_meta(meta)
 
     def __repr__(self):
         return f"{str(self.img)} @ {self.path}"
 
+    @property
+    def time(self):
+        return self._meta.get("time")
+
+    @property
+    def date(self):
+        return self._meta.get("date")
+
+    @property
+    def id(self):
+        return self._meta.get("id")
+
+    @property
+    def metadata(self):
+        return dict(self._meta.items())
+
     def read(self):
         self.img = Image.open(self.path)
         self.size = (self.img.size[1], self.img.size[0], self.img.layers)
-        self.meta = self.img.getexif()
+        self._meta = self.img.getexif()
         print(f"read {self.path}")
 
+    def set_meta(self, meta: dict):
+        self._meta.update(meta)
+
     def calculate_pixels(self):
-        pix = np.array(self.img.getdata(), dtype="uint8")
-        self.pixels = pix.reshape((self.size))
+        self.pixels = np.asarray(self.img)
 
     def read_raw(self, **params):
         """
@@ -249,15 +266,14 @@ class Snapshot(Files):
     def read_tags(self):
         self.tags = pd.csv
 
-    @classmethod
-    def cut_slices(cls, image, contours, mar=0):
+    def cut_slices(self, mar=0):
         """
         mar:            margin to be drawn around the tag boxes
         """
         slices = []
-        for c in contours:
+        for c in self.tags.tag_contour:
             (x, y, w, h) = cv2.boundingRect(c)
-            slc = cls.slice_image(image, x, y, w, h, mar)
+            slc = self.slice_image(self.pixels, x, y, w, h, mar)
             slices.append(slc)
         
         return slices
@@ -266,13 +282,12 @@ class Snapshot(Files):
     def slice_image(img, x, y, w, h, mar=0):
         return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
 
-    @staticmethod
-    def tag_image(image, contours, mar=0):
+    def tag_image(self, mar=0):
         """
         mar:            margin to be drawn around the tag boxes
         """ 
-        img = image.copy()
-        for c in contours:
+        img = self.pixels.copy()
+        for c in self.tags.tag_contour:
             # fit a bounding box to the contour
             (x, y, w, h) = cv2.boundingRect(c)
             cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
@@ -329,13 +344,24 @@ class Snapshot(Files):
         return cv2.erode(img, kernel)
 
 
-class Series(Snapshot):
+class Series():
     def __init__(
         self, 
         images: list = []
     ):
+        self.id = self.get_unique(images, "id")
+        self.date = self.get_unique(images, "date")
         self.images = images
 
+    @staticmethod
+    def get_unique(images: list, key: str):
+        unq = np.unique([getattr(img, key) for img in images])
+        assert len(unq) == 1, f"no unique ids {unq} in series"
+        return unq[0]
+
+    @property
+    def pixels(self):
+        return [i.pixels for i in self.images]
 
 class Session(Series):
     def __init__(self, directory):
