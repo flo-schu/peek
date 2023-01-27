@@ -12,13 +12,14 @@ from datetime import datetime as dt
 from glob import glob
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
+from matplotlib.collections import PatchCollection
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
 from toopy.pandas import read_csv_list
 
 from peek.utils.manage import Files
-from peek.image.process import Image, Series
+from peek.image.process import Snapshot, Series
 
 
 
@@ -107,6 +108,7 @@ class Tag(Files):
                 os.makedirs(p_, exist_ok=True)
                 np.save(os.path.join(p_, str(int(self.id))+'.npy'), contour)
 
+        path = tag.pop("path")
         return pd.Series(tag), path
 
     def get_tag_box_coordinates(self):
@@ -128,10 +130,11 @@ class Tag(Files):
 class Annotations(Tag): 
     def __init__(
         self, 
-        image, 
-        analysis, 
-        storage_path,
-        tag_db_path, 
+        path,
+        image=None, 
+        image_metadata={},
+        analysis="undefined", 
+        tag_db_path="", 
         keymap={
             'd':"Daphnia Magna",
             'c':"Culex Pipiens, larva",
@@ -141,7 +144,9 @@ class Annotations(Tag):
         store_extra_files = True,
         zfill=0,
         ):
-        self.image = image
+        self.path = os.path.normpath(path)
+        self.tags = self.load_processed_tags()
+        self.image = self.load_image(image, image_metadata)
         self.store_extra_files = store_extra_files
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
@@ -150,22 +155,18 @@ class Annotations(Tag):
         self.origy = (0,0)
         self.xlim = (0,0)
         self.ylim = (0,0)
-        self.tags = pd.DataFrame({'id':[]})
         self.ctag = None
         self.error = (False, "no message")
         self.keymap = keymap
         self.zfill = zfill
-        self.path = self.annotations_path(storage_path, analysis)
+        self.target = ()
 
-    def annotations_path(self, path, analysis):
-        assert os.path.isdir(path)
-        fname = f"{str(self.image.id).zfill(self.zfill)}_{analysis}_tags.csv"
-        
-        if not os.path.exists(path):
-            os.mkdir(path)
-
-        return os.path.normpath(os.path.join(path, fname))
-                
+    def load_image(self, image, meta): 
+        if image is None:
+            return Snapshot(self.path, meta=meta)
+        else:
+            assert isinstance(image, Snapshot)
+            return image
 
     def start(self, plot_type="plot_complete_tag_diff"):
         """
@@ -185,11 +186,14 @@ class Annotations(Tag):
 
         plt.ion()
         plt.show()
+        self.draw_tag_boxes()
+        self.show_tag_number(0)
+
 
     def plot_complete_tag_diff(self):
         self.display_whole_img = True
-        self.origx = (0, self.image.img.size[1])
-        self.origy = (self.image.img.size[0],0)
+        self.origx = (0, self.image.img.size[0])
+        self.origy = (self.image.img.size[1],0)
         self.gs = plt.GridSpec(nrows=2, ncols=2)
 
         self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0])
@@ -220,15 +224,17 @@ class Annotations(Tag):
         
     def load_processed_tags(self):
         try:
-            self.tags = pd.read_csv(self.path)
+            return pd.read_csv(self.path)
         except FileNotFoundError:
-            self.error = (True, self.path)
+            print(f"no existing tags found at {self.path}. Starting new tags")
+            return pd.DataFrame({'id':[]})
 
     def load_processed_tags_from_tar(self, tar):
         try:
-            self.tags = pd.read_csv(tar.extractfile(self.path))
+            pd.read_csv(tar.extractfile(self.path))
         except FileNotFoundError:
-            self.error = (True, self.path)
+            print(f"no existing tags found. Starting new file on {self.path}")
+            return pd.DataFrame({'id':[]})
 
 
     def press(self, event):
@@ -243,6 +249,13 @@ class Annotations(Tag):
             self.save_tag_to_database(t, add_attrs=['id','date','time'])
             self.show_label()
 
+            self.tags = self.tags.sort_values(by='id')
+            self.save_progress()
+
+            # directly go to next tag after labeling
+            self.reset_lims()
+            self.show_next_tag()
+
         if event.key == "n":
             self.reset_lims()
             self.show_next_tag()
@@ -252,8 +265,6 @@ class Annotations(Tag):
             self.show_previous_tag()
 
         self.figure.canvas.draw()
-        self.tags = self.tags.sort_values(by='id')
-        self.save_progress()
 
     def save_tag_to_database(self, tag, add_attrs=[]):
         try:
@@ -282,22 +293,22 @@ class Annotations(Tag):
         db.to_csv(self.tag_db_path, index=False)
 
     def copy_tag_image(self, tag):
+        path, _ = os.path.splitext(self.path) 
         from_path = os.path.join(
-            os.path.dirname(self.image.path), 
-            self.analysis, 
+            path,
             "tag_image_orig",
-            str(int(tag.id)) + ".tiff"
+            str(int(tag.id)) + ".jpg"
         )
 
         to_path = os.path.join(
             os.path.dirname(self.tag_db_path), 
             "annotated_images", 
              "_".join([
-                 str(int(tag.img_date)).zfill(8), 
+                 str(tag.img_date),
                  str(int(tag.img_id)).zfill(2), 
                  str(int(tag.img_time)).zfill(6), 
                  str(int(tag.id))
-                 ])+".tiff"
+                 ])+".jpg"
         )
 
         os.makedirs(os.path.dirname(to_path), exist_ok=True)
@@ -340,6 +351,10 @@ class Annotations(Tag):
             new_tags.analysis
         except AttributeError:
             new_tags['analysis'] = self.analysis
+        try:
+            new_tags.img_path
+        except AttributeError:
+            new_tags['img_path'] = self.image.path
 
         self.save_new_tags(new_tags)
 
@@ -359,6 +374,8 @@ class Annotations(Tag):
     def show_label(self):
         try:
             self.axes[1].annotate(self.ctag.label, (0.05,0.05), xycoords="axes fraction",
+                                  bbox={'color':'white','ec':'black', 'lw':2})
+            self.axes[1].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
                                   bbox={'color':'white','ec':'black', 'lw':2})
         except KeyError:
             pass
@@ -388,15 +405,41 @@ class Annotations(Tag):
         
         self.save_progress()
 
+    def draw_tag_boxes(self):
+        patches = []
+        for i in range(len(self.tags)):
+            tag = self.read_tag(self.tags, i)
+            x, y, w, h = tag.get_tag_box_coordinates()
+            rect = Rectangle((x,y),w,h)
+
+            patches.append(rect)
+        
+        pc = PatchCollection(patches, facecolor="none", edgecolor="green")
+        _ = self.axes[0].add_collection(pc)
+
     def draw_tag_box(self):
         x, y, w, h = self.ctag.get_tag_box_coordinates()
-
+        
         rect = Rectangle((x,y),w,h, linewidth=5, fill=False, color="red")
         # [ptch.remove() for ptch in reversed(self.axes[0].patches)]
         for p in reversed(self.axes[0].patches):
             p.set_color('green')
             p.set_linewidth(1)
         self.axes[0].add_patch(rect)
+
+    def get_center_bbox(self):
+        x, y, w, h = self.ctag.get_tag_box_coordinates()
+        return x + np.round(w / 2), y + np.round(h / 2)
+
+    def draw_target(self):
+        for t in self.target:
+            t.remove()
+
+        x, y = self.get_center_bbox()
+        v = self.axes[0].vlines(x, y-50, y+50, color="red")
+        h = self.axes[0].hlines(y, x-50, x+50, color="red")
+        self.target = (v, h)
+
 
     def read_tag(self, tags, i):
         t = Tag()
@@ -411,7 +454,8 @@ class Annotations(Tag):
         self.ctag = t
         self.ctag.load_special()
         if self.display_whole_img:
-            self.draw_tag_box()
+            # self.draw_tag_box()
+            self.draw_target()
         self.show_tag()
 
     def show_next_tag(self):

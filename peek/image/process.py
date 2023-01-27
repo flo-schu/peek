@@ -18,16 +18,19 @@ from exifread import process_file
 from peek.utils.manage import Files
 
 class Snapshot(Files):
+    """
+    class for handling images
+    """
+
     def __init__(self, path: str = "", meta: dict = {}):
-        self.path = path
+        self._meta = None
         self.img = None
         self.pixels = np.array([])
-        self.size = ()
-        self._meta = None
         self.tags = {}
+        self.annotations = None
         self.analyses = {}
         
-        self.read()
+        self.read(path)
         self.calculate_pixels()
         self.set_meta(meta)
 
@@ -50,9 +53,21 @@ class Snapshot(Files):
     def metadata(self):
         return dict(self._meta.items())
 
-    def read(self):
-        self.img = Image.open(self.path)
-        self.size = (self.img.size[1], self.img.size[0], self.img.layers)
+    @property
+    def path(self):
+        return self.img.filename
+
+    @property
+    def filename(self):
+        name, _ = os.path.splitext(os.path.basename(self.path))
+        return name
+
+    @property
+    def size(self):
+        return (self.img.size[1], self.img.size[0], self.img.layers)
+
+    def read(self, path):
+        self.img = Image.open(os.path.normpath(path))
         self._meta = self.img.getexif()
         print(f"read {self.path}")
 
