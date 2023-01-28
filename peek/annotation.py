@@ -24,8 +24,9 @@ def annotate(file, style, database, image):
 
     a.start(plot_type=style)
     
-    print("completed.")        
-    a.show_tag_number(956)
+    while True:
+        # a.figure.canvas.draw_idle()
+        a.figure.canvas.flush_events()
 
 if __name__ == "__main__":
     annotate()

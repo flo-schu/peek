@@ -330,7 +330,7 @@ class Annotations(Tag):
 
             return
 
-        self.figure.canvas.draw()
+        self.figure.canvas.draw_idle()
 
     def save_tag_to_database(self, tag):
         try:
