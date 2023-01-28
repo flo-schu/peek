@@ -47,7 +47,8 @@ class Tag(Files):
         
         # temporary attributes
         self.path = ""
-        
+        self.slices = ["tag_image_orig", "tag_image_diff", "tag_image_extra1"]
+            
         # special attributes with custom save methods
         self.tag_contour = np.array([])
         self.tag_image_orig = np.array([])
@@ -88,29 +89,6 @@ class Tag(Files):
             if not os.path.exists(path):
                 os.mkdir(path)
 
-        # save_tag_slice
-        img_orig = tag.pop('tag_image_orig')
-        if store:
-            if img_orig.size > 0:
-                p_ = os.path.join(path, 'tag_image_orig')
-                os.makedirs(p_, exist_ok=True)
-                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_orig)
-
-        # save tag slice from diff pic (maybe not necessary)
-        img_diff = tag.pop('tag_image_diff')
-        if store:
-            if img_diff.size > 0:
-                p_ = os.path.join(path, 'tag_image_diff')
-                os.makedirs(p_, exist_ok=True)
-                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_diff)
-
-        img_diff = tag.pop('tag_image_extra1')
-        if store:
-            if img_diff.size > 0:
-                p_ = os.path.join(path, 'tag_image_extra1')
-                os.makedirs(p_, exist_ok=True)
-                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_diff)
-
         # save contour
         contour = tag.pop('tag_contour')
         if store:
@@ -118,6 +96,17 @@ class Tag(Files):
                 p_ = os.path.join(path, 'tag_contour')
                 os.makedirs(p_, exist_ok=True)
                 np.save(os.path.join(p_, str(int(self.id))+'.npy'), contour)
+
+        # save slices
+        slices = tag.pop("slices")
+        for s in slices:
+            img_slice = tag.pop(s)
+            if store:
+                if img_slice.size > 0:
+                    p_ = os.path.join(path, s)
+                    os.makedirs(p_, exist_ok=True)
+                    imageio.imwrite(
+                        os.path.join(p_, f"{int(self.id)}.jpg"), img_slice)
 
         path = tag.pop("path")
         return pd.Series(tag), path
