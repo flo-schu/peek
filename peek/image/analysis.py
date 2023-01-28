@@ -223,7 +223,7 @@ class Annotations(Tag):
         t.height = y2 - y1
         t.label = "?"
         t.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        t.analysis = self.analysis
+        t.analysis = "manual"
         t.annotated = False
         t.xcenter = (x1 + x2) / 2
         t.ycenter = (y1 + y2) / 2
@@ -276,9 +276,17 @@ class Annotations(Tag):
     def load_processed_tags(self):
         try:
             tags = pd.read_csv(self.path)
+            
             analysis = tags.analysis.unique()
-            assert len(analysis) == 1, f"multiple analyses in .csv file {analysis}"
+            if len(analysis) > 1:
+                is_manual = analysis == "manual"
+                if any(is_manual) and len(is_manual) == 2:
+                    analysis = analysis[~is_manual]
+                else:
+                    raise ValueError(f"multiple analyses in .csv file {analysis}")
+            
             self.analysis = analysis[0]
+            
             return tags
         except FileNotFoundError:
             print(f"no existing tags found at {self.path}. Starting new tags")
