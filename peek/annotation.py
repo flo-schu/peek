@@ -1,35 +1,31 @@
-import os
-import argparse
-from matplotlib import pyplot as plt
-
-from peek.utils.manage import Files
-from peek.image.process import Image
+import click
+from peek.image.process import Snapshot
 from peek.image.analysis import Annotations
 
-parser = argparse.ArgumentParser(description="Annotate images execute with python -i ...")
-parser.add_argument("image" , type=str, help="path to image")
-parser.add_argument("db" , type=str, help="path to annotations database")
-parser.add_argument("analysis", type=str, help="applied analysis, this was usually specified in the detection arguments")
-parser.add_argument("-p", "--plot" , type=str, help="specify type of plot, select from: 1) plot_complete_tag_diff 2) plot_tag 3) plot_tag_diff", default="plot_tag")
-parser.add_argument("-s", "--settings" , type=str, help="path to settings file", default="annotations_default.json")
-args = parser.parse_args()
+@click.command()
+@click.option("--file", "-f", type=str, help="annotation .csv file", default="C:\\Users\\schunckf\\Documents\\Florian\\papers\\nanocosm\\temp\\pics_classic\\20210402\\6_tags.csv")
+@click.option("--style", "-s", type=str, help="style of annotations", default="plot_complete_tag_diff")
+@click.option("--database", "-d", type=str, help="path to tag database", default="C:\\Users\\schunckf\\Documents\\Florian\\papers\\nanocosm\\results\\image_annotations.csv")
+@click.option("--image", "-i", type=str, help="image should normally be provided through annotated file. If necessary it can be provided separately", default=None)
+def annotate(file, style, database, image):
 
-sdir = Files.load_settings_dir()
-settings = Files.read_settings(os.path.join(sdir, args.settings))
+    print(f"annotating file {file}")
+    # open series and load image
 
-print("working on image:", args.image)
-print("annotating analysis:", args.analysis)
-print("storing output in:", args.db)
-print("using settings:", settings)
+    if image is not None:
+        image = Snapshot(path=image)
 
-# open series and load image
-i = Image(args.image, ignore_struct_path=True, import_image=False)
+    a = Annotations(
+        path=file,
+        image=image,  # image is searched through 
+        analysis="undefined",  # analysis should be provided by annotation file
+        tag_db_path=database,
+    )
 
-a = Annotations(i, args.analysis, tag_db_path=args.db, keymap=settings["keymap"])
+    a.start(plot_type=style)
+    
+    print("completed.")        
 
-a.load_processed_tags()
-a.start(plot_type=args.plot)
-# a.set_plot_titles()
-a.show_tag_number(0)
-# plt.show()
 
+if __name__ == "__main__":
+    annotate()

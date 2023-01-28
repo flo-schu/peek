@@ -3,14 +3,17 @@ import sys
 import time
 import shutil
 import imageio
+import warnings
 import cv2 as cv
 import pandas as pd
 import numpy as np
+import tqdm
 import matplotlib as mpl
 from glob import glob
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
+from matplotlib.widgets import RectangleSelector
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
@@ -27,6 +30,7 @@ class Tag(Files):
         # IF POSSIBLE NEVER CHANGE THESE NAMES. WHY?
         # THEN THE DATA WILL BE HOMOGENEOUSLY NAMED ACCROSS ALL ANALYSES
         # ----------------------------------------------------------------------
+        self.image_hash = None      # unique reference hash of parent image
         self.id = 0                 # id of tag in image
         self.x = 0                  # top left corner of bounding box (x-axis)
         self.y = 0                  # top left corner of bounding box (y-axis)
@@ -132,7 +136,7 @@ class Annotations(Tag):
         image=None, 
         image_metadata={},
         analysis="undefined", 
-        tag_db_path="", 
+        tag_db_path="annotations/tag_db.csv", 
         keymap={
             'd':"Daphnia Magna",
             'c':"Culex Pipiens, larva",
@@ -145,6 +149,7 @@ class Annotations(Tag):
         self.path = os.path.normpath(path)
         self.tags = self.load_processed_tags()
         self.image = self.load_image(image, image_metadata)
+        self.image_hash = self.image.__hash__()
         self.store_extra_files = store_extra_files
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
@@ -158,13 +163,21 @@ class Annotations(Tag):
         self.keymap = keymap
         self.zfill = zfill
         self.target = ()
+        self.seletctor = None
 
     def load_image(self, image, meta): 
         if image is None:
-            return Snapshot(self.path, meta=meta)
+            img_path = self.tags.img_path.unique()
+            assert len(img_path) == 1, f"multiple image paths in annotation {img_path}"
+            return Snapshot(img_path[0], meta=meta)
         else:
             assert isinstance(image, Snapshot)
             return image
+
+    def get_image_path(self):
+        img_path = self.tags.img_path.unique()
+        assert len(img_path) == 1, f"multiple images listed in annotation file {img_path}"
+        return img_path[0]
 
     def start(self, plot_type="plot_complete_tag_diff"):
         """
@@ -186,6 +199,18 @@ class Annotations(Tag):
         plt.show()
         self.draw_tag_boxes()
         self.show_tag_number(0)
+
+
+    def select_callback(self, eclick, erelease):
+        """
+        Callback for line selection.
+
+        *eclick* and *erelease* are the press and release events.
+        """
+        x1, y1 = eclick.xdata, eclick.ydata
+        x2, y2 = erelease.xdata, erelease.ydata
+        print(f"({x1:3.2f}, {y1:3.2f}) --> ({x2:3.2f}, {y2:3.2f})")
+        print(f"The buttons you used were: {eclick.button} {erelease.button}")
 
 
     def plot_complete_tag_diff(self):
@@ -222,7 +247,11 @@ class Annotations(Tag):
         
     def load_processed_tags(self):
         try:
-            return pd.read_csv(self.path)
+            tags = pd.read_csv(self.path)
+            analysis = tags.analysis.unique()
+            assert len(analysis) == 1, f"multiple analyses in .csv file {analysis}"
+            self.analysis = analysis[0]
+            return tags
         except FileNotFoundError:
             print(f"no existing tags found at {self.path}. Starting new tags")
             return pd.DataFrame({'id':[]})
@@ -243,8 +272,8 @@ class Annotations(Tag):
             self.ctag.annotated = True
             t, p = self.ctag.save()
             self.drop_duplicates()
-            self.tags = self.tags.append(t, ignore_index=True)
-            self.save_tag_to_database(t, add_attrs=['id','date','time'])
+            self.tags = pd.concat([self.tags, t.to_frame().T], ignore_index=True)
+            self.save_tag_to_database(t)
             self.show_label()
 
             self.tags = self.tags.sort_values(by='id')
@@ -262,27 +291,31 @@ class Annotations(Tag):
             self.reset_lims()
             self.show_previous_tag()
 
+        if event.key == "t":
+            name = type(self.selector).__name__
+            if self.selector.active:
+                print(f'{name} deactivated.')
+                self.selector.set_active(False)
+            else:
+                print(f'{name} activated.')
+                self.selector.set_active(True)
+
+            return
+
         self.figure.canvas.draw()
 
-    def save_tag_to_database(self, tag, add_attrs=[]):
+    def save_tag_to_database(self, tag):
         try:
             db = pd.read_csv(self.tag_db_path)
         except FileNotFoundError:
             db = pd.DataFrame()
 
-        for a in add_attrs:
-            tag['img_'+a] = getattr(self.image, a)
-        # print(db.loc[:,("id","img_id", "img_time","img_date")])
-        db = db.append(tag, ignore_index=True)
-        db.img_time = db.img_time.astype(str).str.zfill(6)
-        db.img_date = db.img_date.astype(str).str.zfill(8)
-        db.img_id = db.img_id.astype(str).str.zfill(2)
+        db = pd.concat([db, tag.to_frame().T], ignore_index=True)
         db.id = db.id.astype(int).astype(str)
         
         # remove duplicates
         db = self.remove_duplicates(db)
-        db.sort_values(by=["img_date","img_id", "img_time","id"], ascending=True)
-        # print(db.loc[:,("id","img_id", "img_time","img_date")])
+        db.sort_values(by=["image_hash", "id"], ascending=True)
 
         # save tagged image to folder according to a unique identifier
         self.copy_tag_image(tag)
@@ -301,13 +334,7 @@ class Annotations(Tag):
         to_path = os.path.join(
             os.path.dirname(self.tag_db_path), 
             "annotated_images", 
-             "_".join([
-                 str(tag.img_date),
-                 str(int(tag.img_id)).zfill(2), 
-                 str(int(tag.img_time)).zfill(6), 
-                 str(int(tag.id))
-                 ])+".jpg"
-        )
+             f"{tag.image_hash}_tag_{int(tag.id)}.jpg")
 
         os.makedirs(os.path.dirname(to_path), exist_ok=True)
         shutil.copy(from_path, to_path)
@@ -320,7 +347,7 @@ class Annotations(Tag):
         img_date    date at which image was taken (Ymd)
         img_time    time at which image was taken (HMS)
         """
-        duplicates = df.duplicated(subset=["id","img_id","img_date","img_time"], 
+        duplicates = df.duplicated(subset=["id","image_hash"], 
                                    keep="last")
         return df.loc[~duplicates, :].copy()
         
@@ -368,6 +395,13 @@ class Annotations(Tag):
     def show_tagged(self):
         tagged = self.image.tag_image(self.image.img, self.new_tags['contour'])
         self.axes[0].imshow(tagged)
+        self.selector = RectangleSelector(
+            self.axes[0], self.select_callback,
+            useblit=False,
+            button=[1, 3],  # disable middle button
+            minspanx=5, minspany=5,
+            spancoords='pixels',
+            interactive=True)
 
     def show_label(self):
         try:
@@ -394,13 +428,26 @@ class Annotations(Tag):
         self.set_plot_titles()
 
     def save_new_tags(self, new_tags):
-        for i in range(len(new_tags)):
-            t = self.read_tag(new_tags, i)
-            t.unpack_dictionaries()
-            t.get_tag_box_coordinates()
-            t, p = t.save(self.store_extra_files)
-            self.tags = self.tags.append(t, ignore_index=True)
+        if len(self.tags) != 0:
+            warnings.warn("overwriting existing annotations")
+            self.tags = pd.DataFrame({'id':[]})
         
+        print("reading tags...")
+        N = len(new_tags)
+        tags = []
+        with tqdm.tqdm(total=N) as bar:
+
+            for i in range(N):
+                t = self.read_tag(new_tags, i)
+                t.unpack_dictionaries()
+                t.get_tag_box_coordinates()
+                t.image_hash = self.image_hash
+                t, _ = t.save(self.store_extra_files)
+                tags.append(t.to_frame().T)
+
+                bar.update(1)
+
+        self.tags = pd.concat(tags, ignore_index=True)        
         self.save_progress()
 
     def draw_tag_boxes(self):

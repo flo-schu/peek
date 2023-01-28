@@ -6,6 +6,9 @@
 # containing methods for cropping, difference of continuous images, edge detection
 
 import os
+import warnings
+import ctypes
+import hashlib
 from PIL import Image
 import cv2
 import gc
@@ -24,6 +27,7 @@ class Snapshot(Files):
 
     def __init__(self, path: str = "", meta: dict = {}):
         self._meta = None
+        self._hash = None
         self.img = None
         self.pixels = np.array([])
         self.tags = {}
@@ -34,8 +38,15 @@ class Snapshot(Files):
         self.calculate_pixels()
         self.set_meta(meta)
 
+        for m in ["id", "date", "time",]:
+            if m is None:
+                warnings.warn(f"metadata {m} is undefined. Set this attribute with meta={{'m': ...}}")
+
     def __repr__(self):
         return f"{str(self.img)} @ {self.path}"
+
+    def __hash__(self):
+        return self._hash
 
     @property
     def time(self):
@@ -48,6 +59,14 @@ class Snapshot(Files):
     @property
     def id(self):
         return self._meta.get("id")
+
+    @property
+    def name(self):
+        interpunct = [";", ":", "-", ".", ",", " "]
+        name = f"{self.date}_{self.time}_{self.id}"
+        for i in interpunct:
+            name = name.replace(i, "")
+        return name
 
     @property
     def metadata(self):
@@ -67,7 +86,7 @@ class Snapshot(Files):
         return (self.img.size[1], self.img.size[0], self.img.layers)
 
     def read(self, path):
-        self.img = Image.open(os.path.normpath(path))
+        self.img = Image.open(os.path.normpath(os.path.abspath(path)))
         self._meta = self.img.getexif()
         print(f"read {self.path}")
 
@@ -76,6 +95,7 @@ class Snapshot(Files):
 
     def calculate_pixels(self):
         self.pixels = np.asarray(self.img)
+        self._hash = hashlib.md5(self.pixels.tobytes()).hexdigest()
 
     def read_raw(self, **params):
         """
