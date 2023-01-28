@@ -52,6 +52,7 @@ class Tag(Files):
         self.tag_contour = np.array([])
         self.tag_image_orig = np.array([])
         self.tag_image_diff = np.array([])
+        self.tag_image_extra1 = np.array([])
     
     def unpack_dictionaries(self):
         pop_dicts = []
@@ -103,6 +104,13 @@ class Tag(Files):
                 os.makedirs(p_, exist_ok=True)
                 imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_diff)
 
+        img_diff = tag.pop('tag_image_extra1')
+        if store:
+            if img_diff.size > 0:
+                p_ = os.path.join(path, 'tag_image_extra1')
+                os.makedirs(p_, exist_ok=True)
+                imageio.imwrite(os.path.join(p_, str(int(self.id))+'.jpg'), img_diff)
+
         # save contour
         contour = tag.pop('tag_contour')
         if store:
@@ -126,6 +134,8 @@ class Tag(Files):
             self.y = y
             self.width = w
             self.height = h
+            self.xcenter = x + w / 2
+            self.ycenter = y + h / 2
 
         return x, y, w, h
 
@@ -276,11 +286,13 @@ class Annotations(Tag):
         self.display_whole_img = True
         self.origx = (0, self.image.img.size[0])
         self.origy = (self.image.img.size[1],0)
-        self.gs = plt.GridSpec(nrows=2, ncols=2)
+        self.gs = plt.GridSpec(nrows=2, ncols=4)
 
-        self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0])
-        self.axes[1] = self.figure.add_subplot(self.gs[0, 1])
-        self.axes[2] = self.figure.add_subplot(self.gs[1, 1])
+        self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0:2])
+        self.axes[1] = self.figure.add_subplot(self.gs[0, 2])
+        self.axes[2] = self.figure.add_subplot(self.gs[0, 3])
+        self.axes[3] = self.figure.add_subplot(self.gs[1, 2])
+        self.axes[4] = self.figure.add_subplot(self.gs[1, 3])
         self.show_original()
 
     def plot_tag(self):
@@ -298,7 +310,9 @@ class Annotations(Tag):
         titles = {
             0: "original image",
             1: "tag original",
-            2: "tag diff"
+            2: "tag diff",
+            3: "tag extra1",
+            4: "",
         }
 
         for key, ax in self.axes.items():
@@ -490,6 +504,12 @@ class Annotations(Tag):
         try:
             self.axes[2].cla()
             self.axes[2].imshow(self.ctag.tag_image_diff)
+        except KeyError:
+            pass
+
+        try:
+            self.axes[3].cla()
+            self.axes[3].imshow(self.ctag.tag_image_extra1)
         except KeyError:
             pass
 

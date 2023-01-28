@@ -27,31 +27,36 @@ class MotionDetector(Detector):
                         with maximum extension (x or y) of 'thresh_size'
         """
 
-        # create a list of the series length + 1, to get a difference image
-        # from the 3rd and the 1st image
-        pixel_imgs = batch.pixels + [batch.pixels[0]]
-        difference_images = self.difference(pixel_imgs, smooth=smooth)
 
-        #threshold the gray image to binarise it. Anything pixel that has
-        #value more than 3 we are converting to white
-        #(remember 0 is black and 255 is absolute white)
-        #the image is called binarised as any value less than 3 will be 0 and
-        # all values equal to and more than 3 will be 255
-
-        zipper = zip(
+        comparison = zip(
             batch.images, 
-            np.roll(difference_images, 1, axis=0)
+            np.roll(batch.images, -1, axis=0),
         )
-        for img, diff in zipper:
-            tags = self.MotionTagger()
-            # TODO: try if this is better placed before
-            gray = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
-            thresh = cv.threshold(gray, thresh_binary, 255, cv.THRESH_BINARY)
-            cnts_select = self.get_contours(thresh[1], thresh_size)
+        for img_orig, img_comp in comparison:
+            # calculate pixel and channel wise difference
+            diff = self.difference(
+                images=[img_comp.pixels, img_orig.pixels], 
+                smooth=smooth)
 
+            # TODO: try if this is better placed before
+            # grayscale
+            gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
+            
+            # threshold grayscale image
+            _, thresh = cv.threshold(gray, thresh_binary, 255, cv.THRESH_BINARY)
+            
+            # get contours
+            cnts_select = self.get_contours(thresh, thresh_size)
+
+            # update tags
+            tags = self.MotionTagger()
             tags.tag_contour = cnts_select
             tags.wrap_up()
-            img.tags = tags
+            img_orig.tags = tags
+            
+            # add other images, which should be shown 
+            img_orig.tag_image_diff = img_comp.pixels
+            img_orig.tag_image_extra1 = thresh
 
         return batch
     
@@ -60,17 +65,17 @@ class MotionDetector(Detector):
         optional method for creating sliced images of the tags. Good for 
         generating data for machine learning algorithm
         """
-        for img_orig, img_diff_ in zip(batch.images, np.roll(batch.images, 1, axis=0)):
+        for img in batch.images:            
+
+            # cut slices ALWAYS reusing the same contours
+
+            # cut slices from the real image
+            img.tags.tag_image_orig = img.cut_slices(mar)
             
-            # load the diff image again to avoid any mess-up
-            img_diff = Snapshot(img_diff_.path)
-            img_diff.tags = self.MotionTagger()
-
-            # copy tag contours from original image
-            img_diff.tags.tag_contour = img_orig.tags.tag_contour
-
-            # cut out the same slices of tags from the two difference images
-            img_orig.tags.tag_image_orig = img_orig.cut_slices(mar)
-            img_orig.tags.tag_image_diff = img_diff.cut_slices(mar)
+            # cut slices from comparison image
+            img.tags.tag_image_diff = img._cut_slices(img.tag_image_diff, mar)
+            
+            # cut slices from thresholded difference image
+            img.tags.tag_image_extra1 = img._cut_slices(img.tag_image_extra1, mar)
 
         return batch

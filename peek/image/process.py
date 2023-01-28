@@ -303,19 +303,36 @@ class Snapshot(Files):
 
     def cut_slices(self, mar=0):
         """
+        mar:  margin to be drawn around the tag boxes
+        """        
+        return self._cut_slices(
+            pixel_img=self.pixels, 
+            mar=mar)
+
+    def _cut_slices(self, pixel_img, mar=0):
+        """
+        method for slicing a different image with the same contours
+
+        pixel_img:      image to be sliced
+        contours:       list of contours making the slices
         mar:            margin to be drawn around the tag boxes
         """
         slices = []
         for c in self.tags.tag_contour:
             (x, y, w, h) = cv2.boundingRect(c)
-            slc = self.slice_image(self.pixels, x, y, w, h, mar)
+            slc = self.slice_image(pixel_img, x, y, w, h, mar)
             slices.append(slc)
         
         return slices
 
     @staticmethod
     def slice_image(img, x, y, w, h, mar=0):
-        return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
+        if len(img.shape) == 3:
+            return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
+        if len(img.shape) == 2:
+            return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w)]
+
+        raise ValueError(f"dimension of image was not 2 or 3 but {img.shape}")
 
     def tag_image(self, mar=0):
         """
