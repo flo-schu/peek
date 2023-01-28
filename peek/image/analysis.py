@@ -6,9 +6,7 @@ import imageio
 import cv2 as cv
 import pandas as pd
 import numpy as np
-import itertools as it
 import matplotlib as mpl
-from datetime import datetime as dt
 from glob import glob
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
@@ -19,7 +17,7 @@ from scipy.signal import argrelextrema, find_peaks
 from toopy.pandas import read_csv_list
 
 from peek.utils.manage import Files
-from peek.image.process import Snapshot, Series
+from peek.image.process import Snapshot
 
 
 
