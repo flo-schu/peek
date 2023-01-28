@@ -25,7 +25,7 @@ def annotate(file, style, database, image):
     a.start(plot_type=style)
     
     print("completed.")        
-
+    a.show_tag_number(956)
 
 if __name__ == "__main__":
     annotate()

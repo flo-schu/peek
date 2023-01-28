@@ -10,6 +10,7 @@ import numpy as np
 import tqdm
 import matplotlib as mpl
 from glob import glob
+from datetime import datetime
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
@@ -147,13 +148,13 @@ class Annotations(Tag):
         zfill=0,
         ):
         self.path = os.path.normpath(path)
+        self.analysis = analysis
         self.tags = self.load_processed_tags()
         self.image = self.load_image(image, image_metadata)
         self.image_hash = self.image.__hash__()
         self.store_extra_files = store_extra_files
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
-        self.analysis = analysis
         self.origx = (0,0)
         self.origy = (0,0)
         self.xlim = (0,0)
@@ -164,6 +165,7 @@ class Annotations(Tag):
         self.zfill = zfill
         self.target = ()
         self.seletctor = None
+        self._pc = None
 
     def load_image(self, image, meta): 
         if image is None:
@@ -196,21 +198,47 @@ class Annotations(Tag):
         self.set_plot_titles()
 
         plt.ion()
-        plt.show()
         self.draw_tag_boxes()
         self.show_tag_number(0)
+        plt.show()
 
 
+    # def test(self, eclick=(1750, 800), erelease=(1770, 810)):
     def select_callback(self, eclick, erelease):
         """
         Callback for line selection.
 
         *eclick* and *erelease* are the press and release events.
         """
-        x1, y1 = eclick.xdata, eclick.ydata
-        x2, y2 = erelease.xdata, erelease.ydata
-        print(f"({x1:3.2f}, {y1:3.2f}) --> ({x2:3.2f}, {y2:3.2f})")
-        print(f"The buttons you used were: {eclick.button} {erelease.button}")
+        x1, y1 = int(eclick.xdata), int(eclick.ydata)
+        x2, y2 = int(erelease.xdata), int(erelease.ydata)
+        t = Tag()
+        t.path = self.path
+        t.image_hash = self.image_hash
+        t.img_path = self.image.path
+        t.id = len(self.tags)
+        t.x = x1
+        t.y = y1
+        t.width = x2 - x1
+        t.height = y2 - y1
+        t.label = "?"
+        t.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        t.analysis = self.analysis
+        t.annotated = False
+        t.xcenter = (x1 + x2) / 2
+        t.ycenter = (y1 + y2) / 2
+        t.tag_contour = np.array([[[x1, y1]], [[x2, y2]]])
+        t.tag_image_orig = self.image.slice_image(
+            self.image.pixels, *cv.boundingRect(t.tag_contour), mar=0)
+        t.tag_image_diff = t.tag_image_orig
+        new_tag, _ = t.save()
+
+        print(f"created new tag {t}")
+
+        self.tags = pd.concat([self.tags, new_tag.to_frame().T], ignore_index=True)
+        self._pc.remove()
+        self.draw_tag_boxes()
+        self.save_progress()
 
 
     def plot_complete_tag_diff(self):
@@ -388,20 +416,22 @@ class Annotations(Tag):
             self.axes[0].set_xlim(self.origx)
             self.axes[0].set_ylim(self.origy)
 
-    def show_original(self, resize=.1):
-        img = cv.resize(self.image.pixels.copy(), (0,0), fx=resize, fy=resize)
+    def show_original(self):
         self.axes[0].imshow(self.image.img)
+        self.selector = self.create_selector()
 
-    def show_tagged(self):
-        tagged = self.image.tag_image(self.image.img, self.new_tags['contour'])
-        self.axes[0].imshow(tagged)
-        self.selector = RectangleSelector(
+    def create_selector(self):
+        return RectangleSelector(
             self.axes[0], self.select_callback,
-            useblit=False,
+            useblit=True,
             button=[1, 3],  # disable middle button
             minspanx=5, minspany=5,
             spancoords='pixels',
             interactive=True)
+
+    def show_tagged(self):
+        tagged = self.image.tag_image(self.image.img, self.new_tags['contour'])
+        self.axes[0].imshow(tagged)
 
     def show_label(self):
         try:
@@ -459,8 +489,8 @@ class Annotations(Tag):
 
             patches.append(rect)
         
-        pc = PatchCollection(patches, facecolor="none", edgecolor="green")
-        _ = self.axes[0].add_collection(pc)
+        self._pc = PatchCollection(patches, facecolor="none", edgecolor="green")
+        _ = self.axes[0].add_collection(self._pc)
 
     def draw_tag_box(self):
         x, y, w, h = self.ctag.get_tag_box_coordinates()
