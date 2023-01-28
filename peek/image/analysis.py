@@ -498,7 +498,9 @@ class Annotations(Tag):
     def show_tag(self):
         try:
             self.axes[1].cla()
-            self.axes[1].imshow(self.ctag.tag_image_orig)
+
+            img = self.draw_contour_on_slice()
+            self.axes[1].imshow(img)
         except KeyError:
             pass
         try:
@@ -513,8 +515,18 @@ class Annotations(Tag):
         except KeyError:
             pass
 
+
         self.show_label()
         self.set_plot_titles()
+
+    def draw_contour_on_slice(self):
+        origin = np.array([[[self.ctag.x, self.ctag.y]]])
+        ym = self.ctag.tag_image_orig.shape[0] - self.ctag.height
+        xm = self.ctag.tag_image_orig.shape[1] - self.ctag.width
+        margins = np.array([xm, ym]) / 2
+        cnt = self.ctag.tag_contour - origin + margins
+        cnt = cnt.astype(int)
+        return cv.drawContours(self.ctag.tag_image_orig, [cnt], 0, (0,255,0), 1)
 
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
