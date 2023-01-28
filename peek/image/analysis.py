@@ -146,7 +146,8 @@ class Annotations(Tag):
             },
         store_extra_files = True,
         zfill=0,
-        ):
+        margin_click_tags=10,
+    ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
         self.tags = self.load_processed_tags()
@@ -166,6 +167,7 @@ class Annotations(Tag):
         self.target = ()
         self.seletctor = None
         self._pc = None
+        self.margin_click_tags = margin_click_tags
 
     def load_image(self, image, meta): 
         if image is None:
@@ -187,6 +189,7 @@ class Annotations(Tag):
         """
         self.figure = plt.figure()
         self.figure.canvas.mpl_connect('key_press_event', self.press) 
+        self.figure.canvas.mpl_connect('button_press_event', self.click_callback) 
         mpl.rcParams['keymap.back'] = ['left'] 
         mpl.rcParams['keymap.pan'] = [] 
         mpl.rcParams['keymap.pan'] = [] 
@@ -212,30 +215,58 @@ class Annotations(Tag):
         """
         x1, y1 = int(eclick.xdata), int(eclick.ydata)
         x2, y2 = int(erelease.xdata), int(erelease.ydata)
+        tag_contour = np.array([[[x1, y1]], [[x2, y2]]])
+        
+        self.manual_tag(contour=tag_contour, mar=0)
+    
+    def click_callback(self, event):
+        """
+        Callback for line selection.
+
+        *eclick* and *erelease* are the press and release events.
+        """
+        if event.button == 3:
+            print(event)
+            x, y = int(event.xdata), int(event.ydata)
+            print(x, y)
+            tag_contour = np.array([[[x, y]]])
+            
+            self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+
+    def manual_tag(self, contour, mar=0):
         t = Tag()
+        x, y, w, h = cv.boundingRect(contour)
+        
+        # manually add margins
+        x = x - mar
+        y = y - mar
+        w = w + 2 * mar
+        h = h + 2 * mar
+
+        t.tag_contour = contour
+        t.tag_image_orig = self.image.slice_image(
+            self.image.pixels, x, y, w, h, mar=0)
+        t.tag_image_diff = t.tag_image_orig
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
         t.id = len(self.tags)
-        t.x = x1
-        t.y = y1
-        t.width = x2 - x1
-        t.height = y2 - y1
+        t.x = x
+        t.y = y
+        t.width = w
+        t.height = h
         t.label = "?"
         t.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         t.analysis = "manual"
         t.annotated = False
-        t.xcenter = (x1 + x2) / 2
-        t.ycenter = (y1 + y2) / 2
-        t.tag_contour = np.array([[[x1, y1]], [[x2, y2]]])
-        t.tag_image_orig = self.image.slice_image(
-            self.image.pixels, *cv.boundingRect(t.tag_contour), mar=0)
-        t.tag_image_diff = t.tag_image_orig
+        t.xcenter = x + w / 2
+        t.ycenter = y + h / 2
         new_tag, _ = t.save()
 
-        print(f"created new tag {t}")
+        print(f"created new manual tag {t}")
 
-        self.tags = pd.concat([self.tags, new_tag.to_frame().T], ignore_index=True)
+        self.tags = pd.concat([self.tags, new_tag.to_frame().T], 
+            ignore_index=True)
         self._pc.remove()
         self.draw_tag_boxes()
         self.save_progress()
