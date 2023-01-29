@@ -55,8 +55,8 @@ class MotionDetector(Detector):
             img_orig.tags = tags
             
             # add other images, which should be shown 
-            img_orig.tag_image_diff = img_comp.pixels
-            img_orig.tag_image_extra1 = thresh
+            img_orig.tag_image_comp = img_comp.pixels
+            img_orig.tag_image_thresh = thresh
 
         return batch
     
@@ -73,9 +73,9 @@ class MotionDetector(Detector):
             img.tags.tag_image_orig = img.cut_slices(mar)
             
             # cut slices from comparison image
-            img.tags.tag_image_diff = img._cut_slices(img.tag_image_diff, mar)
+            img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar)
             
             # cut slices from thresholded difference image
-            img.tags.tag_image_extra1 = img._cut_slices(img.tag_image_extra1, mar)
+            img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar)
 
         return batch

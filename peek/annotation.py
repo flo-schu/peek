@@ -20,6 +20,10 @@ def annotate(file, style, database, image, margin):
         path=file,
         image=image,  # image is searched through 
         analysis="undefined",  # analysis should be provided by annotation file
+        extra_fileobjects={
+            "tag_image_comp": ".jpg",
+            "tag_image_thresh": ".jpg",
+        },
         tag_db_path=database,
         margin_click_tags=margin,
     )

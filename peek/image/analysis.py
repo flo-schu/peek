@@ -63,13 +63,7 @@ class Tag(Files):
         # temporary attributes
         self.path = ""
         self.fileobjects = {}
-            
-        # special attributes with custom save methods
-        # self.tag_contour = np.array([])
-        # self.tag_image_orig = np.array([])
-        # self.tag_image_diff = np.array([])
-        # self.tag_image_extra1 = np.array([])
-    
+                
     def unpack_dictionaries(self):
         pop_dicts = []
         for key, item in self.__dict__.items():
@@ -563,26 +557,27 @@ class Annotations(Tag):
         except KeyError:
             pass
 
+    def extrafileobjects(self):
+        fo = self.fileobjects.copy()
+        _ = fo.pop("tag_contour")
+        _ = fo.pop("tag_image_orig")
+        return fo
+
     def show_tag(self):
         try:
             self.axes[1].cla()
-
             img = self.draw_contour_on_slice()
             self.axes[1].imshow(img)
         except KeyError:
             pass
-        try:
-            self.axes[2].cla()
-            self.axes[2].imshow(self.ctag.tag_image_diff)
-        except KeyError:
-            pass
 
-        try:
-            self.axes[3].cla()
-            self.axes[3].imshow(self.ctag.tag_image_extra1)
-        except KeyError:
-            pass
-
+        extra_objects = self.extrafileobjects()
+        for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
+            try:
+                self.axes[i].cla()
+                self.axes[i].imshow(getattr(self.ctag, attr))
+            except KeyError:
+                pass
 
         self.show_label()
         self.set_plot_titles()
