@@ -179,9 +179,7 @@ class Annotations(Tag):
         image=None, 
         image_metadata={},
         analysis="undefined", 
-        fileobjects={
-            "tag_contour": ".npy",
-            "tag_image_orig": ".jpg",
+        extra_fileobjects={
             "tag_image_diff": ".jpg", 
             "tag_image_extra1": ".jpg",
         },
@@ -202,7 +200,6 @@ class Annotations(Tag):
         self.image = self.load_image(image, image_metadata)
         self.image_hash = self.image.__hash__()
         self.store_extra_files = store_extra_files
-        self.fileobjects = fileobjects
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
         self.origx = (0,0)
@@ -217,6 +214,12 @@ class Annotations(Tag):
         self.seletctor = None
         self._pc = None
         self.margin_click_tags = margin_click_tags
+
+        self.fileobjects = {
+            "tag_contour": ".npy",
+            "tag_image_orig": ".jpg",
+        }
+        self.fileobjects.update(extra_fileobjects)
 
     def load_image(self, image, meta): 
         if image is None:
@@ -260,6 +263,13 @@ class Annotations(Tag):
 
         # self.press(A())
 
+        # class B:
+        #     button = 3
+        #     xdata = 10
+        #     ydata = 20
+
+        # self.click_callback(B())
+
     # def test(self, eclick=(1750, 800), erelease=(1770, 810)):
     def select_callback(self, eclick, erelease):
         """
@@ -280,12 +290,13 @@ class Annotations(Tag):
         *eclick* and *erelease* are the press and release events.
         """
         if event.button == 3:
-            print(event)
+            # print(event)
             x, y = int(event.xdata), int(event.ydata)
-            print(x, y)
+            # print(x, y)
             tag_contour = np.array([[[x, y]]])
             
             self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+
 
     def manual_tag(self, contour, mar=0):
         t = Tag()
@@ -297,10 +308,23 @@ class Annotations(Tag):
         w = w + 2 * mar
         h = h + 2 * mar
 
-        t.tag_contour = contour
-        t.tag_image_orig = self.image.slice_image(
-            self.image.pixels, x, y, w, h, mar=0)
-        t.tag_image_diff = t.tag_image_orig
+        # create fileobjects
+        for attr, _ in self.fileobjects.items():
+            if attr == "tag_contour":
+                setattr(t, attr, contour)
+
+            elif attr == "tag_image_orig":
+                slc = self.image.slice_image(
+                    self.image.pixels, x, y, w, h, mar=0)
+                setattr(t, attr, slc)
+                
+            else:
+                # no calculated images for fileobjects apart from tag_contour
+                # and tag_image_orig exist
+                slc = np.full((10,10), 255, dtype=np.uint8)
+                setattr(t, attr, slc)
+                
+        t.fileobjects = self.fileobjects
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
@@ -351,16 +375,16 @@ class Annotations(Tag):
         }
 
     def set_plot_titles(self):
-        titles = {
-            0: "original image",
-            1: "tag original",
-            2: "tag diff",
-            3: "tag extra1",
-            4: "",
-        }
+        ax_no = 0
+        titles = {ax_no: "original image"}
+        for key, _ in self.fileobjects.items():
+            if key == "tag_contour":
+                continue
+            ax_no += 1
+            titles.update({ax_no: key})
 
-        for key, ax in self.axes.items():
-            ax.set_title(titles[key])
+        for (_, tit), (_, ax) in zip(titles.items(), self.axes.items()):
+            ax.set_title(tit)
         
     def load_processed_tags(self):
         try:
