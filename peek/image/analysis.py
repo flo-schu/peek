@@ -21,7 +21,7 @@ from scipy.signal import argrelextrema, find_peaks
 from toopy.pandas import read_csv_list
 
 from peek.utils.manage import Files
-from peek.image.process import Snapshot
+from peek.image.process import Snapshot, contour_center
 
 WRITE_BACKENDS = {
     ".npy": np.save,
@@ -160,8 +160,7 @@ class Tag(Files):
             self.y = y
             self.width = w
             self.height = h
-            self.xcenter = x + w / 2
-            self.ycenter = y + h / 2
+            self.xcenter, self.ycenter = contour_center(self.tag_contour)
 
         return x, y, w, h
 
@@ -331,8 +330,7 @@ class Annotations(Tag):
         t.time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         t.analysis = "manual"
         t.annotated = False
-        t.xcenter = x + w / 2
-        t.ycenter = y + h / 2
+        t.xcenter, t.ycenter = contour_center(contour)
         new_tag, _ = t.save()
 
         print(f"created new manual tag {t}")

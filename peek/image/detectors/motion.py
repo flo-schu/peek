@@ -68,12 +68,12 @@ class MotionDetector(Detector):
             # cut slices ALWAYS reusing the same contours
 
             # cut slices from the real image
-            img.tags.tag_image_orig = img.cut_slices(mar)
+            img.tags.tag_image_orig = img._cut_slices(img.pixels, mar, True)
             
             # cut slices from comparison image
-            img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar)
+            img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar, True)
             
             # cut slices from thresholded difference image
-            img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar)
+            img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar, True)
 
         return batch

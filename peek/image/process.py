@@ -307,7 +307,7 @@ class Snapshot(Files):
             pixel_img=self.pixels, 
             mar=mar)
 
-    def _cut_slices(self, pixel_img, mar=0):
+    def _cut_slices(self, pixel_img, mar=0, max_from_center=False):
         """
         method for slicing a different image with the same contours
 
@@ -317,7 +317,14 @@ class Snapshot(Files):
         """
         slices = []
         for c in self.tags.tag_contour:
-            (x, y, w, h) = cv2.boundingRect(c)
+            x, y, w, h = cv2.boundingRect(c)
+            if max_from_center:
+                x, y = contour_center(c)
+                x = int(np.floor(x))
+                y = int(np.floor(y))
+                w, h = (1, 1)
+
+            # add margin to bounding mox
             slc = self.slice_image(pixel_img, x, y, w, h, mar)
             slices.append(slc)
         
@@ -392,6 +399,13 @@ class Snapshot(Files):
 
         # Applies the minimum filter with kernel NxN
         return cv2.erode(img, kernel)
+
+
+def contour_center(contour):
+    x, y, w, h = cv2.boundingRect(contour)
+    xcenter = x + w / 2
+    ycenter = y + h / 2
+    return xcenter, ycenter
 
 
 class Series():
