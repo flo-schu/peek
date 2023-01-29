@@ -1,0 +1,20 @@
+name: peek
+channels:
+  - conda-forge
+  - bioconda
+  - fastchan
+  - defaults
+dependencies:
+  - mamba
+  - opencv-python-headless
+  - ca-certificates
+  - certifi
+  - openssl
+  - imageio
+  - pandas
+  - matplotlib
+  - scipy
+  - click
+  - scikit-learn
+  - imutils
+
