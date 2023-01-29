@@ -1,7 +1,4 @@
 import cv2 as cv
-import numpy as np
-from progress.bar import IncrementalBar
-from matplotlib import pyplot as plt
 
 from peek.image.process import Image 
 from peek.image.detectors.base import Detector, Mask, Tagger

@@ -7,7 +7,6 @@
 
 import os
 import warnings
-import ctypes
 import hashlib
 from PIL import Image
 import cv2
@@ -16,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-from exifread import process_file
 
 from peek.utils.manage import Files
 
@@ -127,7 +125,7 @@ class Snapshot(Files):
 
     def get_meta(self, tag="", index=None, return_as=None):
         with open(self.path, 'rb') as f:
-            tags = process_file(f)
+            tags = exifread.process_file(f)
         
         tags = tags[tag].values
         

@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import gc
-from progress.bar import IncrementalBar
+import tqdm
 
 from peek.image.process import Image
 from peek.image.analysis import Preprocessing
@@ -98,51 +98,49 @@ class MovementEdgeDetector(Detector):
             self.plot_grid(impp)
 
         if progress_bar:
-            bar = IncrementalBar('Processing', max=len(pois))
-        
-        for poi in pois:
-            roi = self.get_roi(m1.img, poi, search_width=detector_config["search_radius"])
-            steps = Detector.preprocess(roi,
-                algorithm=detector_config["algorithm"], 
-                algorithm_kwargs=detector_config["parameters"])
+            with tqdm.tqdm(total=len(pois)) as bar:
+                
+                for poi in pois:
+                    roi = self.get_roi(m1.img, poi, search_width=detector_config["search_radius"])
+                    steps = Detector.preprocess(roi,
+                        algorithm=detector_config["algorithm"], 
+                        algorithm_kwargs=detector_config["parameters"])
 
-            contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
-                                                  cv.CHAIN_APPROX_NONE)
-            
-            contours = self.unite_family(hierarchy, list(contours))
-            roi, properties, contours = self.find_ellipses_in_contours(
-                steps[0], contours, draw=False)
-            
-            for p in properties:
-                p = self.pass_tests(p)
+                    contours, hierarchy = cv.findContours(steps[-1], cv.RETR_TREE, 
+                                                        cv.CHAIN_APPROX_NONE)
+                    
+                    contours = self.unite_family(hierarchy, list(contours))
+                    roi, properties, contours = self.find_ellipses_in_contours(
+                        steps[0], contours, draw=False)
+                    
+                    for p in properties:
+                        p = self.pass_tests(p)
 
-            select = self.select_and_sort(zip(properties, contours), 
-                                            by='distance')
+                    select = self.select_and_sort(zip(properties, contours), 
+                                                    by='distance')
 
-            try:
-                properties = select[0][0]
-                contours = select[0][1]
-            except IndexError:
-                contours = np.empty((0,1,2), dtype=int)
-                properties = {}
-            
-            tags.add("pois", poi)
-            tags.add("properties", properties)
-            tags.add("tag_contour", contours)
-            tags.add("tag_image_orig", steps[0])
-            gc.collect()
-            roi_diff = Detector.get_roi(m2.img, poi, search_width=detector_config["search_radius"])
-            tags.add("tag_image_diff", roi_diff)
+                    try:
+                        properties = select[0][0]
+                        contours = select[0][1]
+                    except IndexError:
+                        contours = np.empty((0,1,2), dtype=int)
+                        properties = {}
+                    
+                    tags.add("pois", poi)
+                    tags.add("properties", properties)
+                    tags.add("tag_contour", contours)
+                    tags.add("tag_image_orig", steps[0])
+                    gc.collect()
+                    roi_diff = Detector.get_roi(m2.img, poi, search_width=detector_config["search_radius"])
+                    tags.add("tag_image_diff", roi_diff)
 
-            gc.collect()
-            if progress_bar:
-                bar.next()
+                    gc.collect()
+                    if progress_bar:
+                        bar.update(1)
 
         # wrap up
         tags.wrap_up(search_radius=detector_config["search_radius"], 
                      trim_top=m1.pars['trim']['t'])
-        if progress_bar:
-            bar.finish()
 
         return tags
 

@@ -1,5 +1,3 @@
-import pandas as pd
-from evaluation.calc import Algorithms as algs
 from matplotlib import pyplot as plt
 import numpy as np
 

@@ -1,7 +1,5 @@
 import cv2 as cv
 import numpy as np
-import copy
-from peek.image.process import Snapshot
 from peek.image.detectors.base import Detector, Mask, Tagger
 
 class MotionDetector(Detector):

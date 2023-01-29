@@ -1,13 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
-from sklearn.datasets import load_digits
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_predict, cross_val_score, train_test_split
 from sklearn import metrics as skm
 
-from peek.ml.plots import plot_precision_recall_vs_threshold, plot_roc_curve, plot_precision_vs_recall
 from peek.ml.data import load_annotated_data
 
 data = load_annotated_data(

@@ -1,15 +1,13 @@
-from exifread import process_file
 import datetime as dt
 import argparse
 
-from peek.image.process import Image
 
 parser = argparse.ArgumentParser(description='Get meta data of image')
 parser.add_argument('input' , type=str, help='path to image')
 args = parser.parse_args()
 
 with open(args.input, 'rb') as f:
-    tags = process_file(f)
+    tags = exifread.process_file(f)
 
 
 print("---------------- ALL TAGS -------------------------")
