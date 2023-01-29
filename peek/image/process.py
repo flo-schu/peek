@@ -296,8 +296,18 @@ class Snapshot(Files):
 
         return self, series_dir, image_dir
 
-    def read_tags(self):
-        self.tags = pd.csv
+    # def read_tags(self):
+    #     self.tags = pd.csv
+
+    def post_process_tags(self, func, fileobjects):
+        """
+        function to postprocess image tags with custom function
+        """
+        objects = [getattr(self.tags, fo) for fo in fileobjects]
+        for tag_objs in zip(*objects):
+            func(self, tag_objs)
+
+
 
     def cut_slices(self, mar=0):
         """

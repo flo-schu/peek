@@ -225,7 +225,7 @@ class Detector():
         cnts_select = []
         for c in cnts:
             # fit a bounding box to the contour
-            if max(c.shape) > threshold:            
+            if c.shape[0] > threshold:            
                 cnts_select.append(c)
 
         return cnts_select
@@ -475,16 +475,12 @@ class Detector():
         return [(p, c) for by, p, c in sorted(select)]
     
 class Tagger():
-    _nitems = 0
     def __init__(self):
         self.tag_contour = []
         self.tag_image_orig = []
-        self.tag_image_diff = []
-        self.properties = []
-        self.pois = []
 
-    def tick(self):
-        self._nitems += 1
+    def new(self, tag):
+        setattr(self, tag, [])
 
     def add(self, tag, value):
         getattr(self, tag).append(value)
@@ -493,16 +489,12 @@ class Tagger():
         for k in keys:
             getattr(self, k).append(None)
 
-    def move(self, search_width=50, manual=(0,0)):
-        for i, (p, cont, prop) in enumerate(zip(self.pois, self.tag_contour, self.properties)):
-            if cont is not None and prop is not None:
-                self.tag_contour[i] = cont - search_width + p + manual
-                if len(self.properties) > 0:
-                    try:
-                        self.properties[i]['xcenter'] = prop['xcenter'] - search_width + p[0] + manual[0]
-                        self.properties[i]['ycenter'] = prop['ycenter'] - search_width + p[1] + manual[1]
-                    except KeyError:
-                        pass
+    def filter_tags(self, properties: list = [], drop_ids: list = []):
+        for p in properties:
+            prop = getattr(self, p)
+            new_prop = [v for i, v in enumerate(prop) if i not in drop_ids]
+            setattr(self, p, new_prop)
+        
 
     @staticmethod
     def rescale(a, img_orig, img_scaled):
@@ -515,30 +507,6 @@ class Tagger():
         xy = np.array(img_scaled.shape[:2]) / np.array(img_orig.shape[:2])
         scld = a / xy
         return scld.astype(int)
-
-    def show(self, img):
-        cs = [c for c in self.tag_contour if c is not None]
-
-        im = img.copy()
-        im = Image.tag_image(im, cs)
-
-        for p in self.pois:
-            Image.draw_cross(im, p[0], p[1], 3, (255,0,0))
-
-        plt.imshow(im)
-
-    def update_props(self, key, val):
-        if len(self.properties) == 0:
-            self.properties = [{} for i in range(self._nitems)]
-
-        if isinstance(val, list):
-            assert len(val) == len(self.properties), "val should have the same length as properties"
-        
-        else:
-            val = [val for i in range(len(self.properties))]
-
-        for p, v in zip(self.properties, val):
-            p[key] = v
 
     def drop(self, key):
         for p in self.properties:

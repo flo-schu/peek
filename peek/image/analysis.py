@@ -170,6 +170,8 @@ class Annotations(Tag):
         self, 
         path,
         image=None, 
+        new_tags=None,
+        detector=None,
         image_metadata={},
         analysis="undefined", 
         extra_fileobjects={
@@ -189,7 +191,9 @@ class Annotations(Tag):
     ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
+        self.new_tags = new_tags
         self.tags = self.load_processed_tags()
+        self.detector = detector
         self.image = self.load_image(image, image_metadata)
         self.image_hash = self.image.__hash__()
         self.store_extra_files = store_extra_files
@@ -213,6 +217,10 @@ class Annotations(Tag):
             "tag_image_orig": ".jpg",
         }
         self.fileobjects.update(extra_fileobjects)
+
+        # read tags if supplied
+        if self.new_tags is not None:
+            self.read_new_tags(self.new_tags)
 
     def load_image(self, image, meta): 
         if image is None:
@@ -504,7 +512,8 @@ class Annotations(Tag):
         except IndexError:
             pass
 
-    def read_new_tags(self, new_tags):
+    def read_new_tags(self, tags):
+        new_tags = pd.DataFrame(tags.__dict__)
         try:
             new_tags.id
         except AttributeError:
