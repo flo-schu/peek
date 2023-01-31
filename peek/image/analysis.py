@@ -24,22 +24,6 @@ from toopy.pandas import read_csv_list
 from peek.utils.manage import Files
 from peek.image.process import Snapshot, contour_center
 
-WRITE_BACKENDS = {
-    ".npy": np.save,
-    ".jpg": imageio.imwrite,
-    ".jpeg": imageio.imwrite,
-    ".png": imageio.imwrite,
-    ".tiff": imageio.imwrite,
-}
-
-READ_BACKENDS = {
-    ".npy": np.load,
-    ".jpg": imageio.imread,
-    ".jpeg": imageio.imread,
-    ".png": imageio.imread,
-    ".tiff": imageio.imread,
-    ".csv": pd.read_csv,
-}
 
 class Tag(Files):
     def __init__(self):
@@ -59,12 +43,14 @@ class Tag(Files):
         self.annotated = False      # was the label manually annotated
         self.xcenter = 0            # x-coordinate of center of detected object
         self.ycenter = 0            # y-coordinate of center of detected object
+        self.box_margin = 0
+        self.pixel_ids = ""
         # ----------------------------------------------------------------------
         
         # temporary attributes
         self.path = ""
         self.fileobjects = {}
-                
+   
     def unpack_dictionaries(self):
         pop_dicts = []
         for key, item in self.__dict__.items():
@@ -74,58 +60,6 @@ class Tag(Files):
         for d in pop_dicts:
             for key, value in self.__dict__.pop(d).items():
                 setattr(self, key, value)
-
-    def path_fileobjects(self, attr: str, ext: str, mode: str):
-        """
-        function to use for constructing paths of fileobjects.
-        Usage recommended so that reading and writing files happens in the same
-        way
-
-        mode: one of 'read', 'write'
-        """
-        path, _ = os.path.splitext(self.path)
-        
-        if mode == "write":
-            p_ = os.path.join(path, attr)
-            if not os.path.exists(p_):
-                os.mkdir(p_)
-
-        elif mode == "read":
-            pass
-
-        else:
-            raise ValueError("mode must be one of 'write' or 'read'.")
-        
-        return os.path.join(path, attr, f"{int(self.id)}{ext}")
-
-
-    def read_fileobjects(self):
-
-        for attr, ext in self.fileobjects.items():
-            # get the right function depending on file extension
-            reader = READ_BACKENDS[ext]
-
-            # get path of file
-            path = self.path_fileobjects(attr, ext, mode="read")
-            
-            # read object and set to Tag instance
-            obj = reader(path)
-            setattr(self, attr, obj)
-
-    def write_fileobjects(self, tag: dict, fileobjects: dict):
-        for attr, ext in fileobjects.items():
-            # get writer from backends according to extension
-            writer = WRITE_BACKENDS[ext]
-
-            # pop attribute from tag dictionary (this is done, because
-            # fileobjects cannot be written to a csv file)
-            obj = tag.pop(attr)
-            if obj.size > 0:
-                # construct path
-                path = self.path_fileobjects(attr, ext, mode="write")
-
-                # write to disk
-                writer(path, obj)
 
     def save(self, store=True):
         """
@@ -140,13 +74,6 @@ class Tag(Files):
             if not os.path.exists(path):
                 os.mkdir(path)
 
-        # save filetype tag attributes (everything that does not go into a
-        # csv file)
-        fileobjects = tag.pop("fileobjects")
-        if store:
-            self.write_fileobjects(tag, fileobjects)
-
-        path = tag.pop("path")
         return pd.Series(tag), path
 
     def get_tag_box_coordinates(self):
@@ -175,10 +102,6 @@ class Annotations(Tag):
         detector=None,
         image_metadata={},
         analysis="undefined", 
-        extra_fileobjects={
-            "tag_image_diff": ".jpg", 
-            "tag_image_extra1": ".jpg",
-        },
         tag_db_path="annotations/tag_db.csv", 
         keymap={
             'd':"Daphnia Magna",
@@ -214,12 +137,6 @@ class Annotations(Tag):
         self.sliders = {}
         self._pc = None
         self.margin_click_tags = margin_click_tags
-
-        self.fileobjects = {
-            "tag_contour": ".npy",
-            "tag_image_orig": ".jpg",
-        }
-        self.fileobjects.update(extra_fileobjects)
 
         # read tags if supplied
         if self.new_tags is not None:
@@ -359,23 +276,23 @@ class Annotations(Tag):
         w = w + 2 * mar
         h = h + 2 * mar
 
-        # create fileobjects
-        for attr, _ in self.fileobjects.items():
-            if attr == "tag_contour":
-                setattr(t, attr, contour)
+        # # create fileobjects
+        # for attr, _ in self.fileobjects.items():
+        #     if attr == "tag_contour":
+        #         setattr(t, attr, contour)
 
-            elif attr == "tag_image_orig":
-                slc = self.image.slice_image(
-                    self.image.pixels, x, y, w, h, mar=0)
-                setattr(t, attr, slc)
+        #     elif attr == "tag_image_orig":
+        #         slc = self.image.slice_image(
+        #             self.image.pixels, x, y, w, h, mar=0)
+        #         setattr(t, attr, slc)
                 
-            else:
-                # no calculated images for fileobjects apart from tag_contour
-                # and tag_image_orig exist
-                slc = np.full((10,10), 255, dtype=np.uint8)
-                setattr(t, attr, slc)
+        #     else:
+        #         # no calculated images for fileobjects apart from tag_contour
+        #         # and tag_image_orig exist
+        #         slc = np.full((10,10), 255, dtype=np.uint8)
+        #         setattr(t, attr, slc)
                 
-        t.fileobjects = self.fileobjects
+        # t.fileobjects = self.fileobjects
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
@@ -438,14 +355,14 @@ class Annotations(Tag):
     def set_plot_titles(self):
         ax_no = 0
         titles = {ax_no: "original image"}
-        for key, _ in self.fileobjects.items():
-            if key == "tag_contour":
-                continue
-            ax_no += 1
-            titles.update({ax_no: key})
+        # for key, _ in self.fileobjects.items():
+        #     if key == "tag_contour":
+        #         continue
+        #     ax_no += 1
+        #     titles.update({ax_no: key})
 
-        for (_, tit), (_, ax) in zip(titles.items(), self.axes.items()):
-            ax.set_title(tit)
+        # for (_, tit), (_, ax) in zip(titles.items(), self.axes.items()):
+        #     ax.set_title(tit)
         
     def load_processed_tags(self):
         try:
@@ -654,12 +571,6 @@ class Annotations(Tag):
         except KeyError:
             pass
 
-    def extrafileobjects(self):
-        fo = self.fileobjects.copy()
-        _ = fo.pop("tag_contour")
-        _ = fo.pop("tag_image_orig")
-        return fo
-
     def show_tag(self):
         try:
             self.axes[1].cla()
@@ -668,13 +579,13 @@ class Annotations(Tag):
         except KeyError:
             pass
 
-        extra_objects = self.extrafileobjects()
-        for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
-            try:
-                self.axes[i].cla()
-                self.axes[i].imshow(getattr(self.ctag, attr))
-            except KeyError:
-                pass
+        # extra_objects = self.extrafileobjects()
+        # for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
+        #     try:
+        #         self.axes[i].cla()
+        #         self.axes[i].imshow(getattr(self.ctag, attr))
+        #     except KeyError:
+        #         pass
 
         self.show_label()
         self.set_plot_titles()
@@ -704,7 +615,6 @@ class Annotations(Tag):
                 t.unpack_dictionaries()
                 t.get_tag_box_coordinates()
                 t.image_hash = self.image_hash
-                t.fileobjects = self.fileobjects
                 t, _ = t.save(self.store_extra_files)
                 tags.append(t.to_frame().T)
 
@@ -760,10 +670,7 @@ class Annotations(Tag):
         tag_id = self.tags.id.values[self.i]
         t = self.read_tag(self.tags, tag_id=tag_id)
 
-        # add fileobjects here
-        t.fileobjects = self.fileobjects
         self.ctag = t
-        self.ctag.read_fileobjects()
         if self.display_whole_img:
             # self.draw_tag_box()
             self.draw_target()
