@@ -22,7 +22,7 @@ from scipy.signal import argrelextrema, find_peaks
 from toopy.pandas import read_csv_list
 
 from peek.utils.manage import Files
-from peek.image.process import Snapshot, contour_center
+from peek.image.process import Snapshot, idstring_to_threshold_image, contour_center
 
 
 class Tag(Files):
@@ -31,25 +31,23 @@ class Tag(Files):
         # IF POSSIBLE NEVER CHANGE THESE NAMES. WHY?
         # THEN THE DATA WILL BE HOMOGENEOUSLY NAMED ACCROSS ALL ANALYSES
         # ----------------------------------------------------------------------
-        self.image_hash = None      # unique reference hash of parent image
-        self.id = 0                 # id of tag in image
-        self.x = 0                  # top left corner of bounding box (x-axis)
-        self.y = 0                  # top left corner of bounding box (y-axis)
-        self.width = 0              # width of bounding box
-        self.height = 0             # height of bounding box
-        self.label = ""             # label of manual classification
-        self.time = ''              # time of detection
-        self.analysis = 'none'      # name of analysis 
-        self.annotated = False      # was the label manually annotated
-        self.xcenter = 0            # x-coordinate of center of detected object
-        self.ycenter = 0            # y-coordinate of center of detected object
-        self.box_margin = 0
-        self.pixel_ids = ""
+        self.image_hash = None       # unique reference hash of parent image
+        self.id = 0                  # id of tag in image
+        self.x = 0                   # top left corner of bounding box (x-axis)
+        self.y = 0                   # top left corner of bounding box (y-axis)
+        self.width = 0               # width of bounding box
+        self.height = 0              # height of bounding box
+        self.label = ""              # label of manual classification
+        self.time = ''               # time of detection
+        self.analysis = 'none'       # name of analysis 
+        self.annotated = False       # was the label manually annotated
+        self.xcenter = 0             # x-coordinate of center of detected object
+        self.ycenter = 0             # y-coordinate of center of detected object
+        self.tag_box_thresh_ids = "" # string of ids where threshold was exceeded
         # ----------------------------------------------------------------------
         
         # temporary attributes
         self.path = ""
-        self.fileobjects = {}
    
     def unpack_dictionaries(self):
         pop_dicts = []
@@ -76,21 +74,20 @@ class Tag(Files):
 
         return pd.Series(tag), path
 
-    def get_tag_box_coordinates(self):
-        x = self.x
-        y = self.y
-        w = self.width
-        h = self.height
+    @property
+    def margin(self):
+        assert self.width == self.height
+        return int((self.width - 1) / 2)
 
-        if x + y + w + h == 0:
-            x, y, w, h = cv.boundingRect(self.tag_contour)
-            self.x = x
-            self.y = y
-            self.width = w
-            self.height = h
-            self.xcenter, self.ycenter = contour_center(self.tag_contour)
+    @property
+    def tag_image_orig(self):
+        return idstring_to_threshold_image(self.tag_box_thresh_ids, self.margin)
 
-        return x, y, w, h
+    @property
+    def slice(self):
+        x = slice(self.x, self.x + self.width)
+        y = slice(self.y, self.y + self.height)
+        return y, x
 
 # interactive figure
 class Annotations(Tag): 
@@ -574,8 +571,10 @@ class Annotations(Tag):
     def show_tag(self):
         try:
             self.axes[1].cla()
-            img = self.draw_contour_on_slice()
-            self.axes[1].imshow(img)
+            # img = self.draw_contour_on_slice()
+            s = self.image.pixels[self.ctag.slice]
+            if len(s) > 0:
+                self.axes[1].imshow(s)
         except KeyError:
             pass
 
@@ -590,14 +589,14 @@ class Annotations(Tag):
         self.show_label()
         self.set_plot_titles()
 
-    def draw_contour_on_slice(self):
-        origin = np.array([[[self.ctag.x, self.ctag.y]]])
-        ym = self.ctag.tag_image_orig.shape[0] - self.ctag.height
-        xm = self.ctag.tag_image_orig.shape[1] - self.ctag.width
-        margins = np.array([xm, ym]) / 2
-        cnt = self.ctag.tag_contour - origin + margins
-        cnt = cnt.astype(int)
-        return cv.drawContours(self.ctag.tag_image_orig, [cnt], 0, (0,255,0), 1)
+    # def draw_contour_on_slice(self):
+    #     origin = np.array([[[self.ctag.x, self.ctag.y]]])
+    #     ym = self.ctag.tag_image_orig.shape[0] - self.ctag.height
+    #     xm = self.ctag.tag_image_orig.shape[1] - self.ctag.width
+    #     margins = np.array([xm, ym]) / 2
+    #     cnt = self.ctag.tag_contour - origin + margins
+    #     cnt = cnt.astype(int)
+    #     return cv.drawContours(self.ctag.tag_image_orig, [cnt], 0, (0,255,0), 1)
 
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
@@ -613,7 +612,6 @@ class Annotations(Tag):
             for i in range(N):
                 t = self.read_tag(new_tags, i)
                 t.unpack_dictionaries()
-                t.get_tag_box_coordinates()
                 t.image_hash = self.image_hash
                 t, _ = t.save(self.store_extra_files)
                 tags.append(t.to_frame().T)
@@ -627,33 +625,20 @@ class Annotations(Tag):
         patches = []
         for i in self.tags.id:
             tag = self.read_tag(self.tags, i)
-            x, y, w, h = tag.get_tag_box_coordinates()
-            rect = Rectangle((x,y),w,h)
+            rect = Rectangle((tag.x, tag.y),tag.width,tag.height)
 
             patches.append(rect)
         
         self._pc = PatchCollection(patches, facecolor="none", edgecolor="green")
         _ = self.axes[0].add_collection(self._pc)
 
-    def draw_tag_box(self):
-        x, y, w, h = self.ctag.get_tag_box_coordinates()
-        
-        rect = Rectangle((x,y),w,h, linewidth=5, fill=False, color="red")
-        # [ptch.remove() for ptch in reversed(self.axes[0].patches)]
-        for p in reversed(self.axes[0].patches):
-            p.set_color('green')
-            p.set_linewidth(1)
-        self.axes[0].add_patch(rect)
-
-    def get_center_bbox(self):
-        x, y, w, h = self.ctag.get_tag_box_coordinates()
-        return x + np.round(w / 2), y + np.round(h / 2)
-
     def draw_target(self):
         for t in self.target:
             t.remove()
 
-        x, y = self.get_center_bbox()
+        y = self.ctag.ycenter
+        x = self.ctag.xcenter
+
         v = self.axes[0].vlines(x, y-50, y+50, color="red")
         h = self.axes[0].hlines(y, x-50, x+50, color="red")
         self.target = (v, h)

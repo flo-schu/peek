@@ -6,7 +6,8 @@ import itertools as it
 from matplotlib import pyplot as plt
 
 from peek.utils.manage import Files
-from peek.image.process import Series, Image
+from peek.image.process import (
+    Series, Snapshot, get_tag_box_coordinates, margin_to_shape, contour_center)
 from peek.image.analysis import Spectral, Preprocessing
 
 class Mask(Spectral):
@@ -431,7 +432,7 @@ class Detector():
         absolute minimal requirements for determining an ellipsis.
         """
         roi = img.copy() 
-        center = np.array(Image.get_center_2D(roi))
+        center = np.array(Snapshot.get_center_2D(roi))
         properties = []
         for i, c in enumerate(contours):
             m = cv.moments(c)
@@ -455,7 +456,7 @@ class Detector():
                     #         roi, c[p][0][0], c[p][0][1], 1, 
                     #         color=(0, 100,0))
                     roi = cv.ellipse(roi, e, (0,255,0), 1)
-                    roi = Image.draw_cross(
+                    roi = Snapshot.draw_cross(
                         roi, round(e[0][0]), round(e[0][1]), 1, 
                         color=(0,255,0))
             
@@ -476,8 +477,13 @@ class Detector():
     
 class Tagger():
     def __init__(self):
-        self.tag_contour = []
-        self.tag_image_orig = []
+        self.tag_box_thresh_ids = []
+        self.x = []
+        self.y = []
+        self.width = []
+        self.height = []
+        self.xcenter = []
+        self.ycenter = []
 
     def new(self, tag):
         setattr(self, tag, [])
@@ -495,6 +501,19 @@ class Tagger():
             new_prop = [v for i, v in enumerate(prop) if i not in drop_ids]
             setattr(self, p, new_prop)
         
+    def get_tag_box_coordinates(self, contour, margin):
+        xcenter, ycenter = contour_center(contour)
+        x = xcenter - margin
+        y = ycenter - margin
+        width, height = margin_to_shape(margin)
+
+        self.add("x", int(x))
+        self.add("y", int(y))
+        self.add("width", int(width))
+        self.add("height", int(height))
+        self.add("xcenter", xcenter)
+        self.add("ycenter", ycenter)
+
 
     @staticmethod
     def rescale(a, img_orig, img_scaled):

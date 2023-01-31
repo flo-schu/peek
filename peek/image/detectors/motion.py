@@ -3,6 +3,7 @@ import numpy as np
 import tqdm
 from matplotlib import pyplot as plt
 from skimage import measure
+from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring
 from peek.image.detectors.base import Detector, Tagger
 
 class MotionDetector(Detector):
@@ -57,44 +58,50 @@ class MotionDetector(Detector):
             _, thresh = cv.threshold(gray, self.thresh_binary, 255, cv.THRESH_BINARY)
             
             # get contours
-            cnts_select = self.get_contours(thresh, self.thresh_size)
+            img_orig.contours = self.get_contours(thresh, self.thresh_size)
+            thresh_slices = img_orig._cut_slices(
+                thresh, mar=self.margin, max_from_center=True)
 
             # update tags
-            tags.tag_contour = cnts_select
+            tags.tag_box_thresh_ids = [
+                threshold_imgage_to_idstring(t) for t in thresh_slices]
+
+            # get contour coordinates
+            [tags.get_tag_box_coordinates(c, self.margin) for c in img_orig.contours]
             img_orig.tags = tags
-            
+
             # add other images, which should be shown 
             img_orig.tag_image_comp = img_comp.pixels
             img_orig.tag_image_thresh = thresh
 
         return batch
     
-    def slice_tags(self, batch):
-        """
-        optional method for creating sliced images of the tags. Good for 
-        generating data for machine learning algorithm
-        """
-        mar = self.margin
-        for img in batch.images:            
+    # def slice_tags(self, batch):
+    #     """
+    #     optional method for creating sliced images of the tags. Good for 
+    #     generating data for machine learning algorithm
+    #     """
+    #     mar = self.margin
+    #     for img in batch.images:            
 
-            # cut slices ALWAYS reusing the same contours
+    #         # cut slices ALWAYS reusing the same contours
 
-            # cut slices from the real image
-            img.tags.tag_image_orig = img._cut_slices(img.pixels, mar, True)
+    #         # cut slices from the real image
+    #         img.tags.tag_image_orig = img._cut_slices(img.pixels, mar, True)
             
-            # cut slices from comparison image
-            img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar, True)
+    #         # cut slices from comparison image
+    #         img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar, True)
             
-            # cut slices from thresholded difference image
-            img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar, True)
+    #         # cut slices from thresholded difference image
+    #         img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar, True)
 
-            # img.post_process_tags(
-            #     pptag, 
-            #     ["tag_image_thresh", "tag_image_orig", "tag_image_comp"]
-            # )
+    #         # img.post_process_tags(
+    #         #     pptag, 
+    #         #     ["tag_image_thresh", "tag_image_orig", "tag_image_comp"]
+    #         # )
 
 
-        return batch
+    #     return batch
 
 
     def filter_tags(self, tags):
@@ -104,7 +111,7 @@ class MotionDetector(Detector):
         tags.new("axis_major_length")
         tags.new("axis_minor_length")
 
-        thresh_slices = tags.tag_image_thresh
+        thresh_slices = tags.tag_box_thresh_ids
 
         remove_tags = []
         kept_tags = []
@@ -113,6 +120,7 @@ class MotionDetector(Detector):
 
             for i, thresh in enumerate(thresh_slices):
                 # find clusters in threshold image with direct connectivity
+                thresh = idstring_to_threshold_image(thresh, self.margin)
                 pbar.update(1)
                 labels, n_cluster = measure.label(
                     thresh, return_num=True, connectivity=1)
@@ -140,7 +148,9 @@ class MotionDetector(Detector):
                 tags.add("axis_minor_length", props.axis_minor_length)
 
         tags.filter_tags(properties=[
-            "tag_contour", "tag_image_orig", "tag_image_thresh", "tag_image_comp"],
+                "tag_box_thresh_ids", 
+                "x", "y", "width", "height", "xcenter", "ycenter"
+            ],
             drop_ids=remove_tags)
 
         return tags, kept_tags

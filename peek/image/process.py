@@ -326,7 +326,7 @@ class Snapshot(Files):
         mar:            margin to be drawn around the tag boxes
         """
         slices = []
-        for c in self.tags.tag_contour:
+        for c in self.contours:
             x, y, w, h = cv2.boundingRect(c)
             if max_from_center:
                 x, y = contour_center(c)
@@ -354,7 +354,7 @@ class Snapshot(Files):
         mar:            margin to be drawn around the tag boxes
         """ 
         img = self.pixels.copy()
-        for c in self.tags.tag_contour:
+        for c in self.contours:
             # fit a bounding box to the contour
             (x, y, w, h) = cv2.boundingRect(c)
             cv2.rectangle(img, (x-mar, y-mar), (x + w + mar, y + h + mar), (0, 255, 0), 2)
@@ -416,6 +416,40 @@ def contour_center(contour):
     xcenter = x + w / 2
     ycenter = y + h / 2
     return xcenter, ycenter
+
+
+def threshold_imgage_to_idstring(img):
+    img_colors = np.unique(img)
+    assert img.ndim == 2, "only 2D images can be used"
+    assert 0 in img_colors, "zero not in image colors"
+    assert len(img_colors) == 2, "image had more than 3 colors, only thresholded images can be used"
+
+    threshold_pixels = np.where(img.flatten() != 0)[0]
+
+    return array1d_to_string(threshold_pixels)
+
+def array1d_to_string(a):
+    return str(a.tolist()).replace("[", "").replace("]", "").replace(",", "")
+
+def string_to_array1d(s):
+    return np.fromstring(s, sep=" ", dtype=int)
+
+def idstring_to_threshold_image(s, margin):
+    a = string_to_array1d(s)
+    
+    shape = margin_to_shape(mar=margin)
+    flat_img = np.zeros((np.multiply(*shape)), dtype=np.uint8)
+
+    flat_img[a] = 255
+
+    return flat_img.reshape(shape)
+
+
+def margin_to_shape(mar):
+    return (1 + mar * 2, 1 + mar * 2)
+
+def get_tag_box_coordinates(self, contour):
+    x, y, w, h = cv2.boundingRect(contour)
 
 
 class Series():
