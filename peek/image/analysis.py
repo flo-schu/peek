@@ -189,6 +189,7 @@ class Annotations(Tag):
         store_extra_files = True,
         zfill=0,
         margin_click_tags=10,
+        sliders=[]
     ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
@@ -226,6 +227,7 @@ class Annotations(Tag):
 
         self._tag_filter = list(self._tags.index)
         self._manual_ids = []
+        self._slider_parameters = sliders
         self.apply_tag_filter()
 
     @property
@@ -403,14 +405,22 @@ class Annotations(Tag):
         self.display_whole_img = True
         self.origx = (0, self.image.img.size[0])
         self.origy = (self.image.img.size[1],0)
-        self.gs = plt.GridSpec(nrows=3, ncols=4, height_ratios=[1,1,.5])
+        n_sliders = len(self._slider_parameters)
+        self.axes_slider = []
+        self.gs = plt.GridSpec(
+            nrows=2 + n_sliders, ncols=4, height_ratios=[1,1] + [0.5 / n_sliders] * n_sliders)
+
 
         self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0:2])
         self.axes[1] = self.figure.add_subplot(self.gs[0, 2])
         self.axes[2] = self.figure.add_subplot(self.gs[0, 3])
         self.axes[3] = self.figure.add_subplot(self.gs[1, 2])
         self.axes[4] = self.figure.add_subplot(self.gs[1, 3])
-        self.axes_slider = self.figure.add_subplot(self.gs[2,:])
+
+        # create slider axes
+        for i in range(n_sliders):
+            self.axes_slider.append(self.figure.add_subplot(self.gs[2 + i,:]))
+
         self.show_original()
         self.show_sliders()
 
@@ -605,28 +615,28 @@ class Annotations(Tag):
         self.selector = self.create_selector()
 
     def show_sliders(self):
-        par = "max_clusters"
-        slider = self.create_slider(par)
-        callback = self.slider_callback(self, par)
-        slider.on_changed(callback)
-        self.sliders.update({par: [slider, callback]})
+        for ax, par in zip(self.axes_slider, self._slider_parameters):
+            slider = self.create_slider(ax, par)
+            callback = self.slider_callback(self, par)
+            slider.on_changed(callback)
+            self.sliders.update({par: [slider, callback]})
 
     def create_selector(self):
         return RectangleSelector(
             self.axes[0], self.select_callback,
             useblit=True,
-            button=[1, 3],  # disable middle button
+            button=[1],  # disable middle and right button
             minspanx=5, minspany=5,
             spancoords='pixels',
             interactive=True)
 
-    def create_slider(self, detector_parameter):
+    def create_slider(self, ax, detector_parameter):
         return Slider(
-            ax=self.axes_slider,
+            ax=ax,
             label=detector_parameter,
             valstep=1,
             valmin=1,
-            valmax=10,
+            valmax=30,
             valinit=getattr(self.detector, detector_parameter),
         )
 
