@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import shutil
+from copy import copy
 import imageio
 import warnings
 import cv2 as cv
@@ -14,7 +15,7 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
-from matplotlib.widgets import RectangleSelector
+from matplotlib.widgets import RectangleSelector, Slider, Button
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
@@ -189,6 +190,7 @@ class Annotations(Tag):
         zfill=0,
         margin_click_tags=10,
     ):
+        self._max_tag_id = 0
         self.path = os.path.normpath(path)
         self.analysis = analysis
         self.new_tags = new_tags
@@ -208,7 +210,8 @@ class Annotations(Tag):
         self.keymap = keymap
         self.zfill = zfill
         self.target = ()
-        self.seletctor = None
+        self.selector = None
+        self.sliders = {}
         self._pc = None
         self.margin_click_tags = margin_click_tags
 
@@ -221,6 +224,26 @@ class Annotations(Tag):
         # read tags if supplied
         if self.new_tags is not None:
             self.read_new_tags(self.new_tags)
+
+        self._tag_filter = list(self._tags.index)
+        self._manual_ids = []
+
+    @property
+    def tags(self):
+        # first if clause is necessary for creating of instance
+        if not hasattr(self, "_tag_filter"):
+            return self._tags
+        return self._tags.loc[self._tag_filter + self._manual_ids, :]
+
+    @tags.setter
+    def tags(self, tags):
+        assert isinstance(tags, pd.DataFrame)
+        self.get_max_id(tags)
+        self._tags = tags
+        assert all(tags["id"] == tags.index), "mismatch of id with index in tags"
+
+    def get_max_id(self, tags):
+        self._max_tag_id = int(max(np.nan_to_num(tags.id.max()), self._max_tag_id))
 
     def load_image(self, image, meta): 
         if image is None:
@@ -258,18 +281,29 @@ class Annotations(Tag):
         self.show_tag_number(0)
         plt.show()
 
+    def test(self):
+        
         # for testing
-        # class A:
-        #     key="d"
+        class A:
+            def __init__(self, key="u"):
+                self.key = key
 
-        # self.press(A())
 
-        # class B:
-        #     button = 3
-        #     xdata = 10
-        #     ydata = 20
+        class B:
+            def __init__(self, button = 3, xdata = 10, ydata = 20):
+                self.button = button
+                self.xdata = xdata
+                self.ydata = ydata
 
-        # self.click_callback(B())
+        self.press(A())
+        self.click_callback(B())
+
+        self.sliders["max_clusters"][1](2)
+        self.sliders["max_clusters"][1](3)
+
+        self.click_callback(B(xdata=50))
+        self.press(A("n"))
+        self.press(A("d"))
 
     # def test(self, eclick=(1750, 800), erelease=(1770, 810)):
     def select_callback(self, eclick, erelease):
@@ -297,6 +331,24 @@ class Annotations(Tag):
             tag_contour = np.array([[[x, y]]])
             
             self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+
+    class slider_callback():
+        # works okay, but the problem is that images will be copied or not
+        # better would be to query the tags for the relevant indices. Would
+        # also be faster
+        def __init__(self, annotations, param):
+            self.annotations = annotations
+            self.param = param      
+            self.detector = annotations.detector
+            self.new_tags = annotations.new_tags
+
+        def __call__(self, val):
+            setattr(self.detector, self.param, val)
+            
+            tags, kept_tags = self.detector.filter_tags(copy(self.new_tags))
+            self.annotations._tag_filter = kept_tags
+            self.annotations._pc.remove()  # remove tags boxes (Artis)
+            self.annotations.draw_tag_boxes()
 
 
     def manual_tag(self, contour, mar=0):
@@ -329,7 +381,7 @@ class Annotations(Tag):
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
-        t.id = len(self.tags)
+        t.id = self._max_tag_id + 1
         t.x = x
         t.y = y
         t.width = w
@@ -345,6 +397,7 @@ class Annotations(Tag):
 
         self.tags = pd.concat([self.tags, new_tag.to_frame().T], 
             ignore_index=True)
+        self._manual_ids.append(t.id)
         self._pc.remove()
         self.draw_tag_boxes()
         self.save_progress()
@@ -354,14 +407,16 @@ class Annotations(Tag):
         self.display_whole_img = True
         self.origx = (0, self.image.img.size[0])
         self.origy = (self.image.img.size[1],0)
-        self.gs = plt.GridSpec(nrows=2, ncols=4)
+        self.gs = plt.GridSpec(nrows=3, ncols=4, height_ratios=[1,1,.5])
 
         self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0:2])
         self.axes[1] = self.figure.add_subplot(self.gs[0, 2])
         self.axes[2] = self.figure.add_subplot(self.gs[0, 3])
         self.axes[3] = self.figure.add_subplot(self.gs[1, 2])
         self.axes[4] = self.figure.add_subplot(self.gs[1, 3])
+        self.axes_slider = self.figure.add_subplot(self.gs[2,:])
         self.show_original()
+        self.show_sliders()
 
     def plot_tag(self):
         self.axes = {
@@ -412,20 +467,31 @@ class Annotations(Tag):
             print(f"no existing tags found. Starting new file on {self.path}")
             return pd.DataFrame({'id':[]})
 
+    def update_ctag(self, attr, value):
+        """
+        updates tags in tags dataframe
+        """
+        tid = self.ctag.id
+        # updates the attribute of ctag
+        setattr(self.ctag, attr, value)
+
+        # updates the cell in the database (access _tags directly)
+        self._tags.loc[tid, attr] = value
+
 
     def press(self, event):
         print('press', event.key)
         sys.stdout.flush()
         if event.key in self.keymap.keys():
-            self.ctag.label = self.keymap[event.key]
-            self.ctag.annotated = True
+            self.update_ctag("label", self.keymap[event.key])
+            self.update_ctag("annotated", True)
             t, p = self.ctag.save()
-            self.drop_duplicates()
-            self.tags = pd.concat([self.tags, t.to_frame().T], ignore_index=True)
+            # self.drop_duplicates()
+            # self.tags = pd.concat([self.tags, t.to_frame().T], ignore_index=True)
             self.save_tag_to_database(t)
             self.show_label()
 
-            self.tags = self.tags.sort_values(by='id')
+            # self.tags = self.tags.sort_values(by='id')
             self.save_progress()
 
             # directly go to next tag after labeling
@@ -501,12 +567,10 @@ class Annotations(Tag):
         return df.loc[~duplicates, :].copy()
         
 
-    @staticmethod
-    def get_id(tags, tag_id):
-        return tags[tags['id']==tag_id].index
+
 
     def drop_duplicates(self):
-        drop_id = self.get_id(self.tags, self.ctag.id)
+        drop_id = self.ctag.id
         try:
             self.tags = self.tags.drop(drop_id)
         except IndexError:
@@ -542,6 +606,13 @@ class Annotations(Tag):
         self.axes[0].imshow(self.image.img)
         self.selector = self.create_selector()
 
+    def show_sliders(self):
+        par = "max_clusters"
+        slider = self.create_slider(par)
+        callback = self.slider_callback(self, par)
+        slider.on_changed(callback)
+        self.sliders.update({par: [slider, callback]})
+
     def create_selector(self):
         return RectangleSelector(
             self.axes[0], self.select_callback,
@@ -550,6 +621,17 @@ class Annotations(Tag):
             minspanx=5, minspany=5,
             spancoords='pixels',
             interactive=True)
+
+    def create_slider(self, detector_parameter):
+        return Slider(
+            ax=self.axes_slider,
+            label=detector_parameter,
+            valstep=1,
+            valmin=1,
+            valmax=10,
+            valinit=getattr(self.detector, detector_parameter),
+        )
+
 
     def show_tagged(self):
         tagged = self.image.tag_image(self.image.img, self.new_tags['contour'])
@@ -601,7 +683,9 @@ class Annotations(Tag):
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
             warnings.warn("overwriting existing annotations")
+
             self.tags = pd.DataFrame({'id':[]})
+            self._max_tag_id = 0
         
         print("reading tags...")
         N = len(new_tags)
@@ -624,7 +708,7 @@ class Annotations(Tag):
 
     def draw_tag_boxes(self):
         patches = []
-        for i in range(len(self.tags)):
+        for i in self.tags.id:
             tag = self.read_tag(self.tags, i)
             x, y, w, h = tag.get_tag_box_coordinates()
             rect = Rectangle((x,y),w,h)
@@ -657,17 +741,17 @@ class Annotations(Tag):
         h = self.axes[0].hlines(y, x-50, x+50, color="red")
         self.target = (v, h)
 
-
-    def read_tag(self, tags, i):
+    def read_tag(self, tags, tag_id):
         t = Tag()
         t.path = self.path
-        t.__dict__.update(tags.iloc[self.get_id(tags, i)[0]])
+        t.__dict__.update(tags.loc[tag_id, :])
         return t
         # self.new_tags = self.new_tags.drop(i)
 
     def show_tag_number(self, i):
         self.i = i
-        t = self.read_tag(self.tags, i)
+        tag_id = self.tags.id.values[self.i]
+        t = self.read_tag(self.tags, tag_id=tag_id)
 
         # add fileobjects here
         t.fileobjects = self.fileobjects
@@ -679,225 +763,20 @@ class Annotations(Tag):
         self.show_tag()
 
     def show_next_tag(self):
-        if self.i + 1 >= len(self.tags):
-            self.i = - 1
-        self.show_tag_number(self.i + 1)
+        self.i += 1
+        if self.i >= len(self.tags):
+            self.i = 0
+        self.show_tag_number(i=self.i)
 
     def show_previous_tag(self):
-        if self.i - 1 < 0:
+        self.i -= 1
+        if self.i < 0:
             self.i = len(self.tags)
-        self.show_tag_number(self.i - 1)
+
+        self.show_tag_number(i=self.i)
 
     def save_progress(self):
         self.tags.to_csv(self.path, index=False)
-
-
-class Data:
-    """
-    Data contains methods for reading files and storing them in specific locations
-    if a data instance is initiated, it opens a file where search results are appended
-    to.
-    """
-    def __init__(
-        self, path, search_keyword="", import_images=False,
-        date="all", sample_id="all", img_num="all",
-        correct_path={}
-        ):
-        self.data=None
-        self.path = path
-        self.keyword = search_keyword
-        self.import_images = import_images
-        self.attrs=['id', 'date', 'time']
-        self.index_names=['time', 'id', 'object']
-        self.correct_path=correct_path
-
-        self.date = date
-        self.id = sample_id
-        self.img_num = img_num
-        self.images = []
-
-    @staticmethod
-    def read_meta(globpath):
-        """
-        convenience function for reading all metafiles from a directory created
-        by read_meta.py
-
-        globpath    should be constructed in order to select all csv files 
-                    e.g. "data/pics_classic/meta/*meta.csv".
-                    See documentation of glob()
-        """
-        meta = read_csv_list(glob(globpath), 
-        kwargs={"dtype":{"time":str,"id":int}})
-        meta['picture'] = meta.groupby(["date","id"]).cumcount()
-        
-        return meta
-
-
-    def collect(self, sample_id=None, date=None, img_num=None):
-        if sample_id is not None:
-            self.id = sample_id
-        if date is not None:
-            self.date = date
-        if img_num is not None:
-            self.img_num = img_num
-        paths = self.collect_paths(self.path, date=self.date, sample_id=self.id, img_num=self.img_num)
-        self.images = self.collect_files(paths, self.keyword, self.import_images, self.correct_path)
-        self.data = self.extract_data(self.images, self.attrs)
-        self.check_for_errors()
-        self.data = self.rename_columns(self.data, self.index_names, 'tag')
-
-        self.index_images()
-        self.order()
-
-        return self.data
-
-    def index_images(self):
-        tstamp = pd.to_datetime(self.data.img_date+self.data.img_time, format='%Y%m%d%H%M%S').to_numpy()
-        tag_id = self.data.tag_id.to_numpy(dtype=int)
-        img_id = self.data.img_id.to_numpy(dtype=int)
-        idx = pd.MultiIndex.from_arrays([tstamp, img_id, tag_id], names=self.index_names)
-
-        self.data.index = idx
-        self.data = self.data.drop(columns=['img_date','img_time','tag_id','img_id'])
-
-    # @staticmethod
-    # def multi_dt_index(df, dtcols, idxcols, names=[]):
-    #     """
-    #     creates a mult datetime index from date columns and other id columns
-    #     for datetime objects the respective format can be added
-
-    #     df          pandas DataFrame object
-    #     dtcols      dict, {"colname": "format"} (format e.g. "%Y-%m-%d")
-    #     idxcols     list
-    #     """
-    #     for column, dt_fmt in dtcols.items():
-    #         df[column] = pd.to_datetime(df[column], format=dt_fmt)
-
-    #     # create a flat list of index columns
-    #     idx = list(dtcols.keys()) + idxcols
-    #     df.rename(columns = )
-    #     df.set_index(idx, inplace=True)
-    #     df = df.drop
-
-    #     return 
-
-    #     # create datetime
-
-    def order(self):
-        self.data = self.data.sort_values(by = self.index_names)
-
-    def check_for_errors(self):
-        errors = [i.tags.error[1] for i in self.images if i.tags.error[0]]
-        if len(errors) > 0:
-            self.errors = errors
-            print("Warning: Errors during file import -> for details see obj.errors")
-
-    def connect_other_data(self, df):
-        pass
-
-    @classmethod
-    def extract_data(cls, images, attrs=['id', 'date', 'time']):
-        df = pd.DataFrame()
-        for i in images:
-            idata = cls.label_data(i, attrs)
-            df = df.append(idata)
-        
-        return df
-    
-    @staticmethod
-    def index_df(df, time_col, time_fmt, other_cols, new_index_names, drop=True):
-        tstamp = pd.to_datetime(df[time_col], format=time_fmt).to_numpy()
-        idx_cols = [tstamp]
-        for i in other_cols:
-            idx_cols.append(df[i].to_numpy())
-        idx = pd.MultiIndex.from_arrays(idx_cols, names=new_index_names)
-        df.index = idx
-        if drop:
-            df = df.drop(columns=[time_col]+other_cols)
-
-        return df
-
-    @staticmethod
-    def rename_columns(df, change_cols, prepend):
-        for col in change_cols:
-            df = df.rename(columns={col:prepend+'_'+col})
-
-        return df
-
-    @staticmethod
-    def label_data(image, attrs=[]):
-        idata = image.tags.tags
-        for a in attrs:
-            idata['img_'+a] = getattr(image, a)
-        return idata
-
-    @staticmethod
-    def collect_paths(path, date="all", sample_id="all", img_num="all"):
-        """
-        path            should be top-level path where all sessions are stored
-        search_keyword  analysis from which tags should be imported
-        date            date from which ids should be collected (YYYYMMDD) or "all"
-                        if all dates from one id should be gathered    
-        id              look for sepcific id in sessions or "all" (start with 1 for 1st image) 
-        """
-        sessions = [d for d in Files.find_subdirs(path) if Files.is_date(d)]
-        if date != "all":
-            sessions = [d for d in sessions if d == date]
-
-        sessions = [os.path.join(path, d) for d in sessions]
-
-        ids = []
-        for s in sessions:
-            s_ids = Files.find_subdirs(s)
-            if sample_id != "all":
-                s_ids = [id_ for id_ in s_ids if id_ == str(sample_id)]
-
-            ids.extend([os.path.join(s, id_) for id_ in s_ids])
-
-        image_paths = []
-
-        for id_ in ids:
-            id_imgs = Files.find_subdirs(id_)
-            if img_num != "all":
-                id_imgs = id_imgs[int(img_num)-1:int(img_num)]
-            image_paths.extend([os.path.join(id_, img) for img in id_imgs])
-            
-        return image_paths
-
-    @staticmethod
-    def collect_meta(paths):
-        meta = []
-        for p in paths:
-            i = Image(p, import_image=False)
-            del i.path
-            del i.tags
-            del i.img
-            del i.analyses
-            meta.append(i)
-
-        # create multiindex
-        meta = pd.DataFrame([m.__dict__ for m in meta])
-        imts = pd.to_datetime(meta.date, format='%Y%m%d').to_numpy()
-        imid = meta.id.to_numpy(dtype=int)
-        meta.index = pd.MultiIndex.from_arrays([imts, imid], names=["date", "id"])
-        meta = meta.drop(columns=["date","id"])
-        return meta
-
-    @staticmethod
-    def collect_files(paths, search_keyword, 
-                      import_images=False, 
-                      correct_path={}):
-        images = []
-        for p in paths:
-            i = Image(p)
-            i.read_struct(import_image=import_images, ignore_struct_path=False)
-            i.path = Files.change_root_of_path(i.path, **correct_path)
-            i.tags = Annotations(image=i, analysis=search_keyword, tag_db_path="")
-            i.tags.load_processed_tags()
-
-            images.append(i)
-
-        return images
 
 
 class Spectral:

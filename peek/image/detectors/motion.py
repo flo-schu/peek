@@ -107,6 +107,7 @@ class MotionDetector(Detector):
         thresh_slices = tags.tag_image_thresh
 
         remove_tags = []
+        kept_tags = []
 
         with tqdm.tqdm(total=len(thresh_slices)) as pbar:
 
@@ -130,7 +131,8 @@ class MotionDetector(Detector):
                 if area_central_cluster < self.min_area:
                     remove_tags.append(i)
                     continue
-
+                
+                kept_tags.append(i)
                 # check out props. It has many attributes
                 tags.add("n_clusters", n_cluster)
                 tags.add("pixels_central", area_central_cluster)
@@ -141,7 +143,7 @@ class MotionDetector(Detector):
             "tag_contour", "tag_image_orig", "tag_image_thresh", "tag_image_comp"],
             drop_ids=remove_tags)
 
-        return tags
+        return tags, kept_tags
 
 def pptag(self, objs):
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(8,3))
