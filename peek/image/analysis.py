@@ -107,6 +107,7 @@ class Annotations(Tag):
             'u':"unidentified"
             },
         store_extra_files = True,
+        extra_images = [],
         zfill=0,
         margin_click_tags=10,
         sliders=[]
@@ -134,6 +135,7 @@ class Annotations(Tag):
         self.sliders = {}
         self._pc = None
         self.margin_click_tags = margin_click_tags
+        self._extra_images = extra_images
 
         # read tags if supplied
         if self.new_tags is not None:
@@ -578,13 +580,15 @@ class Annotations(Tag):
         except KeyError:
             pass
 
-        # extra_objects = self.extrafileobjects()
+        for i, attr in enumerate(self._extra_images):
         # for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
-        #     try:
-        #         self.axes[i].cla()
-        #         self.axes[i].imshow(getattr(self.ctag, attr))
-        #     except KeyError:
-        #         pass
+            try:
+                self.axes[3].cla()
+                s = getattr(self.image, attr)[self.ctag.slice]
+                if len(s) > 0:
+                    self.axes[i+2].imshow(s)
+            except KeyError:
+                pass
 
         self.show_label()
         self.set_plot_titles()

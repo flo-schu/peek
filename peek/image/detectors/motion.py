@@ -71,8 +71,7 @@ class MotionDetector(Detector):
             img_orig.tags = tags
 
             # add other images, which should be shown 
-            img_orig.tag_image_comp = img_comp.pixels
-            img_orig.tag_image_thresh = thresh
+            img_orig.comparison = img_comp.pixels
 
         return batch
     
