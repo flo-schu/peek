@@ -190,7 +190,6 @@ class Annotations(Tag):
         zfill=0,
         margin_click_tags=10,
     ):
-        self._max_tag_id = 0
         self.path = os.path.normpath(path)
         self.analysis = analysis
         self.new_tags = new_tags
@@ -227,6 +226,7 @@ class Annotations(Tag):
 
         self._tag_filter = list(self._tags.index)
         self._manual_ids = []
+        self.apply_tag_filter()
 
     @property
     def tags(self):
@@ -238,12 +238,8 @@ class Annotations(Tag):
     @tags.setter
     def tags(self, tags):
         assert isinstance(tags, pd.DataFrame)
-        self.get_max_id(tags)
         self._tags = tags
         assert all(tags["id"] == tags.index), "mismatch of id with index in tags"
-
-    def get_max_id(self, tags):
-        self._max_tag_id = int(max(np.nan_to_num(tags.id.max()), self._max_tag_id))
 
     def load_image(self, image, meta): 
         if image is None:
@@ -339,17 +335,17 @@ class Annotations(Tag):
         def __init__(self, annotations, param):
             self.annotations = annotations
             self.param = param      
-            self.detector = annotations.detector
-            self.new_tags = annotations.new_tags
 
         def __call__(self, val):
-            setattr(self.detector, self.param, val)
+            setattr(self.annotations.detector, self.param, val)
+            self.annotations.apply_tag_filter()
             
-            tags, kept_tags = self.detector.filter_tags(copy(self.new_tags))
-            self.annotations._tag_filter = kept_tags
-            self.annotations._pc.remove()  # remove tags boxes (Artis)
-            self.annotations.draw_tag_boxes()
-
+    def apply_tag_filter(self):
+        tags, kept_tags = self.detector.filter_tags(copy(self.new_tags))
+        self._tag_filter = kept_tags
+        if self._pc is not None:
+            self._pc.remove()  # remove tags boxes (Artis)
+            self.draw_tag_boxes()
 
     def manual_tag(self, contour, mar=0):
         t = Tag()
@@ -381,7 +377,7 @@ class Annotations(Tag):
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
-        t.id = self._max_tag_id + 1
+        t.id = len(self._tags)
         t.x = x
         t.y = y
         t.width = w
@@ -395,8 +391,8 @@ class Annotations(Tag):
 
         print(f"created new manual tag {t}")
 
-        self.tags = pd.concat([self.tags, new_tag.to_frame().T], 
-            ignore_index=True)
+        self._tags = pd.concat([self._tags, new_tag.to_frame().T], ignore_index=True)
+
         self._manual_ids.append(t.id)
         self._pc.remove()
         self.draw_tag_boxes()
@@ -453,6 +449,8 @@ class Annotations(Tag):
                 else:
                     raise ValueError(f"multiple analyses in .csv file {analysis}")
             
+            # overwrite new index with id
+            tags.index = tags.id
             self.analysis = analysis[0]
             
             return tags
@@ -685,7 +683,6 @@ class Annotations(Tag):
             warnings.warn("overwriting existing annotations")
 
             self.tags = pd.DataFrame({'id':[]})
-            self._max_tag_id = 0
         
         print("reading tags...")
         N = len(new_tags)
