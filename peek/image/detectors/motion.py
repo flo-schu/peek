@@ -109,68 +109,86 @@ class MotionDetector(Detector):
     #     return batch
 
 
-    def filter_tags(self, tags):
-        # create new tag properties
-        tags.new("n_clusters")
-        tags.new("pixels_central")
-        tags.new("axis_major_length")
-        tags.new("axis_minor_length")
+    def analyze_tags(self, tags):
 
-        remove_tags = []
-        kept_tags = []
-
-        with tqdm.tqdm(total=tags.max_len) as pbar:
+        with tqdm.tqdm(total=tags.max_len, desc="analyzing") as pbar:
 
             for i in range(tags.max_len):
                 # find clusters in threshold image with direct connectivity
-                thresh = tags.get("tag_box_thresh_ids", i)
-                thresh = idstring_to_threshold_image(thresh, self.margin)
+                tag_props = self.analyse_tag(tags, i)
+
+                # add props to tags
+                _ = [tags.add(key, value) for key, value in tag_props.items()]
+
                 pbar.update(1)
-                labels, n_cluster = measure.label(
-                    thresh, return_num=True, connectivity=1)
-                rp = measure.regionprops(labels)
-
-                # get properties of central cluster
-                central_label = labels[self.margin, self.margin]
-                props = rp[central_label - 1]
-
-                area_central_cluster = props.area
-                x = tags.get("x", i)
-
-                # apply filter depending on labels
-                if n_cluster > self.max_clusters:
-                    remove_tags.append(i)
-                    continue
                 
-                if area_central_cluster < self.min_area:
-                    remove_tags.append(i)
-                    continue
-
-                if x > self.max_x:
-                    remove_tags.append(i)
-                    continue
-
-                if x < self.min_x:
-                    remove_tags.append(i)
-                    continue
-
-
-                kept_tags.append(i)
-                # check out props. It has many attributes
-                tags.add("n_clusters", n_cluster)
-                tags.add("pixels_central", area_central_cluster)
-                tags.add("axis_major_length", props.axis_major_length)
-                tags.add("axis_minor_length", props.axis_minor_length)
-
-        tags.filter_tags(properties=[
-                "tag_box_thresh_ids", 
-                "x", "y", "width", "height", "xcenter", "ycenter"
-            ],
-            drop_ids=remove_tags)
-        
         assert tags.is_equal_properties_lengths()
 
-        return tags, kept_tags
+        return tags
+
+    def filter_tags(self, tags):
+        drop_tags = []
+        kept_tags = []
+        with tqdm.tqdm(total=tags.max_len, desc="filtering") as pbar:
+
+            for i in range(tags.max_len):
+                keep = self.test_tag(tags, i)
+                
+                if keep:
+                    kept_tags.append(i)
+                else:
+                    drop_tags.append(i)
+
+                pbar.update(1)
+            
+        # tags.drop_tags(
+        #     properties=list(tags.__dict__.keys()), 
+        #     drop_ids=drop_tags
+        # )
+        assert tags.is_equal_properties_lengths()
+
+        return kept_tags
+
+    def analyse_tag(self, tags, i):
+        thresh = tags.get("tag_box_thresh_ids", i)
+        thresh = idstring_to_threshold_image(thresh, self.margin)
+        labels, n_cluster = measure.label(
+            thresh, return_num=True, connectivity=1)
+        rp = measure.regionprops(labels)
+
+        # get properties of central cluster
+        central_label = labels[self.margin, self.margin]
+        props = rp[central_label - 1]
+
+        area_central_cluster = props.area
+
+        tag_props = {
+            "n_clusters": n_cluster,
+            "pixels_central": area_central_cluster,
+            "axis_major_length": props.axis_major_length,
+            "axis_minor_length": props.axis_minor_length,
+        }
+
+        return tag_props
+
+    def test_tag(self, tags, i):
+        keep = True
+
+        # apply test depending on labels
+        if tags.get("n_clusters", i) > self.max_clusters:
+            keep = False
+        
+        if tags.get("pixels_central", i) < self.min_area:
+            keep = False
+
+        x = tags.get("x", i)
+        if x > self.max_x:
+            keep = False
+
+        if x < self.min_x:
+            keep = False
+
+        return keep
 
 def pptag(self, objs):
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(8,3))

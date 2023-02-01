@@ -278,7 +278,7 @@ class Annotations(Tag):
         return int(self.tags.iloc[closest]["id"])
     
     def apply_tag_filter(self):
-        tags, kept_tags = self.detector.filter_tags(copy(self.new_tags))
+        kept_tags = self.detector.filter_tags(self.new_tags)
         self._tag_filter = kept_tags
         self._tags["filtered"] = [0 if t in kept_tags else 1 for t in self._tags["id"]]
         self.save_progress()
@@ -629,10 +629,9 @@ class Annotations(Tag):
             else:
                 return
         
-        print("reading tags...")
         N = len(new_tags)
         tags = []
-        with tqdm.tqdm(total=N) as bar:
+        with tqdm.tqdm(total=N, desc="reading") as bar:
 
             for i in range(N):
                 t = self.read_tag(new_tags, i)

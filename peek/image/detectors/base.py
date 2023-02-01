@@ -244,6 +244,12 @@ class Detector():
 
         return m
 
+    def analyze_tag(self):
+        raise NotImplementedError("you must write a custom 'analyze tag' method")
+
+    def test_tag(self):
+        raise NotImplementedError("you must write a custom 'test tag' method")
+
     @staticmethod
     def difference(images, smooth=1):
         """
@@ -531,6 +537,8 @@ class Tagger():
         setattr(self, tag, [])
 
     def add(self, tag, value):
+        if not hasattr(self, tag):
+            self.new(tag)
         getattr(self, tag).append(value)
 
     def get(self, tag, i):
@@ -540,12 +548,12 @@ class Tagger():
         for k in keys:
             getattr(self, k).append(None)
 
-    def filter_tags(self, properties: list = [], drop_ids: list = []):
+    def drop_tags(self, properties: list = [], drop_ids: list = []):
         for p in properties:
             prop = getattr(self, p)
             new_prop = [v for i, v in enumerate(prop) if i not in drop_ids]
             setattr(self, p, new_prop)
-        
+
     def get_tag_box_coordinates(self, contour, margin):
         xcenter, ycenter = contour_center(contour)
         x = xcenter - margin
@@ -558,24 +566,6 @@ class Tagger():
         self.add("height", int(height))
         self.add("xcenter", xcenter)
         self.add("ycenter", ycenter)
-
-
-    @staticmethod
-    def rescale(a, img_orig, img_scaled):
-        """
-        returns a scaled version of an input array 
-        a numpy array of x and y scaling factors [x-scale, y-scale].
-        To restore original scalings. 
-        return array is backtransformed to int
-        """
-        xy = np.array(img_scaled.shape[:2]) / np.array(img_orig.shape[:2])
-        scld = a / xy
-        return scld.astype(int)
-
-    def drop(self, key):
-        for p in self.properties:
-            if key in p:
-                del p[key]
 
     
     @property
