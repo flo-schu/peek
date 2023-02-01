@@ -422,7 +422,7 @@ def threshold_imgage_to_idstring(img):
     img_colors = np.unique(img)
     assert img.ndim == 2, "only 2D images can be used"
     assert 0 in img_colors, "zero not in image colors"
-    assert len(img_colors) == 2, "image had more than 3 colors, only thresholded images can be used"
+    assert not len(img_colors) > 2, "image had more than 2 colors, only thresholded images can be used"
 
     threshold_pixels = np.where(img.flatten() != 0)[0]
 

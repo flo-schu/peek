@@ -42,6 +42,8 @@ class MotionDetector(Detector):
         """
         motion analysis algorithm. First computes the difference between images.
         """
+        print("\n generating difference images series. Always the difference with the next image is taken. The last image is compared with the first image.")
+
         comparison = zip(
             batch.images, 
             np.roll(batch.images, -1, axis=0),
