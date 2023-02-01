@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import shutil
 from copy import copy
 import imageio
 import warnings
@@ -10,17 +9,14 @@ import pandas as pd
 import numpy as np
 import tqdm
 import matplotlib as mpl
-from glob import glob
 from datetime import datetime
 from matplotlib import rc
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
-from matplotlib.widgets import RectangleSelector, Slider, Button
+from matplotlib.widgets import RectangleSelector, Slider
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
-
-from toopy.pandas import read_csv_list
 
 from peek.utils.manage import Files
 from peek.image.process import Snapshot, idstring_to_threshold_image, contour_center
@@ -45,11 +41,10 @@ class Tag(Files):
         self.annotated = False       # was the label manually annotated
         self.xcenter = 0             # x-coordinate of center of detected object
         self.ycenter = 0             # y-coordinate of center of detected object
+        self.path = ""               # path of original image
         self.tag_box_thresh_ids = "" # string of ids where threshold was exceeded
         # ----------------------------------------------------------------------
         
-        # temporary attributes
-        self.path = ""
    
     def unpack_dictionaries(self):
         pop_dicts = []
@@ -61,20 +56,13 @@ class Tag(Files):
             for key, value in self.__dict__.pop(d).items():
                 setattr(self, key, value)
 
-    def save(self, store=True):
+    def save(self):
         """
-        removes all attributes from tag which are not needed, or are unsuitable
-        for dataframes (those are saved in arrays or tiffs).
-        The remainder is forwarded to a dataframe, which can easily be 
+        adds current time and converts to pd.Series
         """
         self.time = time.strftime('%Y-%m-%d %H:%M:%S')
         tag = self.__dict__.copy()
-        if store:
-            path, _ = os.path.splitext(self.path)
-            if not os.path.exists(path):
-                os.mkdir(path)
-
-        return pd.Series(tag), path
+        return pd.Series(tag)
 
     @property
     def margin(self):
@@ -108,7 +96,6 @@ class Annotations(Tag):
             'p':"Culex Pipiens, pupa",
             'u':"unidentified"
             },
-        store_extra_files = True,
         extra_images = [],
         zfill=0,
         margin_click_tags=10,
@@ -121,7 +108,6 @@ class Annotations(Tag):
         self.detector = detector
         self.image = self.load_image(image, image_metadata)
         self.image_hash = self.image.__hash__()
-        self.store_extra_files = store_extra_files
         self.display_whole_img = False
         self.tag_db_path = tag_db_path
         self.origx = (0,0)
@@ -282,23 +268,6 @@ class Annotations(Tag):
         w = w + 2 * mar
         h = h + 2 * mar
 
-        # # create fileobjects
-        # for attr, _ in self.fileobjects.items():
-        #     if attr == "tag_contour":
-        #         setattr(t, attr, contour)
-
-        #     elif attr == "tag_image_orig":
-        #         slc = self.image.slice_image(
-        #             self.image.pixels, x, y, w, h, mar=0)
-        #         setattr(t, attr, slc)
-                
-        #     else:
-        #         # no calculated images for fileobjects apart from tag_contour
-        #         # and tag_image_orig exist
-        #         slc = np.full((10,10), 255, dtype=np.uint8)
-        #         setattr(t, attr, slc)
-                
-        # t.fileobjects = self.fileobjects
         t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
@@ -312,7 +281,7 @@ class Annotations(Tag):
         t.analysis = "manual"
         t.annotated = False
         t.xcenter, t.ycenter = contour_center(contour)
-        new_tag, _ = t.save()
+        new_tag = t.save()
 
         print(f"created new manual tag {t}")
 
@@ -415,7 +384,7 @@ class Annotations(Tag):
         if event.key in self.keymap.keys():
             self.update_ctag("label", self.keymap[event.key])
             self.update_ctag("annotated", True)
-            t, p = self.ctag.save()
+            t = self.ctag.save()
             # self.drop_duplicates()
             # self.tags = pd.concat([self.tags, t.to_frame().T], ignore_index=True)
             self.save_tag_to_database(t)
@@ -629,7 +598,7 @@ class Annotations(Tag):
                 t = self.read_tag(new_tags, i)
                 t.unpack_dictionaries()
                 t.image_hash = self.image_hash
-                t, _ = t.save(self.store_extra_files)
+                t = t.save()
                 tags.append(t.to_frame().T)
 
                 bar.update(1)
@@ -686,7 +655,7 @@ class Annotations(Tag):
     def show_previous_tag(self):
         self.i -= 1
         if self.i < 0:
-            self.i = len(self.tags)
+            self.i = len(self.tags) - 1
 
         self.show_tag_number(i=self.i)
 
