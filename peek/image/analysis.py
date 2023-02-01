@@ -519,13 +519,14 @@ class Annotations(Tag):
             interactive=True)
 
     def create_slider(self, ax, detector_parameter):
+        par = getattr(self.detector, detector_parameter)
         return Slider(
             ax=ax,
             label=detector_parameter.replace("_", " "),
-            valstep=1,
-            valmin=1,
-            valmax=30,
-            valinit=getattr(self.detector, detector_parameter),
+            valstep=par.step,
+            valmin=par.min,
+            valmax=par.max,
+            valinit=par,
         )
 
 
