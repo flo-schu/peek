@@ -12,6 +12,7 @@ import tqdm
 import matplotlib as mpl
 from glob import glob
 from datetime import datetime
+from matplotlib import rc
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
@@ -24,6 +25,7 @@ from toopy.pandas import read_csv_list
 from peek.utils.manage import Files
 from peek.image.process import Snapshot, idstring_to_threshold_image, contour_center
 
+rc("font", family='monospace', size=9)
 
 class Tag(Files):
     def __init__(self):
@@ -80,7 +82,7 @@ class Tag(Files):
         return int((self.width - 1) / 2)
 
     @property
-    def tag_image_orig(self):
+    def threshold_img(self):
         return idstring_to_threshold_image(self.tag_box_thresh_ids, self.margin)
 
     @property
@@ -137,6 +139,11 @@ class Annotations(Tag):
         self.margin_click_tags = margin_click_tags
         self._extra_images = extra_images
 
+        # plot axes
+        self.ax_complete_fig = None
+        self.axes_tag = [None, None, None, None]
+        self.axes_slider = []
+
         # read tags if supplied
         if self.new_tags is not None:
             self.read_new_tags(self.new_tags)
@@ -177,7 +184,8 @@ class Annotations(Tag):
         """
         plot_type   one of "plot_complete_tag_diff", "plot_tag", "plot_tag_diff"
         """
-        self.figure = plt.figure()
+        self.figure = plt.figure(figsize=(12,6))
+        self.figure.subplots_adjust(left=.15, hspace=.1, bottom=0.05, right=.95)
         self.figure.canvas.mpl_connect('key_press_event', self.press) 
         self.figure.canvas.mpl_connect('button_press_event', self.click_callback) 
         mpl.rcParams['keymap.back'] = ['left'] 
@@ -186,14 +194,13 @@ class Annotations(Tag):
         
         # create figure
         init_plot = getattr(self, plot_type)
-        self.axes = {}
         init_plot()
         self.set_plot_titles()
 
         plt.ion()
         self.draw_tag_boxes()
         self.show_tag_number(0)
-        plt.show()
+        self.figure.show()
 
     def test(self):
         
@@ -322,46 +329,45 @@ class Annotations(Tag):
         self.origx = (0, self.image.img.size[0])
         self.origy = (self.image.img.size[1],0)
         n_sliders = len(self._slider_parameters)
-        self.axes_slider = []
         self.gs = plt.GridSpec(
-            nrows=2 + n_sliders, ncols=4, height_ratios=[1,1] + [0.5 / n_sliders] * n_sliders)
+            nrows=4 + n_sliders, ncols=4, 
+            width_ratios=[1, 1, 0.8, 0.8],
+            height_ratios=[1, 0.2, 1] + [0.2] + [0.5 / n_sliders] * n_sliders
+        )
 
 
-        self.axes[0] = self.figure.add_subplot(self.gs[0:2, 0:2])
-        self.axes[1] = self.figure.add_subplot(self.gs[0, 2])
-        self.axes[2] = self.figure.add_subplot(self.gs[0, 3])
-        self.axes[3] = self.figure.add_subplot(self.gs[1, 2])
-        self.axes[4] = self.figure.add_subplot(self.gs[1, 3])
+        self.ax_complete_fig = self.figure.add_subplot(self.gs[0:3, 0:2])
+
+        self.axes_tag[0] = self.figure.add_subplot(self.gs[0, 2])
+        self.axes_tag[1] = self.figure.add_subplot(self.gs[0, 3])
+
+        for i, tit in enumerate(self._extra_images):
+            self.axes_tag[i+2] = self.figure.add_subplot(self.gs[2, i+2])
 
         # create slider axes
         for i in range(n_sliders):
-            self.axes_slider.append(self.figure.add_subplot(self.gs[2 + i,:]))
+            self.axes_slider.append(self.figure.add_subplot(self.gs[4 + i,:]))
 
         self.show_original()
         self.show_sliders()
 
     def plot_tag(self):
-        self.axes = {
-            1: self.figure.add_subplot(111)
-        }
+        self.axes_tag = [
+            self.figure.add_subplot(111)
+        ]
 
     def plot_tag_diff(self):
-        self.axes = {
-            1: self.figure.add_subplot(121),
-            2: self.figure.add_subplot(122),
-        }
+        self.axes_tag = [
+            self.figure.add_subplot(121),
+            self.figure.add_subplot(122),
+        ]
 
     def set_plot_titles(self):
-        ax_no = 0
-        titles = {ax_no: "original image"}
-        # for key, _ in self.fileobjects.items():
-        #     if key == "tag_contour":
-        #         continue
-        #     ax_no += 1
-        #     titles.update({ax_no: key})
+        self.axes_tag[0].set_title("original")
+        self.axes_tag[1].set_title("threshold")
 
-        # for (_, tit), (_, ax) in zip(titles.items(), self.axes.items()):
-        #     ax.set_title(tit)
+        for i, tit in zip(range(2,4), self._extra_images):
+            self.axes_tag[i].set_title(tit)
         
     def load_processed_tags(self):
         try:
@@ -457,26 +463,23 @@ class Annotations(Tag):
         db.sort_values(by=["image_hash", "id"], ascending=True)
 
         # save tagged image to folder according to a unique identifier
-        self.copy_tag_image(tag)
+        self.save_tag_image_to_database(tag)
         
         # save updated database
         db.to_csv(self.tag_db_path, index=False)
 
-    def copy_tag_image(self, tag):
-        path, _ = os.path.splitext(self.path) 
-        from_path = os.path.join(
-            path,
-            "tag_image_orig",
-            str(int(tag.id)) + ".jpg"
-        )
-
-        to_path = os.path.join(
+    def save_tag_image_to_database(self, tag):
+        """
+        convenience to start creating a ML databse for organisms
+        all tags could be reproduced 
+        """
+        filename = os.path.join(
             os.path.dirname(self.tag_db_path), 
             "annotated_images", 
              f"{tag.image_hash}_tag_{int(tag.id)}.jpg")
 
-        os.makedirs(os.path.dirname(to_path), exist_ok=True)
-        shutil.copy(from_path, to_path)
+        imageio.imwrite(filename, self.image.pixels[self.ctag.slice])
+
 
     @staticmethod
     def remove_duplicates(df):
@@ -523,11 +526,11 @@ class Annotations(Tag):
 
     def reset_lims(self):
         if self.display_whole_img:
-            self.axes[0].set_xlim(self.origx)
-            self.axes[0].set_ylim(self.origy)
+            self.ax_complete_fig.set_xlim(self.origx)
+            self.ax_complete_fig.set_ylim(self.origy)
 
     def show_original(self):
-        self.axes[0].imshow(self.image.img)
+        self.ax_complete_fig.imshow(self.image.img)
         self.selector = self.create_selector()
 
     def show_sliders(self):
@@ -539,7 +542,7 @@ class Annotations(Tag):
 
     def create_selector(self):
         return RectangleSelector(
-            self.axes[0], self.select_callback,
+            self.ax_complete_fig, self.select_callback,
             useblit=True,
             button=[1],  # disable middle and right button
             minspanx=5, minspany=5,
@@ -549,7 +552,7 @@ class Annotations(Tag):
     def create_slider(self, ax, detector_parameter):
         return Slider(
             ax=ax,
-            label=detector_parameter,
+            label=detector_parameter.replace("_", " "),
             valstep=1,
             valmin=1,
             valmax=30,
@@ -559,34 +562,43 @@ class Annotations(Tag):
 
     def show_tagged(self):
         tagged = self.image.tag_image(self.image.img, self.new_tags['contour'])
-        self.axes[0].imshow(tagged)
+        self.ax_complete_fig.imshow(tagged)
 
     def show_label(self):
         try:
-            self.axes[1].annotate(self.ctag.label, (0.05,0.05), xycoords="axes fraction",
-                                  bbox={'color':'white','ec':'black', 'lw':2})
-            self.axes[1].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
-                                  bbox={'color':'white','ec':'black', 'lw':2})
+            self.axes_tag[0].annotate(self.ctag.label, (0.05,0.05), xycoords="axes fraction",
+                                  bbox={'color':'white','ec':'black', 'lw':1},
+                                  ha="left", va="bottom")
+            self.axes_tag[0].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
+                                  bbox={'color':'white','ec':'black', 'lw':1},
+                                  ha="left", va="top")
         except KeyError:
             pass
 
     def show_tag(self):
+        # plot original image
         try:
-            self.axes[1].cla()
+            self.axes_tag[0].cla()
             # img = self.draw_contour_on_slice()
             s = self.image.pixels[self.ctag.slice]
             if len(s) > 0:
-                self.axes[1].imshow(s)
+                self.axes_tag[0].imshow(s)
+        except KeyError:
+            pass
+
+        try:
+            self.axes_tag[1].cla()
+            self.axes_tag[1].imshow(self.ctag.threshold_img)
         except KeyError:
             pass
 
         for i, attr in enumerate(self._extra_images):
         # for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
             try:
-                self.axes[3].cla()
+                self.axes_tag[i+2].cla()
                 s = getattr(self.image, attr)[self.ctag.slice]
                 if len(s) > 0:
-                    self.axes[i+2].imshow(s)
+                    self.axes_tag[i+2].imshow(s)
             except KeyError:
                 pass
 
@@ -634,7 +646,7 @@ class Annotations(Tag):
             patches.append(rect)
         
         self._pc = PatchCollection(patches, facecolor="none", edgecolor="green")
-        _ = self.axes[0].add_collection(self._pc)
+        _ = self.ax_complete_fig.add_collection(self._pc)
 
     def draw_target(self):
         for t in self.target:
@@ -643,8 +655,8 @@ class Annotations(Tag):
         y = self.ctag.ycenter
         x = self.ctag.xcenter
 
-        v = self.axes[0].vlines(x, y-50, y+50, color="red")
-        h = self.axes[0].hlines(y, x-50, x+50, color="red")
+        v = self.ax_complete_fig.vlines(x, y-50, y+50, color="red")
+        h = self.ax_complete_fig.hlines(y, x-50, x+50, color="red")
         self.target = (v, h)
 
     def read_tag(self, tags, tag_id):
