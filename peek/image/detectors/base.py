@@ -186,6 +186,9 @@ class Mask(Spectral):
             self.img = self.apply_mask(self.img, self.masks['water_surface'])
 
 
+class Param():
+    pass
+
 class Detector():
 
     @staticmethod
@@ -491,6 +494,9 @@ class Tagger():
     def add(self, tag, value):
         getattr(self, tag).append(value)
 
+    def get(self, tag, i):
+        return getattr(self, tag)[i]
+
     def set_none(self, keys=[]):
         for k in keys:
             getattr(self, k).append(None)
@@ -533,4 +539,14 @@ class Tagger():
                 del p[key]
 
     
+    @property
+    def len_properties(self):
+        return {key:len(prop) for key, prop in self.__dict__.items()}
 
+    @property
+    def max_len(self):
+        return np.max(list(self.len_properties.values()))
+
+    def is_equal_properties_lengths(self):
+        lens = np.array(list(self.len_properties.values()))
+        return all(lens[0] == lens)
