@@ -80,74 +80,7 @@ class MotionDetector(Detector):
             img_orig.comparison = img_comp.pixels
 
         return batch
-    
-    # def slice_tags(self, batch):
-    #     """
-    #     optional method for creating sliced images of the tags. Good for 
-    #     generating data for machine learning algorithm
-    #     """
-    #     mar = self.margin
-    #     for img in batch.images:            
 
-    #         # cut slices ALWAYS reusing the same contours
-
-    #         # cut slices from the real image
-    #         img.tags.tag_image_orig = img._cut_slices(img.pixels, mar, True)
-            
-    #         # cut slices from comparison image
-    #         img.tags.tag_image_comp = img._cut_slices(img.tag_image_comp, mar, True)
-            
-    #         # cut slices from thresholded difference image
-    #         img.tags.tag_image_thresh = img._cut_slices(img.tag_image_thresh, mar, True)
-
-    #         # img.post_process_tags(
-    #         #     pptag, 
-    #         #     ["tag_image_thresh", "tag_image_orig", "tag_image_comp"]
-    #         # )
-
-
-    #     return batch
-
-
-    def analyze_tags(self, tags):
-
-        with tqdm.tqdm(total=tags.max_len, desc="analyzing") as pbar:
-
-            for i in range(tags.max_len):
-                # find clusters in threshold image with direct connectivity
-                tag_props = self.analyse_tag(tags, i)
-
-                # add props to tags
-                _ = [tags.add(key, value) for key, value in tag_props.items()]
-
-                pbar.update(1)
-                
-        assert tags.is_equal_properties_lengths()
-
-        return tags
-
-    def filter_tags(self, tags):
-        drop_tags = []
-        kept_tags = []
-        with tqdm.tqdm(total=tags.max_len, desc="filtering") as pbar:
-
-            for i in range(tags.max_len):
-                keep = self.test_tag(tags, i)
-                
-                if keep:
-                    kept_tags.append(i)
-                else:
-                    drop_tags.append(i)
-
-                pbar.update(1)
-            
-        # tags.drop_tags(
-        #     properties=list(tags.__dict__.keys()), 
-        #     drop_ids=drop_tags
-        # )
-        assert tags.is_equal_properties_lengths()
-
-        return kept_tags
 
     def analyse_tag(self, tags, i):
         thresh = tags.get("tag_box_thresh_ids", i)
@@ -190,15 +123,3 @@ class MotionDetector(Detector):
 
         return keep
 
-def pptag(self, objs):
-    fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(8,3))
-    ax1.imshow(objs[0])
-    ax2.imshow(objs[1])
-    ax3.imshow(objs[2])
-
-
-    fig.text(.1, .9, "")
-    fig.savefig("work/temp/slice.png")
-    plt.close()
-
-    a = 2

@@ -3,6 +3,7 @@ import cv2 as cv
 import numpy as np
 import imutils
 import itertools as it
+import tqdm
 from matplotlib import pyplot as plt
 
 from peek.utils.manage import Files
@@ -243,6 +244,53 @@ class Detector():
             m.apply_multi(masks=mask.masks)
 
         return m
+
+    def analyze_tags(self, tags):
+        """
+        wrapper around analyze tag method specified by the user
+        """
+
+        with tqdm.tqdm(total=tags.max_len, desc="analyzing") as pbar:
+
+            for i in range(tags.max_len):
+                # find clusters in threshold image with direct connectivity
+                tag_props = self.analyse_tag(tags, i)
+
+                # add props to tags
+                _ = [tags.add(key, value) for key, value in tag_props.items()]
+
+                pbar.update(1)
+                
+        assert tags.is_equal_properties_lengths()
+
+        return tags
+
+    def filter_tags(self, tags):
+        """
+        wrapper around test tag method specified by the user.
+        Returns the ids of kept tags
+        """
+        drop_tags = []
+        kept_tags = []
+        with tqdm.tqdm(total=tags.max_len, desc="filtering") as pbar:
+
+            for i in range(tags.max_len):
+                keep = self.test_tag(tags, i)
+                
+                if keep:
+                    kept_tags.append(i)
+                else:
+                    drop_tags.append(i)
+
+                pbar.update(1)
+            
+        # tags.drop_tags(
+        #     properties=list(tags.__dict__.keys()), 
+        #     drop_ids=drop_tags
+        # )
+        assert tags.is_equal_properties_lengths()
+
+        return kept_tags
 
     def analyze_tag(self):
         raise NotImplementedError("you must write a custom 'analyze tag' method")
