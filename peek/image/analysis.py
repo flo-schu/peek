@@ -12,6 +12,7 @@ import matplotlib as mpl
 from datetime import datetime
 from matplotlib import rc
 from matplotlib import pyplot as plt
+from matplotlib.backend_bases import _Mode
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 from matplotlib.widgets import RectangleSelector, Slider
@@ -31,6 +32,7 @@ class Tag(Files):
         # ----------------------------------------------------------------------
         self.image_hash = None       # unique reference hash of parent image
         self.id = 0                  # id of tag in image
+        self.filtered = 0            # indicates if the tag was pre-filtered
         self.x = 0                   # top left corner of bounding box (x-axis)
         self.y = 0                   # top left corner of bounding box (y-axis)
         self.width = 0               # width of bounding box
@@ -62,6 +64,7 @@ class Tag(Files):
         """
         self.time = time.strftime('%Y-%m-%d %H:%M:%S')
         tag = self.__dict__.copy()
+        _ = tag.pop("path")  # remove path so it does not appear in file
         return pd.Series(tag)
 
     @property
@@ -115,6 +118,8 @@ class Annotations(Tag):
         self.xlim = (0,0)
         self.ylim = (0,0)
         self.ctag = None
+        self.i = 0
+        self.last_tag_number = 0
         self.error = (False, "no message")
         self.keymap = keymap
         self.zfill = zfill
@@ -197,11 +202,12 @@ class Annotations(Tag):
 
 
         class B:
-            def __init__(self, button = 3, xdata = 10, ydata = 20):
+            def __init__(self, button = 3, xdata = 10, ydata = 20, dblclick=False):
                 self.button = button
                 self.xdata = xdata
                 self.ydata = ydata
 
+        self.click_callback(B(1, xdata=891, ydata=530, dblclick=False))
         self.press(A())
         self.click_callback(B())
 
@@ -211,6 +217,8 @@ class Annotations(Tag):
         self.click_callback(B(xdata=50))
         self.press(A("n"))
         self.press(A("d"))
+        self.click_callback(B(1, xdata=891, ydata=200, dblclick=False))
+        self.sliders["max_clusters"][1](10)
 
     # def test(self, eclick=(1750, 800), erelease=(1770, 810)):
     def select_callback(self, eclick, erelease):
@@ -231,13 +239,26 @@ class Annotations(Tag):
 
         *eclick* and *erelease* are the press and release events.
         """
-        if event.button == 3:
-            # print(event)
-            x, y = int(event.xdata), int(event.ydata)
-            # print(x, y)
-            tag_contour = np.array([[[x, y]]])
-            
-            self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+        toolbar_mode = self.figure.canvas.toolbar.mode
+        if toolbar_mode == _Mode.ZOOM:
+            return
+
+        if event.inaxes == self.ax_complete_fig:
+            if event.button == 3:
+
+                # print(event)
+                x, y = int(event.xdata), int(event.ydata)
+                # print(x, y)
+                tag_contour = np.array([[[x, y]]])
+                
+                self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+
+            if event.button == 1:
+                x, y = int(event.xdata), int(event.ydata)
+                tag_id = self.get_tag_id_of_closest_point(x, y)
+
+                self.last_tag_number = self.i
+                self.show_tag_number(i=self.get_tag_number_from_id(tag_id))
 
     class slider_callback():
         # works okay, but the problem is that images will be copied or not
@@ -250,10 +271,18 @@ class Annotations(Tag):
         def __call__(self, val):
             setattr(self.annotations.detector, self.param, val)
             self.annotations.apply_tag_filter()
-            
+
+    def get_tag_id_of_closest_point(self, x, y):
+        diff = np.array([self.tags['ycenter']-y, self.tags["xcenter"]-x])
+        closest = np.abs(diff).sum(axis=0).argsort()[0]
+        return int(self.tags.iloc[closest]["id"])
+    
     def apply_tag_filter(self):
         tags, kept_tags = self.detector.filter_tags(copy(self.new_tags))
         self._tag_filter = kept_tags
+        self._tags["filtered"] = [0 if t in kept_tags else 1 for t in self._tags["id"]]
+        self.save_progress()
+
         if self._pc is not None:
             self._pc.remove()  # remove tags boxes (Artis)
             self.draw_tag_boxes()
@@ -397,6 +426,10 @@ class Annotations(Tag):
             self.reset_lims()
             self.show_next_tag()
 
+        if event.key == "r":
+            self.reset_lims()
+            self.show_tag_number(self.last_tag_number)
+        
         if event.key == "n":
             self.reset_lims()
             self.show_next_tag()
@@ -446,6 +479,9 @@ class Annotations(Tag):
             os.path.dirname(self.tag_db_path), 
             "annotated_images", 
              f"{tag.image_hash}_tag_{int(tag.id)}.jpg")
+
+        if not os.path.exists(os.path.dirname(filename)):
+            os.mkdir(os.path.dirname(filename))
 
         imageio.imwrite(filename, self.image.pixels[self.ctag.slice])
 
@@ -587,8 +623,11 @@ class Annotations(Tag):
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
             warnings.warn("overwriting existing annotations")
-
-            self.tags = pd.DataFrame({'id':[]})
+            overwrite = input("do you want to overwrite? (y/n):")
+            if overwrite == "y":
+                self.tags = pd.DataFrame({'id':[]})
+            else:
+                return
         
         print("reading tags...")
         N = len(new_tags)
@@ -636,6 +675,9 @@ class Annotations(Tag):
         return t
         # self.new_tags = self.new_tags.drop(i)
 
+    def get_tag_number_from_id(self, tag_id):
+        return np.where(self.tags.id.values == tag_id)[0][0]
+
     def show_tag_number(self, i):
         self.i = i
         tag_id = self.tags.id.values[self.i]
@@ -661,7 +703,7 @@ class Annotations(Tag):
         self.show_tag_number(i=self.i)
 
     def save_progress(self):
-        self.tags.to_csv(self.path, index=False)
+        self._tags.to_csv(self.path, index=False)
 
 
 class Spectral:
