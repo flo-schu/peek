@@ -24,6 +24,8 @@ class MotionDetector(Detector):
         smooth=1,
         max_clusters=np.inf,
         min_area=1,
+        max_x=np.inf,
+        min_x=0
     ):
         # parent class has no attributes, make sure only attributes in 
         # class remain parameters
@@ -33,6 +35,8 @@ class MotionDetector(Detector):
         self.smooth = smooth
         self.max_clusters = max_clusters
         self.min_area = min_area
+        self.max_x = max_x
+        self.min_x = min_x
 
     def tag_images(self, batch):
         """
@@ -110,15 +114,14 @@ class MotionDetector(Detector):
         tags.new("axis_major_length")
         tags.new("axis_minor_length")
 
-        thresh_slices = tags.tag_box_thresh_ids
-
         remove_tags = []
         kept_tags = []
 
-        with tqdm.tqdm(total=len(thresh_slices)) as pbar:
+        with tqdm.tqdm(total=tags.max_len) as pbar:
 
-            for i, thresh in enumerate(thresh_slices):
+            for i in range(tags.max_len):
                 # find clusters in threshold image with direct connectivity
+                thresh = tags.get("tag_box_thresh_ids", i)
                 thresh = idstring_to_threshold_image(thresh, self.margin)
                 pbar.update(1)
                 labels, n_cluster = measure.label(
@@ -130,7 +133,9 @@ class MotionDetector(Detector):
                 props = rp[central_label - 1]
 
                 area_central_cluster = props.area
-                # filter depending on labels
+                x = tags.get("x", i)
+
+                # apply filter depending on labels
                 if n_cluster > self.max_clusters:
                     remove_tags.append(i)
                     continue
@@ -138,7 +143,16 @@ class MotionDetector(Detector):
                 if area_central_cluster < self.min_area:
                     remove_tags.append(i)
                     continue
-                
+
+                if x > self.max_x:
+                    remove_tags.append(i)
+                    continue
+
+                if x < self.min_x:
+                    remove_tags.append(i)
+                    continue
+
+
                 kept_tags.append(i)
                 # check out props. It has many attributes
                 tags.add("n_clusters", n_cluster)
@@ -151,6 +165,8 @@ class MotionDetector(Detector):
                 "x", "y", "width", "height", "xcenter", "ycenter"
             ],
             drop_ids=remove_tags)
+        
+        assert tags.is_equal_properties_lengths()
 
         return tags, kept_tags
 
