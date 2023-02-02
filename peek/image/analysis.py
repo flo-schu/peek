@@ -204,7 +204,7 @@ class Annotations(Tag):
 
         ax = self.ax_complete_fig
         class B:
-            def __init__(self, button = 3, xdata = 10, ydata = 20, dblclick=False):
+            def __init__(self, button = 3, xdata = 100, ydata = 200, dblclick=False):
                 self.button = button
                 self.xdata = xdata
                 self.ydata = ydata
@@ -217,7 +217,7 @@ class Annotations(Tag):
         self.sliders["max_clusters"][1](2)
         self.sliders["max_clusters"][1](3)
 
-        self.click_callback(B(xdata=50))
+        self.click_callback(B(xdata=500))
         self.press(A("n"))
         self.press(A("d"))
         self.click_callback(B(1, xdata=891, ydata=200, dblclick=False))
