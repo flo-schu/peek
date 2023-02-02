@@ -104,8 +104,10 @@ class Annotations(Tag):
             'u':"unidentified"
             },
         extra_images = [],
+        sliders=[],
         zfill=0,
-        sliders=[]
+        continue_annotation=True,
+
     ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
@@ -131,7 +133,7 @@ class Annotations(Tag):
         self.sliders = {}
         self._pc = None
         self._extra_images = extra_images
-
+        self._continue_annotation = continue_annotation
         # plot axes
         self.ax_complete_fig = None
         self.axes_tag = [None, None, None, None]
@@ -638,11 +640,14 @@ class Annotations(Tag):
 
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
-            overwrite = input("WARNING! Annotations will be overwritten. Do you want to overwrite? (y/n):")
-            if overwrite == "y":
-                self.tags = pd.DataFrame({'id':[]})
-            else:
+            if self._continue_annotation:
                 return
+
+            overwrite = input("WARNING! Annotations will be overwritten. Do you want to overwrite? (y/n):")
+            if not overwrite == "y":
+                return
+            else:
+                self.tags = pd.DataFrame({'id':[]})
         
         N = len(new_tags)
         tags = []

@@ -613,8 +613,8 @@ class Tagger():
 
     def get_tag_box_coordinates(self, contour, shape):
         xcenter, ycenter = contour_center(contour)
-        y = ycenter - shape[0]
-        x = xcenter - shape[1]
+        y = ycenter - (shape[0] - 1) / 2 
+        x = xcenter - (shape[1] - 1) / 2
         width, height = shape
 
         self.add("x", int(x))
