@@ -428,16 +428,18 @@ def threshold_imgage_to_idstring(img):
 
     return array1d_to_string(threshold_pixels)
 
+
 def array1d_to_string(a):
     return str(a.tolist()).replace("[", "").replace("]", "").replace(",", "")
+
 
 def string_to_array1d(s):
     return np.fromstring(s, sep=" ", dtype=int)
 
-def idstring_to_threshold_image(s, margin):
+
+def idstring_to_threshold_image(s, shape):
     a = string_to_array1d(s)
     
-    shape = margin_to_shape(mar=margin)
     flat_img = np.zeros((np.multiply(*shape)), dtype=np.uint8)
 
     flat_img[a] = 255

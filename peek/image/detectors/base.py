@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from peek.utils.manage import Files
 from peek.image.process import (
-    Series, Snapshot, get_tag_box_coordinates, margin_to_shape, contour_center)
+    Series, Snapshot, get_tag_box_coordinates, contour_center)
 from peek.image.analysis import Spectral, Preprocessing
 
 class Mask(Spectral):
@@ -611,11 +611,11 @@ class Tagger():
             new_prop = [v for i, v in enumerate(prop) if i not in drop_ids]
             setattr(self, p, new_prop)
 
-    def get_tag_box_coordinates(self, contour, margin):
+    def get_tag_box_coordinates(self, contour, shape):
         xcenter, ycenter = contour_center(contour)
-        x = xcenter - margin
-        y = ycenter - margin
-        width, height = margin_to_shape(margin)
+        y = ycenter - shape[0]
+        x = xcenter - shape[1]
+        width, height = shape
 
         self.add("x", int(x))
         self.add("y", int(y))

@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 from matplotlib import pyplot as plt
 from skimage import measure
-from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring
+from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring, margin_to_shape
 from peek.image.detectors.base import Detector, Tagger
 
 class MotionDetector(Detector):
@@ -65,7 +65,8 @@ class MotionDetector(Detector):
                 threshold_imgage_to_idstring(t) for t in thresh_slices]
 
             # get contour coordinates
-            [tags.get_tag_box_coordinates(c, self.margin) for c in img_orig.contours]
+            [tags.get_tag_box_coordinates(c, margin_to_shape(self.margin)) 
+                for c in img_orig.contours]
             img_orig.tags = tags
 
             # add other images, which should be shown 
@@ -92,7 +93,8 @@ class MotionDetector(Detector):
 
     def analyze_tag(self, tag):
         thresh = tag["tag_box_thresh_ids"]
-        thresh = idstring_to_threshold_image(thresh, self.margin)
+        w, h = tag["width"], tag["height"]
+        thresh = idstring_to_threshold_image(thresh, shape=(h, w))
         labels, n_cluster = measure.label(
             thresh, return_num=True, connectivity=1)
         rp = measure.regionprops(labels)

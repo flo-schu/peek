@@ -76,7 +76,9 @@ class Tag(Files):
 
     @property
     def threshold_img(self):
-        return idstring_to_threshold_image(self.tag_box_thresh_ids, self.margin)
+        return idstring_to_threshold_image(
+            self.tag_box_thresh_ids, 
+            shape=(self.height, self.width))
 
     @property
     def slice(self):
@@ -103,7 +105,6 @@ class Annotations(Tag):
             },
         extra_images = [],
         zfill=0,
-        margin_click_tags=10,
         sliders=[]
     ):
         self.path = os.path.normpath(path)
@@ -129,7 +130,6 @@ class Annotations(Tag):
         self.selector = None
         self.sliders = {}
         self._pc = None
-        self.margin_click_tags = margin_click_tags
         self._extra_images = extra_images
 
         # plot axes
@@ -202,12 +202,13 @@ class Annotations(Tag):
             def __init__(self, key="u"):
                 self.key = key
 
-
+        ax = self.ax_complete_fig
         class B:
             def __init__(self, button = 3, xdata = 10, ydata = 20, dblclick=False):
                 self.button = button
                 self.xdata = xdata
                 self.ydata = ydata
+                self.inaxes = ax
 
         self.click_callback(B(1, xdata=891, ydata=530, dblclick=False))
         self.press(A())
@@ -254,7 +255,7 @@ class Annotations(Tag):
                     # print(x, y)
                     tag_contour = np.array([[[x, y]]])
                     
-                    self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+                    self.manual_tag(contour=tag_contour, mar=self.detector.margin)
 
                 if event.button == 1:
                     x, y = int(event.xdata), int(event.ydata)
