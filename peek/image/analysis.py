@@ -246,21 +246,22 @@ class Annotations(Tag):
             return
 
         if event.inaxes == self.ax_complete_fig:
-            if event.button == 3:
+            if not self.selector.active:
+                if event.button == 3:
 
-                # print(event)
-                x, y = int(event.xdata), int(event.ydata)
-                # print(x, y)
-                tag_contour = np.array([[[x, y]]])
-                
-                self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
+                    # print(event)
+                    x, y = int(event.xdata), int(event.ydata)
+                    # print(x, y)
+                    tag_contour = np.array([[[x, y]]])
+                    
+                    self.manual_tag(contour=tag_contour, mar=self.margin_click_tags)
 
-            if event.button == 1:
-                x, y = int(event.xdata), int(event.ydata)
-                tag_id = self.get_tag_id_of_closest_point(x, y)
+                if event.button == 1:
+                    x, y = int(event.xdata), int(event.ydata)
+                    tag_id = self.get_tag_id_of_closest_point(x, y)
 
-                self.last_tag_number = self.i
-                self.show_tag_number(i=self.get_tag_number_from_id(tag_id))
+                    self.last_tag_number = self.i
+                    self.show_tag_number(i=self.get_tag_number_from_id(tag_id))
 
     class slider_callback():
         # works okay, but the problem is that images will be copied or not
@@ -430,7 +431,6 @@ class Annotations(Tag):
             # self.drop_duplicates()
             # self.tags = pd.concat([self.tags, t.to_frame().T], ignore_index=True)
             self.save_tag_to_database(t)
-            self.show_label()
 
             # self.tags = self.tags.sort_values(by='id')
             self.save_progress()
@@ -550,6 +550,8 @@ class Annotations(Tag):
     def show_original(self):
         self.ax_complete_fig.imshow(self.image.img)
         self.selector = self.create_selector()
+        # initiate as inactive. Has to be activate with "t"
+        self.selector.set_active(False)
 
     def show_sliders(self):
         for ax, par in zip(self.axes_slider, self._slider_parameters):
