@@ -251,16 +251,21 @@ class Detector():
         """
 
         with tqdm.tqdm(total=tags.max_len, desc="analyzing") as pbar:
-
+            new_tag_props = []
             for i in range(tags.max_len):
                 # find clusters in threshold image with direct connectivity
-                tag_props = self.analyse_tag(tags, i)
+                t = tags.get_tag(i)
+                props = self.analyze_tag(t)
 
+                new_tag_props.append(props)
                 # add props to tags
-                _ = [tags.add(key, value) for key, value in tag_props.items()]
 
                 pbar.update(1)
-                
+            
+            for i in range(tags.max_len):
+                props = new_tag_props[i]
+                _ = [tags.add(key, value) for key, value in props.items()]
+        
         assert tags.is_equal_properties_lengths()
 
         return tags
@@ -275,7 +280,8 @@ class Detector():
         with tqdm.tqdm(total=tags.max_len, desc="filtering") as pbar:
 
             for i in range(tags.max_len):
-                keep = self.test_tag(tags, i)
+                t = tags.get_tag(i)
+                keep = self.test_tag(t)
                 
                 if keep:
                     kept_tags.append(i)
@@ -292,10 +298,10 @@ class Detector():
 
         return kept_tags
 
-    def analyze_tag(self):
+    def analyze_tag(self, tag):
         raise NotImplementedError("you must write a custom 'analyze tag' method")
 
-    def test_tag(self):
+    def test_tag(self, tag):
         raise NotImplementedError("you must write a custom 'test tag' method")
 
     @staticmethod
@@ -588,6 +594,9 @@ class Tagger():
         if not hasattr(self, tag):
             self.new(tag)
         getattr(self, tag).append(value)
+
+    def get_tag(self, i):
+        return {key: values[i] for key, values in self.__dict__.items()}
 
     def get(self, tag, i):
         return getattr(self, tag)[i]

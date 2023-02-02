@@ -20,7 +20,9 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.signal import argrelextrema, find_peaks
 
 from peek.utils.manage import Files
-from peek.image.process import Snapshot, idstring_to_threshold_image, contour_center
+from peek.image.process import (
+    Snapshot, idstring_to_threshold_image, contour_center, 
+    threshold_imgage_to_idstring)
 
 rc("font", family='monospace', size=9)
 
@@ -310,6 +312,9 @@ class Annotations(Tag):
         t.analysis = "manual"
         t.annotated = False
         t.xcenter, t.ycenter = contour_center(contour)
+
+        # analyze the new tag
+        self.analyze_manual_tag(tag=t)
         new_tag = t.save()
 
         print(f"created new manual tag {t}")
@@ -321,6 +326,14 @@ class Annotations(Tag):
         self.draw_tag_boxes()
         self.save_progress()
 
+    def analyze_manual_tag(self, tag):
+        orig_slice = self.image.pixels[tag.slice]
+        comp_slice = self.image.comparison[tag.slice]
+        thresh = self.detector.thresholding(orig_slice, comp_slice)
+        tag.tag_box_thresh_ids = threshold_imgage_to_idstring(thresh)
+        props = self.detector.analyze_tag(tag=tag.__dict__)
+        _ = [setattr(tag, key, value) for key, value in props.items()]
+        
 
     def plot_complete_tag_diff(self):
         self.display_whole_img = True
@@ -622,8 +635,7 @@ class Annotations(Tag):
 
     def save_new_tags(self, new_tags):
         if len(self.tags) != 0:
-            warnings.warn("overwriting existing annotations")
-            overwrite = input("do you want to overwrite? (y/n):")
+            overwrite = input("WARNING! Annotations will be overwritten. Do you want to overwrite? (y/n):")
             if overwrite == "y":
                 self.tags = pd.DataFrame({'id':[]})
             else:

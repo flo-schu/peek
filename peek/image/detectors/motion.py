@@ -50,19 +50,11 @@ class MotionDetector(Detector):
         )
         for img_orig, img_comp in comparison:
             tags = Tagger()
-
-            # calculate pixel and channel wise difference
-            diff = self.difference(
-                images=[img_comp.pixels, img_orig.pixels], 
-                smooth=self.smooth)
-
-            # TODO: try if this is better placed before
-            # grayscale
-            gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
-
-            # threshold grayscale image
-            _, thresh = cv.threshold(gray, self.thresh_binary, 255, cv.THRESH_BINARY)
             
+            thresh = self.thresholding(
+                img_orig=img_orig.pixels, 
+                img_comp=img_comp.pixels
+            )
             # get contours
             img_orig.contours = self.get_contours(thresh, self.thresh_size)
             thresh_slices = img_orig._cut_slices(
@@ -82,8 +74,24 @@ class MotionDetector(Detector):
         return batch
 
 
-    def analyse_tag(self, tags, i):
-        thresh = tags.get("tag_box_thresh_ids", i)
+    def thresholding(self, img_orig, img_comp):
+        # calculate pixel and channel wise difference
+        diff = self.difference(
+            images=[img_comp, img_orig], 
+            smooth=self.smooth)
+
+        # TODO: try if this is better placed before
+        # grayscale
+        
+        gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
+
+        # threshold grayscale image
+        _, thresh = cv.threshold(gray, self.thresh_binary, 255, cv.THRESH_BINARY)
+
+        return thresh
+
+    def analyze_tag(self, tag):
+        thresh = tag["tag_box_thresh_ids"]
         thresh = idstring_to_threshold_image(thresh, self.margin)
         labels, n_cluster = measure.label(
             thresh, return_num=True, connectivity=1)
@@ -91,30 +99,38 @@ class MotionDetector(Detector):
 
         # get properties of central cluster
         central_label = labels[self.margin, self.margin]
-        props = rp[central_label - 1]
+        
+        if len(rp) == 0:
+            area_central_cluster = 0
+            amal = 0
+            amil = 0
 
-        area_central_cluster = props.area
-
+        else:
+            props = rp[central_label - 1]
+            area_central_cluster = props.area
+            amal = props.axis_major_length
+            amil = props.axis_minor_length
+        
         tag_props = {
             "n_clusters": n_cluster,
             "pixels_central": area_central_cluster,
-            "axis_major_length": props.axis_major_length,
-            "axis_minor_length": props.axis_minor_length,
+            "axis_major_length": amal,
+            "axis_minor_length": amil,
         }
 
         return tag_props
 
-    def test_tag(self, tags, i):
+    def test_tag(self, tag):
         keep = True
 
         # apply test depending on labels
-        if tags.get("n_clusters", i) > self.max_clusters:
+        if tag["n_clusters"] > self.max_clusters:
             keep = False
         
-        if tags.get("pixels_central", i) < self.min_area:
+        if tag["pixels_central"] < self.min_area:
             keep = False
 
-        x = tags.get("x", i)
+        x = tag["x"]
         if x > self.max_x:
             keep = False
 
