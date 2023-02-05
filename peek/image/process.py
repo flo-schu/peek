@@ -434,6 +434,10 @@ def array1d_to_string(a):
 
 
 def string_to_array1d(s):
+    if isinstance(s, float):
+        if np.isnan(s):
+            s = ""
+
     return np.fromstring(s, sep=" ", dtype=int)
 
 
