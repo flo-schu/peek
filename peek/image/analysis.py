@@ -3,7 +3,7 @@ import sys
 import time
 from copy import copy
 import imageio
-import warnings
+from functools import lru_cache
 import cv2 as cv
 import pandas as pd
 import numpy as np
@@ -26,8 +26,10 @@ from peek.image.process import (
 
 rc("font", family='monospace', size=9)
 
+
 class Tag(Files):
-    def __init__(self):
+    def __init__(self, props: dict={}):
+
         # tag attributes which are saved to df
         # IF POSSIBLE NEVER CHANGE THESE NAMES. WHY?
         # THEN THE DATA WILL BE HOMOGENEOUSLY NAMED ACCROSS ALL ANALYSES
@@ -45,10 +47,18 @@ class Tag(Files):
         self.annotated = False       # was the label manually annotated
         self.xcenter = 0             # x-coordinate of center of detected object
         self.ycenter = 0             # y-coordinate of center of detected object
-        self.path = ""               # path of original image
+        self.img_path = ""           # path of original image
         self.tag_box_thresh_ids = "" # string of ids where threshold was exceeded
         # ----------------------------------------------------------------------
         
+        # initiate Tag with properties if props dictionary is given
+        if len(props) > 0:
+            self.set_tag(props)
+        
+
+    def set_tag(self, props):
+        for key, value in props.items():
+            setattr(self, key, value)
    
     def unpack_dictionaries(self):
         pop_dicts = []
@@ -66,7 +76,6 @@ class Tag(Files):
         """
         self.time = time.strftime('%Y-%m-%d %H:%M:%S')
         tag = self.__dict__.copy()
-        _ = tag.pop("path")  # remove path so it does not appear in file
         return pd.Series(tag)
 
     @property
@@ -85,6 +94,16 @@ class Tag(Files):
         x = slice(self.x, self.x + self.width)
         y = slice(self.y, self.y + self.height)
         return y, x
+
+    @property
+    def orig_img(self):
+        img = self.load_img(self.img_path)
+        return img[self.slice]
+
+    @staticmethod
+    @lru_cache
+    def load_img(path):
+        return imageio.imread(path)
 
 # interactive figure
 class Annotations(Tag): 
@@ -525,7 +544,7 @@ class Annotations(Tag):
             pass
 
     def read_new_tags(self, tags):
-        new_tags = pd.DataFrame(tags.__dict__)
+        new_tags = tags.export_annotations()
         try:
             new_tags.id
         except AttributeError:
@@ -688,9 +707,7 @@ class Annotations(Tag):
         self.target = (v, h)
 
     def read_tag(self, tags, tag_id):
-        t = Tag()
-        t.path = self.path
-        t.__dict__.update(tags.loc[tag_id, :])
+        t = Tag(props=tags.loc[tag_id, :])
         return t
         # self.new_tags = self.new_tags.drop(i)
 
