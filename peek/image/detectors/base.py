@@ -4,6 +4,7 @@ import numpy as np
 import imutils
 import itertools as it
 import tqdm
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from peek.utils.manage import Files
@@ -244,11 +245,13 @@ class Detector():
             m.apply_multi(masks=mask.masks)
 
         return m
-
+    
     def analyze_tags(self, tags):
         """
         wrapper around analyze tag method specified by the user
         """
+
+        tags.reset_extra_props()
 
         with tqdm.tqdm(total=tags.max_len, desc="analyzing") as pbar:
             new_tag_props = []
@@ -297,6 +300,31 @@ class Detector():
         assert tags.is_equal_properties_lengths()
 
         return kept_tags
+
+    def re_analyze_tags(self, annotations: pd.DataFrame):
+        """
+        convenience function to re-analyze existing tags from an Annotations
+        class Pandas data-frame.
+        """
+
+        # convert annotations (pandas df) to Tagger class
+        tags = Tagger()
+        tags.import_annotations(annotations)
+
+        # analyze the tags
+        tags = self.analyze_tags(tags)
+
+        # export to csv
+        modified_tags = tags.export_annotations()
+
+        # make sure ids are equal before merging.
+        all(annotations.tag_box_thresh_ids.values == modified_tags.tag_box_thresh_ids.values)
+
+        # update annotations table
+        for c in modified_tags.columns:
+            annotations.loc[:, c] = modified_tags[c].values
+
+        return modified_tags
 
     def analyze_tag(self, tag):
         raise NotImplementedError("you must write a custom 'analyze tag' method")
@@ -580,6 +608,7 @@ class Detector():
 class Tagger():
     def __init__(self):
         self.tag_box_thresh_ids = []
+        self.img_path = []
         self.x = []
         self.y = []
         self.width = []
@@ -589,6 +618,23 @@ class Tagger():
 
     def new(self, tag):
         setattr(self, tag, [])
+
+    def reset_extra_props(self):
+        standardprops = Tagger().__dict__.keys()
+        currentprops = list(self.__dict__.keys())
+        for key in currentprops:
+            if key not in standardprops:
+                delattr(self, key)
+
+    def import_annotations(self, annotations: pd.DataFrame):
+        for c in annotations.columns:
+            if hasattr(self, c):
+                setattr(self, c, list(annotations[c].values))
+
+        assert self.is_equal_properties_lengths()
+
+    def export_annotations(self):
+        return pd.DataFrame(self.__dict__)
 
     def add(self, tag, value):
         if not hasattr(self, tag):
@@ -624,7 +670,6 @@ class Tagger():
         self.add("xcenter", xcenter)
         self.add("ycenter", ycenter)
 
-    
     @property
     def len_properties(self):
         return {key:len(prop) for key, prop in self.__dict__.items()}

@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from skimage import measure
 from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring, margin_to_shape
 from peek.image.detectors.base import Detector, Tagger
+from peek.image.analysis import Tag
 
 class MotionDetector(Detector):
     """
@@ -25,7 +26,8 @@ class MotionDetector(Detector):
         max_clusters=np.inf,
         min_area=1,
         max_x=np.inf,
-        min_x=0
+        min_x=0,
+        connectivity=1,
     ):
         # parent class has no attributes, make sure only attributes in 
         # class remain parameters
@@ -37,6 +39,7 @@ class MotionDetector(Detector):
         self.min_area = min_area
         self.max_x = max_x
         self.min_x = min_x
+        self.connectivity = connectivity
 
     def tag_images(self, batch):
         """
@@ -67,6 +70,8 @@ class MotionDetector(Detector):
             # get contour coordinates
             [tags.get_tag_box_coordinates(c, margin_to_shape(self.margin)) 
                 for c in img_orig.contours]
+            
+            tags.img_path = [img_orig.path] * tags.max_len
             img_orig.tags = tags
 
             # add other images, which should be shown 
@@ -96,7 +101,7 @@ class MotionDetector(Detector):
         w, h = tag["width"], tag["height"]
         thresh = idstring_to_threshold_image(thresh, shape=(h, w))
         labels, n_cluster = measure.label(
-            thresh, return_num=True, connectivity=1)
+            thresh, return_num=True, connectivity=self.connectivity)
         rp = measure.regionprops(labels)
 
         # get properties of central cluster
@@ -106,8 +111,19 @@ class MotionDetector(Detector):
             area_central_cluster = 0
             amal = 0
             amil = 0
+            r, g, b = (0, 0, 0)
 
         else:
+            mask = labels == central_label
+            mask = np.tile(mask.reshape((*mask.shape, 1)), 3)
+            # calculate properties based on the tag box of the orginal image
+            tag_ = Tag(props=tag)
+            original_slice = tag_.orig_img
+            masked_slice = np.ma.MaskedArray(original_slice, mask)
+
+            # get median colors of central cluster of original image
+            r, g, b = np.ma.median(masked_slice, axis=(0,1))
+
             props = rp[central_label - 1]
             area_central_cluster = props.area
             amal = props.axis_major_length
@@ -118,6 +134,9 @@ class MotionDetector(Detector):
             "pixels_central": area_central_cluster,
             "axis_major_length": amal,
             "axis_minor_length": amil,
+            "red_cluster": r,
+            "green_cluster": g,
+            "blue_cluster": b,
         }
 
         return tag_props
