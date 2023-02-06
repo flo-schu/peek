@@ -1,7 +1,5 @@
 import cv2 as cv
 import numpy as np
-import tqdm
-from matplotlib import pyplot as plt
 from skimage import measure
 from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring, margin_to_shape
 from peek.image.detectors.base import Detector, Tagger
@@ -112,6 +110,7 @@ class MotionDetector(Detector):
             amal = 0
             amil = 0
             r, g, b = (0, 0, 0)
+            rb, gb, bb = (0, 0, 0)
 
         else:
             mask = labels == central_label
@@ -123,6 +122,7 @@ class MotionDetector(Detector):
 
             # get median colors of central cluster of original image
             r, g, b = np.ma.median(masked_slice, axis=(0,1))
+            rb, gb, bb = np.ma.median(~masked_slice, axis=(0,1))
 
             props = rp[central_label - 1]
             area_central_cluster = props.area
@@ -137,6 +137,9 @@ class MotionDetector(Detector):
             "red_cluster": r,
             "green_cluster": g,
             "blue_cluster": b,
+            "red_background": rb,
+            "green_background": gb,
+            "blue_background": bb,
         }
 
         return tag_props
