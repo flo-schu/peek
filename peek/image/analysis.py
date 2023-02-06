@@ -126,13 +126,14 @@ class Annotations(Tag):
         sliders=[],
         zfill=0,
         continue_annotation=True,
-
+        classifier=None,
     ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
         self.new_tags = new_tags
         self.tags = self.load_processed_tags()
         self.detector = detector
+        self.classifier = classifier
         self.image = self.load_image(image, image_metadata)
         self.image_hash = self.image.__hash__()
         self.display_whole_img = False
@@ -157,7 +158,7 @@ class Annotations(Tag):
         self.ax_complete_fig = None
         self.axes_tag = [None, None, None, None]
         self.axes_slider = []
-
+        
         # read tags if supplied
         if self.new_tags is not None:
             self.read_new_tags(self.new_tags)
@@ -615,6 +616,19 @@ class Annotations(Tag):
             self.axes_tag[0].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
                                   bbox={'color':'white','ec':'black', 'lw':1},
                                   ha="left", va="top")
+            if self.classifier is not None:
+                try:
+                    features = [getattr(self.ctag, f) for f in self.classifier.features]
+                    x = np.array(features).reshape((1, len(features)))
+                    pproba = self.classifier.predict_proba(x)
+                    plabel = self.classifier.predict(x)
+                    pred = f"{plabel[0]} ({round(pproba.max()*100)}%)"
+                except:
+                    pred = "error"
+                self.axes_tag[0].annotate(pred, (0.95,0.95), 
+                                    xycoords="axes fraction",
+                                    bbox={'color':'white','ec':'black', 'lw':1},
+                                    ha="right", va="top")
         except KeyError:
             pass
 
