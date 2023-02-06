@@ -155,6 +155,9 @@ class MotionDetector(Detector):
     def test_tag(self, tag):
         keep = True
 
+        if tag["pred"] == "duplicate":
+            keep = False
+
         # apply test depending on labels
         if tag["n_clusters"] > self.max_clusters:
             keep = False
@@ -171,10 +174,3 @@ class MotionDetector(Detector):
 
         return keep
 
-    @staticmethod
-    def predict(classifier, tag):
-        features = [getattr(tag, f) for f in classifier.features]
-        x = np.array(features).reshape((1, len(features)))
-        pproba = classifier.predict_proba(x)
-        plabel = classifier.predict(x)
-        return plabel, pproba

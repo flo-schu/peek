@@ -323,7 +323,6 @@ class Annotations(Tag):
         w = w + 2 * mar
         h = h + 2 * mar
 
-        t.path = self.path
         t.image_hash = self.image_hash
         t.img_path = self.image.path
         t.id = len(self._tags)
@@ -337,6 +336,11 @@ class Annotations(Tag):
         t.annotated = False
         t.xcenter, t.ycenter = contour_center(contour)
 
+        # get closest neighbor
+        max_dist = np.sqrt(2 * self.detector.margin ** 2)
+        t.closest_neighbor = self.detector.find_neighbors(
+            t.__dict__, self.new_tags, max_dist)
+        
         # analyze the new tag
         self.analyze_manual_tag(tag=t)
         new_tag = t.save()
@@ -355,7 +359,9 @@ class Annotations(Tag):
         comp_slice = self.image.comparison[tag.slice]
         thresh = self.detector.thresholding(orig_slice, comp_slice)
         tag.tag_box_thresh_ids = threshold_imgage_to_idstring(thresh)
-        props = self.detector.analyze_tag(tag=tag.__dict__)
+        nb = self.read_tag(self.tags, tag.closest_neighbor)
+        props = self.detector.analyze_tag(
+            tag=tag.__dict__, neighbor=(nb.id, nb.__dict__))
         _ = [setattr(tag, key, value) for key, value in props.items()]
         
 
@@ -616,32 +622,12 @@ class Annotations(Tag):
             self.axes_tag[0].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
                                   bbox={'color':'white','ec':'black', 'lw':1},
                                   ha="left", va="top")
-            if self.classifier is not None:
-                try:
-                    t = self.ctag
-                    nb = t.closest_neighbor
-                    iou = t.neighbor_iou
-                    t_nb = self.read_tag(self.tags, nb)
 
-                    plabel_nb, pproba_nb = self.detector.predict(self.classifier, t_nb)
-                    plabel_t, pproba_t = self.detector.predict(self.classifier, t)
-
-                    # non maximum surpression
-                    if all(iou > 0.5 and plabel_t == plabel_nb):
-                        if pproba_t.max() > pproba_nb.max():
-                            label = "duplicate"
-                        else:
-                            label = plabel_t[0]
-                    else:
-                        label = plabel_t[0]
-
-                    pred = f"{label} ({round(pproba_t.max()*100)}%)"
-                except:
-                    pred = "error"
-                self.axes_tag[0].annotate(pred, (0.95,0.95), 
-                                    xycoords="axes fraction",
-                                    bbox={'color':'white','ec':'black', 'lw':1},
-                                    ha="right", va="top")
+            pred = f"{self.ctag.pred} ({np.round(self.ctag.prob * 100, 2)} %)"
+            self.axes_tag[0].annotate(pred, (0.95,0.95), 
+                                xycoords="axes fraction",
+                                bbox={'color':'white','ec':'black', 'lw':1},
+                                ha="right", va="top")
         except KeyError:
             pass
 

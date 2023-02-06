@@ -259,7 +259,58 @@ class Detector():
         # the point itself
         return np.argsort(distance)[1]
 
+    @staticmethod
+    def predict(classifier, tag):
+        features = [tag[f] for f in classifier.features]
+        x = np.array(features).reshape((1, len(features)))
+        pproba = classifier.predict_proba(x)
+        plabel = classifier.predict(x)
+        return plabel, pproba
 
+    @classmethod
+    def non_maximum_surpression(cls, classifier, tag, neighbor):
+        iou = tag["neighbor_iou"]
+
+        plabel_t, pproba_t = cls.predict(classifier, tag)
+        plabel_nb, pproba_nb = cls.predict(classifier, neighbor)
+
+        # non maximum surpression
+        if iou > 0.5 and plabel_t[0] == plabel_nb[0]:
+            if pproba_t.max() > pproba_nb.max():
+                label = "duplicate"
+                prob = None
+            else:
+                label = plabel_t[0]
+                prob = pproba_t.max()
+        else:
+            label = plabel_t[0]
+            prob = pproba_t.max()
+
+        return label, prob
+    
+    def make_predictions(self, tags, classifier):
+
+        with tqdm.tqdm(total=tags.max_len, desc="predicting") as pbar:
+            predictions = []
+            probabilities = []
+
+            for i in range(tags.max_len):
+                t = tags.get_tag(i)
+                n = tags.get_tag(t["closest_neighbor"])
+
+                label, prob = self.non_maximum_surpression(classifier, t, n)
+
+                predictions.append(label)
+                probabilities.append(prob)
+
+                pbar.update(1)
+
+        tags.pred = predictions
+        tags.prob = probabilities
+
+        assert tags.is_equal_properties_lengths()
+        
+        return tags
 
     def analyze_tags(self, tags):
         """
@@ -463,7 +514,9 @@ class Detector():
         float
             in [0, 1]
         """
-
+        bb1 = bb1.copy()
+        bb2 = bb2.copy()
+        
         bb1["x1"] = bb1["x"]
         bb1["x2"] = bb1["x"] + bb1["width"]
         bb1["y1"] = bb1["y"]
