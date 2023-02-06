@@ -245,7 +245,22 @@ class Detector():
             m.apply_multi(masks=mask.masks)
 
         return m
-    
+                
+    @staticmethod
+    def find_neighbors(t, tags, max_dist, closest=True):
+        p = np.array([t["xcenter"], t["ycenter"]])
+        points = np.array([tags.xcenter, tags.ycenter]).T
+        abdist = points-p
+        distance = np.sqrt(np.sum(abdist ** 2, axis=1) )
+        if not closest:
+            return np.where(distance < max_dist)[0]
+        
+        # return the point with the closest diagonal distance the is not
+        # the point itself
+        return np.argsort(distance)[1]
+
+
+
     def analyze_tags(self, tags):
         """
         wrapper around analyze tag method specified by the user
@@ -258,7 +273,13 @@ class Detector():
             for i in range(tags.max_len):
                 # find clusters in threshold image with direct connectivity
                 t = tags.get_tag(i)
-                props = self.analyze_tag(t)
+                
+                # find potential neighbors
+                max_dist = np.sqrt(2 * self.margin ** 2)
+                neighbor = self.find_neighbors(t, tags, max_dist, closest=True)
+                nt = tags.get_tag(neighbor)
+
+                props = self.analyze_tag(t, neighbor=(neighbor, nt))
 
                 new_tag_props.append(props)
                 # add props to tags
@@ -420,7 +441,125 @@ class Detector():
             plt.show()
 
         return img
+    
+    @staticmethod
+    def get_iou(bb1, bb2):
+        """
+        Calculate the Intersection over Union (IoU) of two bounding boxes.
 
+        Parameters
+        ----------
+        bb1 : dict
+            Keys: {'x1', 'x2', 'y1', 'y2'}
+            The (x1, y1) position is at the top left corner,
+            the (x2, y2) position is at the bottom right corner
+        bb2 : dict
+            Keys: {'x1', 'x2', 'y1', 'y2'}
+            The (x, y) position is at the top left corner,
+            the (x2, y2) position is at the bottom right corner
+
+        Returns
+        -------
+        float
+            in [0, 1]
+        """
+
+        bb1["x1"] = bb1["x"]
+        bb1["x2"] = bb1["x"] + bb1["width"]
+        bb1["y1"] = bb1["y"]
+        bb1["y2"] = bb1["y"] + bb1["height"]
+
+        bb2["x1"] = bb2["x"]
+        bb2["x2"] = bb2["x"] + bb2["width"]
+        bb2["y1"] = bb2["y"]
+        bb2["y2"] = bb2["y"] + bb2["height"]
+
+        assert bb1['x1'] < bb1['x2']
+        assert bb1['y1'] < bb1['y2']
+        assert bb2['x1'] < bb2['x2']
+        assert bb2['y1'] < bb2['y2']
+
+        # determine the coordinates of the intersection rectangle
+        x_left = max(bb1['x1'], bb2['x1'])
+        y_top = max(bb1['y1'], bb2['y1'])
+        x_right = min(bb1['x2'], bb2['x2'])
+        y_bottom = min(bb1['y2'], bb2['y2'])
+
+        if x_right < x_left or y_bottom < y_top:
+            return 0.0
+
+        # The intersection of two axis-aligned bounding boxes is always an
+        # axis-aligned bounding box
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+        # compute the area of both AABBs
+        bb1_area = (bb1['x2'] - bb1['x1']) * (bb1['y2'] - bb1['y1'])
+        bb2_area = (bb2['x2'] - bb2['x1']) * (bb2['y2'] - bb2['y1'])
+
+        # compute the intersection over union by taking the intersection
+        # area and dividing it by the sum of prediction + ground-truth
+        # areas - the interesection area
+        iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
+        assert iou >= 0.0
+        assert iou <= 1.0
+        return iou
+    
+    @classmethod
+    def get_overlapping_contours(cls, tags, iou_threshold: float=0.5):
+        """
+        find overlapping tag boxes.
+        Caution! This function is slow. It scales with the square of the 
+        number of detections. 
+        """
+        ious = []
+        for i in range(tags.max_len):
+            ious_ = []
+            for j in range(tags.max_len):
+                iou = cls.get_iou(tags.get_tag(i), tags.get_tag(j))
+                if iou > iou_threshold:
+                    if i == j:
+                        continue
+                    ious_.append((j, iou))
+            ious.append(ious_)
+
+        return ious
+
+    @staticmethod
+    def get_neighbors(ious, tag_id: int):
+        """
+        will get the cluster of partially overlapping tag boxes. Due to recursion
+        it will go on until no tag box that matches the iou_threshold is found
+        to obtain ious use self.get_overlapping_countours()
+        """
+        neighbors = []
+        def recurse_neighbors(tid: int):
+            for nb in ious[tid]:
+                nid, iou = nb
+                if nid == tid:
+                    continue
+
+                if nid in neighbors:
+                    continue
+                
+                neighbors.append(nid)
+                recurse_neighbors(nid)
+
+        recurse_neighbors(tag_id)
+        return neighbors
+
+    @staticmethod
+    def get_closest_neighbor(ious):
+        closest_neighbors = []
+        for i, nbs in enumerate(ious):
+            if len(nbs) == 0:
+                closest_neighbors.append((None, 0.0))
+                continue
+            max_nb = np.argmax([iou for _, iou in nbs])
+            closest = nbs[max_nb]
+            closest_neighbors.append(closest[0])
+
+        return closest_neighbors
+    
     @staticmethod
     def group_bounding_boxes(contours, group_threshold=1, eps=2):
         rects = []

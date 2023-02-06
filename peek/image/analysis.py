@@ -618,11 +618,24 @@ class Annotations(Tag):
                                   ha="left", va="top")
             if self.classifier is not None:
                 try:
-                    features = [getattr(self.ctag, f) for f in self.classifier.features]
-                    x = np.array(features).reshape((1, len(features)))
-                    pproba = self.classifier.predict_proba(x)
-                    plabel = self.classifier.predict(x)
-                    pred = f"{plabel[0]} ({round(pproba.max()*100)}%)"
+                    t = self.ctag
+                    nb = t.closest_neighbor
+                    iou = t.neighbor_iou
+                    t_nb = self.read_tag(self.tags, nb)
+
+                    plabel_nb, pproba_nb = self.detector.predict(self.classifier, t_nb)
+                    plabel_t, pproba_t = self.detector.predict(self.classifier, t)
+
+                    # non maximum surpression
+                    if all(iou > 0.5 and plabel_t == plabel_nb):
+                        if pproba_t.max() > pproba_nb.max():
+                            label = "duplicate"
+                        else:
+                            label = plabel_t[0]
+                    else:
+                        label = plabel_t[0]
+
+                    pred = f"{label} ({round(pproba_t.max()*100)}%)"
                 except:
                     pred = "error"
                 self.axes_tag[0].annotate(pred, (0.95,0.95), 
@@ -631,6 +644,7 @@ class Annotations(Tag):
                                     ha="right", va="top")
         except KeyError:
             pass
+
 
     def show_tag(self):
         # plot original image

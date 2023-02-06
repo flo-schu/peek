@@ -3,7 +3,7 @@ import numpy as np
 from skimage import measure
 from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_idstring, margin_to_shape
 from peek.image.detectors.base import Detector, Tagger
-from peek.image.analysis import Tag
+from peek.image.analysis import Tag, Spectral
 
 class MotionDetector(Detector):
     """
@@ -79,6 +79,10 @@ class MotionDetector(Detector):
 
 
     def thresholding(self, img_orig, img_comp):
+
+        # img_orig_ = Spectral.max_filter(3, img=img_orig)
+        # img_comp_ = Spectral.max_filter(3, img=img_comp)
+
         # calculate pixel and channel wise difference
         diff = self.difference(
             images=[img_comp, img_orig], 
@@ -86,7 +90,7 @@ class MotionDetector(Detector):
 
         # TODO: try if this is better placed before
         # grayscale
-        
+
         gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
 
         # threshold grayscale image
@@ -94,7 +98,7 @@ class MotionDetector(Detector):
 
         return thresh
 
-    def analyze_tag(self, tag):
+    def analyze_tag(self, tag, neighbor=None):
         thresh = tag["tag_box_thresh_ids"]
         w, h = tag["width"], tag["height"]
         thresh = idstring_to_threshold_image(thresh, shape=(h, w))
@@ -104,6 +108,8 @@ class MotionDetector(Detector):
 
         # get properties of central cluster
         central_label = labels[self.margin, self.margin]
+
+        iou = self.get_iou(tag, neighbor[1])
         
         if len(rp) == 0:
             area_central_cluster = 0
@@ -140,6 +146,8 @@ class MotionDetector(Detector):
             "red_background": rb,
             "green_background": gb,
             "blue_background": bb,
+            "closest_neighbor": neighbor[0],
+            "neighbor_iou": iou
         }
 
         return tag_props
@@ -163,3 +171,10 @@ class MotionDetector(Detector):
 
         return keep
 
+    @staticmethod
+    def predict(classifier, tag):
+        features = [getattr(tag, f) for f in classifier.features]
+        x = np.array(features).reshape((1, len(features)))
+        pproba = classifier.predict_proba(x)
+        plabel = classifier.predict(x)
+        return plabel, pproba
