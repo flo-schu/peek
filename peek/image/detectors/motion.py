@@ -5,6 +5,12 @@ from peek.image.process import idstring_to_threshold_image, threshold_imgage_to_
 from peek.image.detectors.base import Detector, Tagger
 from peek.image.analysis import Tag, Spectral
 
+class MotionTagger(Tagger):
+    # set extra standard attributes
+    def __init__(self):
+        super().__init__()
+        self.img_comp_path = []
+
 class MotionDetector(Detector):
     """
     margin          margin to created around the contours center for tag images        
@@ -19,6 +25,7 @@ class MotionDetector(Detector):
         self, 
         margin=10,
         thresh_binary=1, 
+        thresh_bg=1, 
         thresh_size=1, 
         smooth=1,
         max_clusters=np.inf,
@@ -31,6 +38,7 @@ class MotionDetector(Detector):
         # class remain parameters
         self.margin = margin
         self.thresh_binary = thresh_binary
+        self.thresh_bg = thresh_bg
         self.thresh_size = thresh_size
         self.smooth = smooth
         self.max_clusters = max_clusters
@@ -50,9 +58,9 @@ class MotionDetector(Detector):
             np.roll(batch.images, -1, axis=0),
         )
         for img_orig, img_comp in comparison:
-            tags = Tagger()
+            tags = MotionTagger()
             
-            thresh = self.thresholding(
+            thresh = self.multi_background_thresholding(
                 img_orig=img_orig.pixels, 
                 img_comp=img_comp.pixels
             )
@@ -70,12 +78,35 @@ class MotionDetector(Detector):
                 for c in img_orig.contours]
             
             tags.img_path = [img_orig.path] * tags.max_len
+            tags.img_comp_path = [img_comp.path] * tags.max_len
             img_orig.tags = tags
 
             # add other images, which should be shown 
             img_orig.comparison = img_comp.pixels
 
         return batch
+
+
+    def multi_background_thresholding(self, img_orig, img_comp):
+        diff_for = self.difference(
+            images=[img_comp, img_orig], 
+            smooth=self.smooth)[0]
+        
+        diff_dup = self.difference(
+            images=[img_orig, img_comp], 
+            smooth=self.smooth, duplicates=True)[0]
+        
+        diff_gray_for = cv.cvtColor(diff_for, cv.COLOR_BGR2GRAY)
+        diff_gray_dup = cv.cvtColor(diff_dup, cv.COLOR_BGR2GRAY)
+                
+        bg = cv.medianBlur(img_orig, 51)
+        bggray = cv.cvtColor(bg, cv.COLOR_BGR2GRAY)
+        _, bg_mask = cv.threshold(bggray, self.thresh_bg, 1, type=cv.THRESH_BINARY)
+        
+        diff = np.where(bg_mask, diff_gray_dup, diff_gray_for)
+        _, thresh = cv.threshold(diff, self.thresh_binary, 255, type=cv.THRESH_BINARY)
+
+        return thresh
 
 
     def thresholding(self, img_orig, img_comp):
@@ -117,14 +148,30 @@ class MotionDetector(Detector):
             amil = 0
             r, g, b = (0, 0, 0)
             rb, gb, bb = (0, 0, 0)
+            contrast = 0
 
         else:
             mask = labels == central_label
-            mask = np.tile(mask.reshape((*mask.shape, 1)), 3)
+            mask_color = np.tile(mask.reshape((*mask.shape, 1)), 3)
             # calculate properties based on the tag box of the orginal image
             tag_ = Tag(props=tag)
             original_slice = tag_.orig_img
-            masked_slice = np.ma.MaskedArray(original_slice, mask)
+            
+            
+            # contrast
+            # calculate contrast by taking the difference to the comparison
+            compare_slice = tag_.comp_img
+            ogray = cv.cvtColor(original_slice, cv.COLOR_BGR2GRAY)
+            cgray = cv.cvtColor(compare_slice, cv.COLOR_BGR2GRAY)
+            diff = ogray.astype(int) - cgray.astype(int)
+            masked_diff = np.ma.MaskedArray(diff, mask)
+
+            # positive values mean bright on dark detection
+            # negative values mean dark on bright detection
+            # large values mean high contrast low values mean low contrast
+            contrast = masked_diff.mean() 
+
+            masked_slice = np.ma.MaskedArray(original_slice, mask_color)
 
             # get median colors of central cluster of original image
             r, g, b = np.ma.median(masked_slice, axis=(0,1))
@@ -147,7 +194,8 @@ class MotionDetector(Detector):
             "green_background": gb,
             "blue_background": bb,
             "closest_neighbor": neighbor[0],
-            "neighbor_iou": iou
+            "neighbor_iou": iou,
+            "contrast": contrast,
         }
 
         return tag_props

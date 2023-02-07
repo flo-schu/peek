@@ -405,7 +405,7 @@ class Detector():
         raise NotImplementedError("you must write a custom 'test tag' method")
 
     @staticmethod
-    def difference(images, smooth=1):
+    def difference(images, smooth=1, duplicates=False):
         """
         calculates the RGB differences between every two consecutive images.
         The last difference is the diff between last and first image
@@ -416,7 +416,11 @@ class Detector():
         images = np.array([cv.filter2D(i, -1, kernel) for i in images], dtype=int)
         # ims = np.array([i.img for i in imlist], dtype=int)
         diff = np.diff(images, n=1, axis=0)
-        diffs = np.where(diff >= 0, diff, 0)
+
+        if not duplicates:
+            diffs = np.where(diff > 0, diff, 0)
+        else:
+            diffs = np.abs(diff)
 
         return [diffs[i,:,:,:].astype('uint8') for i in range(len(diffs))]        
 
@@ -812,7 +816,7 @@ class Tagger():
         setattr(self, tag, [])
 
     def reset_extra_props(self):
-        standardprops = Tagger().__dict__.keys()
+        standardprops = type(self)().__dict__.keys()
         currentprops = list(self.__dict__.keys())
         for key in currentprops:
             if key not in standardprops:

@@ -48,6 +48,7 @@ class Tag(Files):
         self.xcenter = 0             # x-coordinate of center of detected object
         self.ycenter = 0             # y-coordinate of center of detected object
         self.img_path = ""           # path of original image
+        self.img_comp_path = ""      # path of original image
         self.tag_box_thresh_ids = "" # string of ids where threshold was exceeded
         # ----------------------------------------------------------------------
         
@@ -98,6 +99,11 @@ class Tag(Files):
     @property
     def orig_img(self):
         img = self.load_img(self.img_path)
+        return img[self.slice]
+
+    @property
+    def comp_img(self):
+        img = self.load_img(self.img_comp_path)
         return img[self.slice]
 
     @staticmethod
@@ -324,7 +330,8 @@ class Annotations(Tag):
         h = h + 2 * mar
 
         t.image_hash = self.image_hash
-        t.img_path = self.image.path
+        t.img_path = self.tags.img_path.unique()[0]
+        t.img_comp_path = self.tags.img_comp_path.unique()[0]
         t.id = len(self._tags)
         t.x = x
         t.y = y
@@ -359,10 +366,14 @@ class Annotations(Tag):
         comp_slice = self.image.comparison[tag.slice]
         thresh = self.detector.thresholding(orig_slice, comp_slice)
         tag.tag_box_thresh_ids = threshold_imgage_to_idstring(thresh)
-        nb = self.read_tag(self.tags, tag.closest_neighbor)
+        nb = self.read_tag(self._tags, tag.closest_neighbor)
         props = self.detector.analyze_tag(
             tag=tag.__dict__, neighbor=(nb.id, nb.__dict__))
         _ = [setattr(tag, key, value) for key, value in props.items()]
+        label, p = self.detector.non_maximum_surpression(
+            self.classifier, tag.__dict__, nb.__dict__)
+        props["pred"] = label
+        props["prob"] = p
         
 
     def plot_complete_tag_diff(self):
