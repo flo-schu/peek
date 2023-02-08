@@ -386,23 +386,20 @@ class Detector():
         # analyze the tags
         tags = self.analyze_tags(tags)
 
-        # export to csv
-        modified_tags = tags.export_annotations()
-
         # make sure ids are equal before merging.
         tag_id_properties = list(tagger().__dict__.keys())
         for tip in tag_id_properties:
-            matching = annotations[tip].values == modified_tags[tip].values
+            matching = annotations[tip].values == np.array(getattr(tags, tip))
             eq = all(matching)
             assert eq, f"{tip} has non matching entries"
          
-        modified_tags["label"] = annotations["label"].values
-        modified_tags["img_path"] = annotations["img_path"].values
-        modified_tags["image_hash"] = annotations["image_hash"].values
-        modified_tags["analysis"] = annotations["analysis"].values
-        modified_tags["time"] = annotations["time"].values
-
-        return modified_tags
+        setattr(tags, "label", annotations["label"].values)
+        setattr(tags, "img_path", annotations["img_path"].values)
+        setattr(tags, "image_hash", annotations["image_hash"].values)
+        setattr(tags, "analysis", annotations["analysis"].values)
+        setattr(tags, "time", annotations["time"].values)
+        
+        return tags
 
     def analyze_tag(self, tag):
         raise NotImplementedError("you must write a custom 'analyze tag' method")
@@ -858,6 +855,18 @@ class Tagger():
             prop = getattr(self, p)
             new_prop = [v for i, v in enumerate(prop) if i not in drop_ids]
             setattr(self, p, new_prop)
+
+    def apply_filter(self, index):
+        # create new tagger instance
+        tags = type(self)()
+
+        # get properties of self
+        for key, value in self.__dict__.items():           
+            # and set to new instance
+            va = np.array(value)[index]
+            setattr(tags, key, va.tolist())
+
+        return tags
 
     def get_tag_box_coordinates(self, contour, shape):
         xcenter, ycenter = contour_center(contour)
