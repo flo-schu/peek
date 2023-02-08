@@ -390,11 +390,17 @@ class Detector():
         modified_tags = tags.export_annotations()
 
         # make sure ids are equal before merging.
-        all(annotations.tag_box_thresh_ids.values == modified_tags.tag_box_thresh_ids.values)
-
-        # update annotations table
-        for c in modified_tags.columns:
-            annotations.loc[:, c] = modified_tags[c].values
+        tag_id_properties = list(tagger().__dict__.keys())
+        for tip in tag_id_properties:
+            matching = annotations[tip].values == modified_tags[tip].values
+            eq = all(matching)
+            assert eq, f"{tip} has non matching entries"
+         
+        modified_tags["label"] = annotations["label"].values
+        modified_tags["img_path"] = annotations["img_path"].values
+        modified_tags["image_hash"] = annotations["image_hash"].values
+        modified_tags["analysis"] = annotations["analysis"].values
+        modified_tags["time"] = annotations["time"].values
 
         return modified_tags
 
