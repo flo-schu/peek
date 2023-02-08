@@ -373,14 +373,14 @@ class Detector():
 
         return kept_tags
 
-    def re_analyze_tags(self, annotations: pd.DataFrame):
+    def re_analyze_tags(self, tagger, annotations: pd.DataFrame):
         """
         convenience function to re-analyze existing tags from an Annotations
         class Pandas data-frame.
         """
 
         # convert annotations (pandas df) to Tagger class
-        tags = Tagger()
+        tags = tagger()
         tags.import_annotations(annotations)
 
         # analyze the tags
