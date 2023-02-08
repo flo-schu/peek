@@ -33,6 +33,7 @@ class MotionDetector(Detector):
         max_x=np.inf,
         min_x=0,
         connectivity=1,
+        median_blur_kernel_size=51,
     ):
         # parent class has no attributes, make sure only attributes in 
         # class remain parameters
@@ -46,6 +47,7 @@ class MotionDetector(Detector):
         self.max_x = max_x
         self.min_x = min_x
         self.connectivity = connectivity
+        self.median_blur_kernel_size = median_blur_kernel_size
 
     def tag_images(self, batch):
         """
@@ -99,7 +101,7 @@ class MotionDetector(Detector):
         diff_gray_for = cv.cvtColor(diff_for, cv.COLOR_BGR2GRAY)
         diff_gray_dup = cv.cvtColor(diff_dup, cv.COLOR_BGR2GRAY)
                 
-        bg = cv.medianBlur(img_orig, 51)
+        bg = cv.medianBlur(img_orig, self.median_blur_kernel_size)
         bggray = cv.cvtColor(bg, cv.COLOR_BGR2GRAY)
         _, bg_mask = cv.threshold(bggray, self.thresh_bg, 1, type=cv.THRESH_BINARY)
         
