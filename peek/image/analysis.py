@@ -223,6 +223,13 @@ class Annotations(Tag):
         self.show_tag_number(0)
         self.figure.show()
 
+    def show_predictions(self):
+        kept_tags = self._tags.query("pred != 'Other'").query("pred != 'duplicate'").id
+        insecure_tags = self._tags.query("pred == 'Other'").query("prob < 0.8").id
+        self._tag_filter = sorted(list(kept_tags.values) + list(insecure_tags.values))
+        self.draw_tag_boxes()
+
+
     def test(self):
         
         # for testing
@@ -271,7 +278,7 @@ class Annotations(Tag):
         *eclick* and *erelease* are the press and release events.
         """
         toolbar_mode = self.figure.canvas.toolbar.mode
-        if toolbar_mode == _Mode.ZOOM:
+        if toolbar_mode == _Mode.ZOOM or toolbar_mode == _Mode.PAN:
             return
 
         if event.inaxes == self.ax_complete_fig:
@@ -291,6 +298,9 @@ class Annotations(Tag):
 
                     self.last_tag_number = self.i
                     self.show_tag_number(i=self.get_tag_number_from_id(tag_id))
+
+        elif not event.inaxes in self.axes_slider:
+            pass
 
     class slider_callback():
         # works okay, but the problem is that images will be copied or not
@@ -315,8 +325,7 @@ class Annotations(Tag):
         self._tags["filtered"] = [0 if t in kept_tags else 1 for t in self._tags["id"]]
         self.save_progress()
 
-        if self._pc is not None:
-            self._pc.remove()  # remove tags boxes (Artis)
+        if self.ax_complete_fig is not None:
             self.draw_tag_boxes()
 
     def manual_tag(self, contour, mar=0):
@@ -357,7 +366,6 @@ class Annotations(Tag):
         self._tags = pd.concat([self._tags, new_tag.to_frame().T], ignore_index=True)
 
         self._manual_ids.append(t.id)
-        self._pc.remove()
         self.draw_tag_boxes()
         self.save_progress()
 
@@ -370,10 +378,12 @@ class Annotations(Tag):
         props = self.detector.analyze_tag(
             tag=tag.__dict__, neighbor=(nb.id, nb.__dict__))
         _ = [setattr(tag, key, value) for key, value in props.items()]
+        
+        # make predictions
         label, p = self.detector.non_maximum_surpression(
             self.classifier, tag.__dict__, nb.__dict__)
-        props["pred"] = label
-        props["prob"] = p
+        setattr(tag, "pred", label)
+        setattr(tag, "prob", p)
         
 
     def plot_complete_tag_diff(self):
@@ -490,6 +500,10 @@ class Annotations(Tag):
         if event.key == "b":
             self.reset_lims()
             self.show_previous_tag()
+
+        if event.key == "alt+p":
+            # show predictions
+            self.show_predictions()
 
         if event.key == "t":
             name = type(self.selector).__name__
@@ -710,6 +724,9 @@ class Annotations(Tag):
         self.save_progress()
 
     def draw_tag_boxes(self):
+        if self._pc is not None:
+            self._pc.remove()  # remove tags boxes (Artis)
+
         patches = []
         for i in self.tags.id:
             tag = self.read_tag(self.tags, i)
