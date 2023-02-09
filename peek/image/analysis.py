@@ -106,6 +106,34 @@ class Tag(Files):
         img = self.load_img(self.img_comp_path)
         return img[self.slice]
 
+    def tag_info(self, ax):
+        """
+        could be a class method of motionTag class, based on Tag.
+        """
+        ax.cla()
+        r = self.red_cluster
+        g = self.green_cluster
+        b = self.blue_cluster
+        rb = self.red_background
+        gb = self.green_background
+        bb = self.blue_background
+        gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+        grayb = 0.2989 * rb + 0.5870 * gb + 0.1140 * bb
+
+        ax.hlines(255/2,-0.7,0.7, color="black")
+        ax.bar(0, self.contrast, color="black", ec="black", bottom=255/2)
+        ax.bar(1, gray, color="gray", ec="black")
+        ax.bar(2, grayb, color="gray", ec="black")
+        ax.bar(3, r, color="red", ec="red")
+        ax.bar(4, rb, color="red", ec="red")
+        ax.bar(5, g, color="green", ec="green")
+        ax.bar(6, gb, color="green", ec="green")
+        ax.bar(7, b, color="blue", ec="blue")
+        ax.bar(8, bb, color="blue", ec="blue")
+        ax.bar(9, self.pixels_central, color="yellow", ec="black")
+        ax.set_ylim(0,255)
+        # ax.set_xticklabels(["ctr", "c", "b", "c", "b", "c", "b", "c", "b", "pxl"])
+
     @staticmethod
     @lru_cache
     def load_img(path):
@@ -486,19 +514,19 @@ class Annotations(Tag):
             self.save_progress()
 
             # directly go to next tag after labeling
-            self.reset_lims()
+            # self.reset_lims()
             self.show_next_tag()
 
         if event.key == "r":
-            self.reset_lims()
+            # self.reset_lims()
             self.show_tag_number(self.last_tag_number)
         
         if event.key == "n":
-            self.reset_lims()
+            # self.reset_lims()
             self.show_next_tag()
 
         if event.key == "b":
-            self.reset_lims()
+            # self.reset_lims()
             self.show_previous_tag()
 
         if event.key == "alt+p":
@@ -663,8 +691,7 @@ class Annotations(Tag):
         # plot original image
         try:
             self.axes_tag[0].cla()
-            # img = self.draw_contour_on_slice()
-            s = self.image.pixels[self.ctag.slice]
+            s = self.ctag.orig_img
             if len(s) > 0:
                 self.axes_tag[0].imshow(s)
         except KeyError:
@@ -679,10 +706,16 @@ class Annotations(Tag):
         for i, attr in enumerate(self._extra_images):
         # for i, (attr, _) in zip(range(2, 10), extra_objects.items()):
             try:
-                self.axes_tag[i+2].cla()
-                s = getattr(self.image, attr)[self.ctag.slice]
-                if len(s) > 0:
-                    self.axes_tag[i+2].imshow(s)
+                ax = self.axes_tag[i+2]
+                ax.cla()
+                s = getattr(self.ctag, attr)
+                
+                if callable(s):
+                    _ = s(ax)
+                else:
+                    if len(s) > 0:
+                        self.axes_tag[i+2].imshow(s)
+
             except KeyError:
                 pass
 
