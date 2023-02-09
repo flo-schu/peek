@@ -153,7 +153,7 @@ class MotionDetector(Detector):
             contrast = 0
 
         else:
-            mask = labels == central_label
+            mask = labels != central_label
             mask_color = np.tile(mask.reshape((*mask.shape, 1)), 3)
             # calculate properties based on the tag box of the orginal image
             tag_ = Tag(props=tag)
@@ -173,11 +173,12 @@ class MotionDetector(Detector):
             # large values mean high contrast low values mean low contrast
             contrast = masked_diff.mean() 
 
-            masked_slice = np.ma.MaskedArray(original_slice, mask_color)
+            masked_center = np.ma.MaskedArray(original_slice, mask_color)
+            masked_background = np.ma.MaskedArray(original_slice, ~mask_color)
 
             # get median colors of central cluster of original image
-            r, g, b = np.ma.median(masked_slice, axis=(0,1))
-            rb, gb, bb = np.ma.median(~masked_slice, axis=(0,1))
+            r, g, b = np.ma.median(masked_center, axis=(0,1))
+            rb, gb, bb = np.ma.median(masked_background, axis=(0,1))
 
             props = rp[central_label - 1]
             area_central_cluster = props.area
