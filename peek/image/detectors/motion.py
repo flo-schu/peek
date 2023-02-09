@@ -62,7 +62,7 @@ class MotionDetector(Detector):
         for img_orig, img_comp in comparison:
             tags = MotionTagger()
             
-            thresh = self.multi_background_thresholding(
+            thresh = self.thresholding(
                 img_orig=img_orig.pixels, 
                 img_comp=img_comp.pixels
             )
@@ -89,7 +89,52 @@ class MotionDetector(Detector):
         return batch
 
 
+
     def multi_background_thresholding(self, img_orig, img_comp):
+        """
+        this function will get positive and negative differences. This 
+        helps to identify motion in situations, where the moving object
+        have approximately the same color as the background.
+
+        This problem is far from trivial. Several issues arise
+        1) if both positive and negative differences are recorded, technically
+           all objects will be detected twice. However, due to heterogeneties
+           in the background, sometimes objects will not be detected at all.
+        2) there is no clear routine to identify whether a true detection
+           will be a negative or positive difference (it always depends) on the
+           color of the background.
+        3) Unfortunately no fixed color range can be assigned to daphnia,
+           since they are somewhat transparent and their color will mimic
+           the background to some degree
+        4) when the camera is not exactly static and/or light conditions change,
+           additional threshold noise confound the problem
+
+        A possible solution would be the comparison with other background images
+        Under organism density which are not too high, the background should 
+        be mostly similar
+
+           A         B         C    
+        [0,0,0]   [0,0,0]   [0,0,0]
+        [0,1,0]   [0,0,0]   [0,0,0]
+        [0,0,0]   [0,0,0]   [0,0,0]
+
+        if abs(A-B) > abs(B-C) it is clear that the image containing the moving object
+        has to come from A. If the object were in B, abs(A-B) == abs(B-C).
+
+        This scenario works under one assumption. 
+        1) no other objects enter the comparison area during the move of the original
+        object
+        2) the likelihood for 1 being true is by making the comparison area very small
+        in fact it could be reduced to the mask of the original difference
+
+        An algorithm could be made up like this:
+
+        1. Calculate the difference between A-B and get the absolute difference
+        2. Compare the image under the threshold mask of B-C
+        3. If B-C = 0 (or smaller than a threshold value), the detection was in A and
+        can be recorded. If not, it was on B and is discarded
+
+        """
         diff_for = self.difference(
             images=[img_comp, img_orig], 
             smooth=self.smooth)[0]
