@@ -339,8 +339,8 @@ class Annotations(Tag):
         h = h + 2 * mar
 
         t.image_hash = self.image_hash
-        t.img_path = self.tags.img_path.unique()[0]
-        t.img_comp_path = self.tags.img_comp_path.unique()[0]
+        t.img_path = self._tags.img_path.unique()[0]
+        t.img_comp_path = self._tags.img_comp_path.unique()[0]
         t.id = len(self._tags)
         t.x = x
         t.y = y
@@ -647,8 +647,10 @@ class Annotations(Tag):
             self.axes_tag[0].annotate(self.ctag.id, (0.05,0.95), xycoords="axes fraction",
                                   bbox={'color':'white','ec':'black', 'lw':1},
                                   ha="left", va="top")
-
-            pred = f"{self.ctag.pred} ({np.round(self.ctag.prob * 100, 2)} %)"
+            if self.ctag.pred == "duplicate":
+                pred = f"{self.ctag.pred}"
+            else:
+                pred = f"{self.ctag.pred} ({np.round(self.ctag.prob * 100, 2)} %)"
             self.axes_tag[0].annotate(pred, (0.95,0.95), 
                                 xycoords="axes fraction",
                                 bbox={'color':'white','ec':'black', 'lw':1},
