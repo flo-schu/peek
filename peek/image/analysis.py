@@ -176,6 +176,7 @@ class Annotations(Tag):
         sliders=[],
         zfill=0,
         continue_annotation=True,
+        force_overwrite=False,
         classifier=None,
         interactive=True,
     ):
@@ -206,6 +207,7 @@ class Annotations(Tag):
         self._pc = None
         self._extra_images = extra_images
         self._continue_annotation = continue_annotation
+        self._force_overwrite = force_overwrite
         # plot axes
         self.ax_complete_fig = None
         self.axes_tag = [None, None, None, None]
@@ -778,12 +780,17 @@ class Annotations(Tag):
         if len(self.tags) != 0:
             if self._continue_annotation:
                 return
-
-            overwrite = input("WARNING! Annotations will be overwritten. Do you want to overwrite? (y/n):")
-            if not overwrite == "y":
-                return
-            else:
+            
+            if self._force_overwrite:
+                print("WARNING! Annotations have been overwritten.")
                 self.tags = pd.DataFrame({'id':[]})
+
+            else:
+                overwrite = input("WARNING! Annotations will be overwritten. Do you want to overwrite? (y/n):")
+                if not overwrite == "y":
+                    return
+                else:
+                    self.tags = pd.DataFrame({'id':[]})
         
         N = len(new_tags)
         tags = []
