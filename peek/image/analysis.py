@@ -27,6 +27,22 @@ from peek.image.process import (
 rc("font", family='monospace', size=9)
 
 
+
+def read_annotations(file):
+    """
+    harmonize reading annotation files, because specific NA handling is important
+    """
+    return pd.read_csv(
+        file, 
+        na_values={
+            "tag_box_thresh_ids": [],
+            "prob": [""],
+        },
+        keep_default_na=False
+    )
+
+
+
 class Tag(Files):
     def __init__(self, props: dict={}):
 
@@ -161,6 +177,7 @@ class Annotations(Tag):
         zfill=0,
         continue_annotation=True,
         classifier=None,
+        interactive=True,
     ):
         self.path = os.path.normpath(path)
         self.analysis = analysis
@@ -185,6 +202,7 @@ class Annotations(Tag):
         self.target = ()
         self.selector = None
         self.sliders = {}
+        self.interactive = interactive
         self._pc = None
         self._extra_images = extra_images
         self._continue_annotation = continue_annotation
@@ -235,25 +253,26 @@ class Annotations(Tag):
         """
         self.figure = plt.figure(figsize=(12,6))
         self.figure.subplots_adjust(left=.15, hspace=.1, bottom=0.05, right=.95)
-        self.figure.canvas.mpl_connect('key_press_event', self.press) 
-        self.figure.canvas.mpl_connect('button_press_event', self.click_callback) 
-        mpl.rcParams['keymap.back'] = ['left'] 
-        mpl.rcParams['keymap.pan'] = [] 
-        mpl.rcParams['keymap.pan'] = [] 
+        
+        if self.interactive:
+            self.figure.canvas.mpl_connect('key_press_event', self.press) 
+            self.figure.canvas.mpl_connect('button_press_event', self.click_callback) 
+            mpl.rcParams['keymap.back'] = ['left'] 
+            mpl.rcParams['keymap.pan'] = [] 
+            mpl.rcParams['keymap.pan'] = [] 
         
         # create figure
         init_plot = getattr(self, plot_type)
         init_plot()
-        self.set_plot_titles()
 
-        plt.ion()
-        self.draw_tag_boxes()
-        self.show_tag_number(0)
+        if self.interactive:
+            plt.ion()
+
         self.figure.show()
 
-    def show_predictions(self):
+    def show_predictions(self, threshold: float=0.9):
         kept_tags = self._tags.query("pred != 'Other'").query("pred != 'duplicate'").id
-        insecure_tags = self._tags.query("pred == 'Other'").query("prob < 0.8").id
+        insecure_tags = self._tags.query("pred == 'Other'").query(f"prob < {threshold}").id
         self._tag_filter = sorted(list(kept_tags.values) + list(insecure_tags.values))
         self.draw_tag_boxes()
 
@@ -413,16 +432,29 @@ class Annotations(Tag):
         setattr(tag, "pred", label)
         setattr(tag, "prob", p)
         
+    def plot_image_with_tags(self):
+        self.display_whole_img = True
+        self.ax_complete_fig = self.figure.add_subplot(111)
+        self.show_original()
+        self.draw_tag_boxes()
+
+
 
     def plot_complete_tag_diff(self):
         self.display_whole_img = True
         self.origx = (0, self.image.img.size[0])
         self.origy = (self.image.img.size[1],0)
-        n_sliders = len(self._slider_parameters)
+        if self.interactive:
+            n_sliders = len(self._slider_parameters)
+            w_sliders = [0.5 / n_sliders] * n_sliders
+        else:
+            n_sliders = 0
+            w_sliders = [] * n_sliders
+
         self.gs = plt.GridSpec(
             nrows=4 + n_sliders, ncols=4, 
             width_ratios=[1, 1, 0.8, 0.8],
-            height_ratios=[1, 0.2, 1] + [0.2] + [0.5 / n_sliders] * n_sliders
+            height_ratios=[1, 0.2, 1] + [0.2] + w_sliders
         )
 
 
@@ -439,29 +471,45 @@ class Annotations(Tag):
             self.axes_slider.append(self.figure.add_subplot(self.gs[4 + i,:]))
 
         self.show_original()
-        self.show_sliders()
+        
+        if self.interactive:
+            self.show_sliders()
+
+        self.set_plot_titles()
+        self.draw_tag_boxes()
+        self.show_tag_number(0)
+
 
     def plot_tag(self):
         self.axes_tag = [
             self.figure.add_subplot(111)
         ]
+        self.set_plot_titles()
+        self.show_tag_number(0)
+
 
     def plot_tag_diff(self):
         self.axes_tag = [
             self.figure.add_subplot(121),
             self.figure.add_subplot(122),
         ]
+        self.set_plot_titles()
+        self.show_tag_number(0)
+
 
     def set_plot_titles(self):
         self.axes_tag[0].set_title("original")
-        self.axes_tag[1].set_title("threshold")
+        try:
+            self.axes_tag[1].set_title("threshold")
+        except IndexError:
+            pass
 
         for i, tit in zip(range(2,4), self._extra_images):
             self.axes_tag[i].set_title(tit)
         
     def load_processed_tags(self):
         try:
-            tags = pd.read_csv(self.path)
+            tags = read_annotations(self.path)
             
             analysis = tags.analysis.unique()
             if len(analysis) > 1:
@@ -478,13 +526,6 @@ class Annotations(Tag):
             return tags
         except FileNotFoundError:
             print(f"no existing tags found at {self.path}. Starting new tags")
-            return pd.DataFrame({'id':[]})
-
-    def load_processed_tags_from_tar(self, tar):
-        try:
-            pd.read_csv(tar.extractfile(self.path))
-        except FileNotFoundError:
-            print(f"no existing tags found. Starting new file on {self.path}")
             return pd.DataFrame({'id':[]})
 
     def update_ctag(self, attr, value):
@@ -631,9 +672,11 @@ class Annotations(Tag):
 
     def show_original(self):
         self.ax_complete_fig.imshow(self.image.img)
-        self.selector = self.create_selector()
-        # initiate as inactive. Has to be activate with "t"
-        self.selector.set_active(False)
+
+        if self.interactive:
+            self.selector = self.create_selector()
+            # initiate as inactive. Has to be activate with "t"
+            self.selector.set_active(False)
 
     def show_sliders(self):
         for ax, par in zip(self.axes_slider, self._slider_parameters):
