@@ -26,8 +26,6 @@ from peek.image.process import (
 
 rc("font", family='monospace', size=9)
 
-
-
 def read_annotations(file):
     """
     harmonize reading annotation files, because specific NA handling is important
@@ -513,6 +511,9 @@ class Annotations(Tag):
         try:
             tags = read_annotations(self.path)
             
+            if len(tags) == 0:
+                return pd.DataFrame({'id':[]})
+
             analysis = tags.analysis.unique()
             if len(analysis) > 1:
                 is_manual = analysis == "manual"
@@ -805,7 +806,11 @@ class Annotations(Tag):
 
                 bar.update(1)
 
-        self.tags = pd.concat(tags, ignore_index=True)        
+        if len(tags) > 0:
+            self.tags = pd.concat(tags, ignore_index=True)
+        else:
+            self.tags = pd.DataFrame({'id':[]})
+
         self.save_progress()
 
     def draw_tag_boxes(self):
@@ -843,14 +848,18 @@ class Annotations(Tag):
 
     def show_tag_number(self, i):
         self.i = i
-        tag_id = self.tags.id.values[self.i]
-        t = self.read_tag(self.tags, tag_id=tag_id)
+        try:
+            tag_id = self.tags.id.values[self.i]
+            t = self.read_tag(self.tags, tag_id=tag_id)
 
-        self.ctag = t
-        if self.display_whole_img:
-            # self.draw_tag_box()
-            self.draw_target()
-        self.show_tag()
+            self.ctag = t
+            if self.display_whole_img:
+                # self.draw_tag_box()
+                self.draw_target()
+            self.show_tag()
+        except IndexError:
+            pass
+
 
     def show_next_tag(self):
         self.i += 1
