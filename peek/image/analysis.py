@@ -153,7 +153,7 @@ class Tag(Files):
     @staticmethod
     @lru_cache
     def load_img(path):
-        return imageio.imread(path)
+        return Snapshot(path).pixels
 
 # interactive figure
 class Annotations(Tag): 
