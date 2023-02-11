@@ -271,6 +271,8 @@ class Annotations(Tag):
         self.figure.show()
 
     def show_predictions(self, threshold: float=0.9):
+        if len(self.tags) == 0:
+            return
         kept_tags = self._tags.query("pred != 'Other'").query("pred != 'duplicate'").id
         insecure_tags = self._tags.query("pred == 'Other'").query(f"prob < {threshold}").id
         self._tag_filter = sorted(list(kept_tags.values) + list(insecure_tags.values))
