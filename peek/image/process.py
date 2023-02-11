@@ -336,18 +336,48 @@ class Snapshot(Files):
 
             # add margin to bounding mox
             slc = self.slice_image(pixel_img, x, y, w, h, mar)
+            assert len(slc.flatten() > 0)
             slices.append(slc)
         
         return slices
 
     @staticmethod
     def slice_image(img, x, y, w, h, mar=0):
-        if len(img.shape) == 3:
-            return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w), :]
-        if len(img.shape) == 2:
-            return img[(y-mar) : (y+mar+h), (x-mar) : (x+mar+w)]
+        color = img.shape[2] if len(img.shape) == 3 else 1
+        xmax = img.shape[1]
+        ymax = img.shape[0]
+        xmin = 0
+        ymin = 0
+        sw = w + 2 * mar
+        sh = h + 2 * mar
 
-        raise ValueError(f"dimension of image was not 2 or 3 but {img.shape}")
+        # get potential x,y coordinates of bounding box
+        # those can still be negative
+        x1 = x - mar
+        x2 = x + w + mar
+        y1 = y - mar
+        y2 = y + h + mar
+
+        # get coordinates of slice where image seciton is inserted
+        xmins = abs(min(x1 - xmin, 0))
+        xmaxs = abs(max(x2 - xmax, sw))
+        ymins = abs(min(y1 - ymin, 0))
+        ymaxs = abs(max(y2 - ymax, sh))
+
+        if color == 1:
+            s = np.zeros((sh, sw), dtype=np.uint8)
+            imsec = img[max(y1, ymin): min(y2, ymax), max(x1, xmin) : min(x2, xmax)]
+        elif color == 3:
+            s = np.zeros((sh, sw, color), dtype=np.uint8)
+            imsec = img[max(y1, ymin): min(y2, ymax), max(x1, xmin) : min(x2, xmax), :]
+
+        else:
+            raise ValueError(f"dimension of image was not 2 or 3 but {img.shape}")
+
+        # add section to empty slice 
+        s[ymins:ymaxs, xmins:xmaxs] = imsec
+
+        return s
 
     def tag_image(self, mar=0):
         """
@@ -421,7 +451,7 @@ def contour_center(contour):
 def threshold_imgage_to_idstring(img):
     img_colors = np.unique(img)
     assert img.ndim == 2, "only 2D images can be used"
-    assert 0 in img_colors, "zero not in image colors"
+    assert 0 in img_colors or 255 in img_colors, "one of 0 or 255 has to be in img colors"
     assert not len(img_colors) > 2, "image had more than 2 colors, only thresholded images can be used"
 
     threshold_pixels = np.where(img.flatten() != 0)[0]
