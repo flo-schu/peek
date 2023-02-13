@@ -1,3 +1,4 @@
+import warnings
 import cv2 as cv
 import numpy as np
 from skimage import measure
@@ -10,6 +11,7 @@ class MotionTagger(Tagger):
     def __init__(self):
         super().__init__()
         self.img_comp_path = []
+        self.frac_moved = []
 
 class MotionDetector(Detector):
     """
@@ -66,6 +68,10 @@ class MotionDetector(Detector):
                 img_orig=img_orig.pixels, 
                 img_comp=img_comp.pixels
             )
+
+            frac_moved = np.sum(thresh / 255) / np.prod([*thresh.shape])
+            if frac_moved > 0.02:
+                warnings.warn("large part of the image moved. This should be interpreted with care.")
             # get contours
             img_orig.contours = self.get_contours(thresh, self.thresh_size)
             thresh_slices = img_orig._cut_slices(
@@ -81,6 +87,7 @@ class MotionDetector(Detector):
             
             tags.img_path = [img_orig.path] * tags.max_len
             tags.img_comp_path = [img_comp.path] * tags.max_len
+            tags.frac_moved = [frac_moved] * tags.max_len
             img_orig.tags = tags
 
             # add other images, which should be shown 
