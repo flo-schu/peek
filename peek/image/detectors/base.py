@@ -257,7 +257,11 @@ class Detector():
         
         # return the point with the closest diagonal distance the is not
         # the point itself
-        return np.argsort(distance)[1]
+        try:
+            nb = np.argsort(distance)[1]
+        except IndexError:
+            nb = None
+        return nb
 
     @staticmethod
     def predict(classifier, tag):
@@ -278,8 +282,13 @@ class Detector():
         iou = tag["neighbor_iou"]
 
         plabel_t, pproba_t = cls.predict(classifier, tag)
-        plabel_nb, pproba_nb = cls.predict(classifier, neighbor)
-
+        
+        # return early if iou is zero
+        if iou > 0:
+            plabel_nb, pproba_nb = cls.predict(classifier, neighbor)
+        else:
+            return plabel_t[0], pproba_t.max()
+        
         # non maximum surpression
         if iou > 0.5 and plabel_t[0] == plabel_nb[0]:
             if pproba_t.max() > pproba_nb.max():
@@ -303,7 +312,6 @@ class Detector():
             for i in range(tags.max_len):
                 t = tags.get_tag(i)
                 n = tags.get_tag(t["closest_neighbor"])
-
                 label, prob = self.non_maximum_surpression(classifier, t, n)
 
                 predictions.append(label)
@@ -847,6 +855,8 @@ class Tagger():
         getattr(self, tag).append(value)
 
     def get_tag(self, i):
+        if i is None:
+            return None
         return {key: values[i] for key, values in self.__dict__.items()}
 
     def get(self, tag, i):

@@ -187,7 +187,10 @@ class MotionDetector(Detector):
         # get properties of central cluster
         central_label = labels[self.margin, self.margin]
 
-        iou = self.get_iou(tag, neighbor[1])
+        if neighbor[0] is None:
+            iou = 0.0
+        else:
+            iou = self.get_iou(tag, neighbor[1])
         
         if len(rp) == 0:
             area_central_cluster = 0
