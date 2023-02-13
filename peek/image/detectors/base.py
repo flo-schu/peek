@@ -1,4 +1,5 @@
 import os
+import warnings
 import cv2 as cv
 import numpy as np
 import imutils
@@ -8,8 +9,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from peek.utils.manage import Files
-from peek.image.process import (
-    Series, Snapshot, get_tag_box_coordinates, contour_center)
+from peek.image.process import Snapshot, contour_center
 from peek.image.analysis import Spectral, Preprocessing
 
 class Mask(Spectral):
@@ -263,8 +263,14 @@ class Detector():
     def predict(classifier, tag):
         features = [tag[f] for f in classifier.features]
         x = np.array(features).reshape((1, len(features)))
-        pproba = classifier.predict_proba(x)
-        plabel = classifier.predict(x)
+        nanfeatures = [f for f, xf in zip(classifier.features, features) if np.isnan(xf)]
+        if len(nanfeatures) != 0:
+            warnings.warn(f"{nanfeatures} were nan. Labelled as 'error'.")
+            plabel = "error"
+            pproba = np.repeat([[np.nan]], len(classifier.classes_), axis=1)
+        else:
+            pproba = classifier.predict_proba(x)
+            plabel = classifier.predict(x)
         return plabel, pproba
 
     @classmethod
