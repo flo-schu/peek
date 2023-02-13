@@ -485,6 +485,7 @@ def margin_to_shape(mar):
     return (1 + mar * 2, 1 + mar * 2)
 
 def get_tag_box_coordinates(self, contour):
+    raise NotImplementedError("calls to this function should return None")
     x, y, w, h = cv2.boundingRect(contour)
 
 

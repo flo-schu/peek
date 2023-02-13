@@ -113,12 +113,14 @@ class Tag(Files):
     @property
     def orig_img(self):
         img = self.load_img(self.img_path)
-        return img[self.slice]
+        return img.slice_image(
+            img.pixels, self.x, self.y, self.width, self.height, mar=0)
 
     @property
     def comp_img(self):
         img = self.load_img(self.img_comp_path)
-        return img[self.slice]
+        return img.slice_image(
+            img.pixels, self.x, self.y, self.width, self.height, mar=0)
 
     def tag_info(self, ax):
         """
@@ -151,7 +153,7 @@ class Tag(Files):
     @staticmethod
     @lru_cache
     def load_img(path):
-        return Snapshot(path).pixels
+        return Snapshot(path)
 
 # interactive figure
 class Annotations(Tag): 
