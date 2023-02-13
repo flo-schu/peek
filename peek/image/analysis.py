@@ -276,7 +276,7 @@ class Annotations(Tag):
         if len(self.tags) == 0:
             return
         kept_tags = self._tags \
-            .query(f"pred == 'Other'") \
+            .query(f"pred != 'Other'") \
             .query("pred != 'duplicate'") \
             .query("pred != 'error'") \
             .id
