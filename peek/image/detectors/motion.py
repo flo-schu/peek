@@ -201,6 +201,7 @@ class MotionDetector(Detector):
         
         if len(rp) == 0:
             area_central_cluster = 0
+            moving_area_background = 0
             amal = 0
             amil = 0
             r, g, b = (0, 0, 0)
@@ -210,6 +211,9 @@ class MotionDetector(Detector):
         else:
             props = rp[central_label - 1]
             area_central_cluster = props.area
+            moving_area_background = np.sum(
+                [p.area for i, p in enumerate(rp) if i != central_label - 1],
+                dtype=int)
             amal = props.axis_major_length
             amil = props.axis_minor_length
 
@@ -245,6 +249,7 @@ class MotionDetector(Detector):
         tag_props = {
             "n_clusters": n_cluster,
             "pixels_central": area_central_cluster,
+            "moving_area_background": moving_area_background,
             "axis_major_length": amal,
             "axis_minor_length": amil,
             "red_cluster": r,
