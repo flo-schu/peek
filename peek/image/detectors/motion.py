@@ -26,6 +26,8 @@ class MotionDetector(Detector):
     def __init__(
         self, 
         margin=10,
+        dilate_iter=3,
+        dist_trans_coef=0.005,
         thresh_binary=1, 
         thresh_bg=1, 
         thresh_size=1, 
@@ -40,6 +42,8 @@ class MotionDetector(Detector):
         # parent class has no attributes, make sure only attributes in 
         # class remain parameters
         self.margin = margin
+        self.dilate_iter = dilate_iter
+        self.dist_trans_coef = dist_trans_coef
         self.thresh_binary = thresh_binary
         self.thresh_bg = thresh_bg
         self.thresh_size = thresh_size
@@ -95,7 +99,82 @@ class MotionDetector(Detector):
 
         return batch
 
+    def water_shedding_thresholding(self, img_orig, img_comp):
+        # calculate pixel and channel wise difference
+        # from matplotlib import pyplot as plt
+        # fig, ax = plt.subplots(1,1)
 
+        diff = self.difference(
+            images=[img_comp, img_orig], 
+            smooth=self.smooth)
+
+        # TODO: try if this is better placed before
+        # grayscale
+
+        gray = cv.cvtColor(diff[0], cv.COLOR_BGR2GRAY)
+        # ax.imshow(gray)
+        # fig.savefig("work/results/classification/thresholding/0_diff.png")
+
+        # threshold the image
+        ret, thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        
+        # ax.imshow(thresh)
+        # fig.savefig("work/results/classification/thresholding/1_thresh.png")
+
+        kernel = np.ones((3,3), np.uint8)
+        # reduce noise. This step is not applied, because it removes too many 
+        # components
+        # opening = cv.morphologyEx(thresh,cv.MORPH_OPEN,kernel, iterations = 1)
+
+        # ax.imshow(opening)
+        # fig.savefig("work/results/classification/thresholding/2_opening.png")
+
+        # identify sure background
+        sure_bg = cv.dilate(thresh, kernel, iterations=self.dilate_iter)
+        # ax.imshow(sure_bg)
+        # fig.savefig("work/results/classification/thresholding/3_sure_bg.png")
+
+        # calculate sure foreground area
+        dist_transform = cv.distanceTransform(thresh, cv.DIST_L2, 5)
+        ret, sure_fg = cv.threshold(
+            dist_transform, self.dist_trans_coef * dist_transform.max(), 255, 0)
+        
+        # ax.imshow(sure_fg)
+        # fig.savefig("work/results/classification/thresholding/4_sure_fg.png")
+
+        # get unknown area
+        sure_fg = np.uint8(sure_fg)
+        unknown = cv.subtract(sure_bg, sure_fg)
+        # ax.imshow(unknown)
+        # fig.savefig("work/results/classification/thresholding/5_unknown.png")
+
+        # get connected_components
+        ret, markers = cv.connectedComponents(sure_fg)
+        
+        # Add one to all labels so that sure background is not 0, but 1
+        markers = markers+1
+        
+        # Now, mark the region of unknown with zero
+        markers[unknown==255] = 0
+
+        # apply watershedding algorithm
+        markers = cv.watershed(img_orig, markers)
+        
+        # set borders to zero
+        markers[markers == -1] = 0
+        markers[markers == 1] = 0
+
+        # fill marker contours
+        markers[markers > 1] = 255
+        
+        # ax.imshow(markers)
+        # fig.savefig("work/results/classification/thresholding/6_markers.png")
+        return markers.astype(np.uint8)
+        # img_orig_2 = img_orig.copy()
+        # img_orig_2[markers == -1] = [255, 0, 0]
+
+        # ax.imshow(img_orig_2)
+        # fig.savefig("work/results/classification/thresholding/7_watershedding.png")
 
     def multi_background_thresholding(self, img_orig, img_comp):
         """
