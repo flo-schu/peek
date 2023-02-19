@@ -413,6 +413,10 @@ class Detector():
         setattr(tags, "analysis", annotations["analysis"].values)
         setattr(tags, "time", annotations["time"].values)
         
+        # filter tags
+        fltr = self.filter_tags(tags)        
+        tags = tags.apply_filter(fltr)
+        
         return tags
 
     def analyze_tag(self, tag):

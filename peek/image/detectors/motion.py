@@ -351,8 +351,11 @@ class MotionDetector(Detector):
     def test_tag(self, tag):
         keep = True
 
-        if tag["pred"] == "duplicate":
-            keep = False
+        try:
+            if tag["pred"] == "duplicate":
+                keep = False
+        except KeyError:
+            pass
 
         # apply test depending on labels
         if tag["n_clusters"] > self.max_clusters:
