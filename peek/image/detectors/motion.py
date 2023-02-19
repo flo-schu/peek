@@ -269,7 +269,7 @@ class MotionDetector(Detector):
         labels, n_cluster = measure.label(
             thresh, return_num=True, connectivity=self.connectivity)
         rp = measure.regionprops(labels)
-
+        dist_from_center = abs(tag["x"] - 1100)
         # get properties of central cluster
         central_label = labels[self.margin, self.margin]
 
@@ -286,6 +286,7 @@ class MotionDetector(Detector):
             r, g, b = (0, 0, 0)
             rb, gb, bb = (0, 0, 0)
             contrast = 0
+            perimeter = 0
 
         else:
             props = rp[central_label - 1]
@@ -295,6 +296,7 @@ class MotionDetector(Detector):
                 dtype=int)
             amal = props.axis_major_length
             amil = props.axis_minor_length
+            perimeter = props.perimeter
 
             mask = labels != central_label
             mask_color = np.tile(mask.reshape((*mask.shape, 1)), 3)
@@ -331,6 +333,8 @@ class MotionDetector(Detector):
             "moving_area_background": moving_area_background,
             "axis_major_length": amal,
             "axis_minor_length": amil,
+            "dist_from_center": dist_from_center,
+            "perimeter": perimeter,
             "red_cluster": r,
             "green_cluster": g,
             "blue_cluster": b,
