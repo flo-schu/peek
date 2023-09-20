@@ -136,6 +136,10 @@ dmypy.json
 /.vscode/
 binaries
 .virtual_documents
+data
+work
+results
+
 
 # file types
 *.pyc

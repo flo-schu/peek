@@ -20,6 +20,17 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
+dependencies=[
+  "opencv-python-headless == 4.6.0.66",
+  "numpy == 1.24.4", 
+  "imageio == 2.21.3",
+  "pandas == 1.4.4",
+  "scipy == 1.9.1",
+  "progress == 1.6",
+  "matplotlib == 3.5.3",
+  "exifread == 3.0.0",
+  "imutils == 0.5.4",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/flo-schu/peek"

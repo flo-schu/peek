@@ -2,14 +2,18 @@
 
 Peek is short for photography enhanced environmental knowledge. It contains algorithms for detecting organisms on photographs
 
-## installation procedure
+## installation procedure using venv
 
 + install python
 + create virtual environment named 'env':  `python -m venv env`
 + activate environment `./env/Scripts/activate` (on Linux: `source ./env/bin/activate`)
-+ upgrade pip:   `python -m pip install --upgrade pip`
-+ install requirements: `pip install -r requirements.txt`
 + install package as development package `pip install --editable .`
+
+## installation using conda
+
+`conda env create --file environment.yaml` (or environment_win.yaml)
+`conda activate peek`
+`pip install --editable .`
 
 ## working on eve cluster
 

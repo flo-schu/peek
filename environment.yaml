@@ -1,4 +1,4 @@
-name: nanocosm_image
+name: peek
 channels:
   - conda-forge
   - fastchan
@@ -6,6 +6,7 @@ channels:
   - defaults
 dependencies:
   - python=3.10.4
+  - numpy=1.24.4
   - opencv-python-headless=4.6.0.66
   - imageio=2.21.3
   - pandas=1.4.4
